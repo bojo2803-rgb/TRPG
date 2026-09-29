@@ -1,0 +1,741 @@
+<title>時系列マップ試作</title>
+<!--
+  試作品（捨てる前提）。設計メモ §10 の「時系列マップを先に試す」ためのもの。
+  保存機能なし・サンプルデータ固定。本体を作るときにこのコードは流用しない。
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho:wght@600&display=swap">
+<style>
+/* 画面構成：上に視点の切り替えと設定、その下を時系列マップが埋める一画面アプリ。下端に凡例 */
+:root {
+  --bg: #e8ebef; --surface: #f9fafb; --fg: #1a2030; --muted: #5a6475; --line: #c5ccd6;
+  --c-main: #2a3246; --c-ryugu: #12847e; --c-beta: #6b4cc2; --c-dream: #3155cf;
+  --life: #1d8039; --stretch: #df861b; --paradox: #cf3434;
+  --font-ui: "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", system-ui, sans-serif;
+  --font-title: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161d; --surface: #1b212b; --fg: #e5e8ee; --muted: #98a1b1; --line: #343c4a;
+    --c-main: #d9dde6; --c-ryugu: #3cc2ba; --c-beta: #a88cf2; --c-dream: #7c98f7;
+    --life: #4bd07a; --stretch: #f2a640; --paradox: #f06a6a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #1b212b; --fg: #e5e8ee; --muted: #98a1b1; --line: #343c4a;
+  --c-main: #d9dde6; --c-ryugu: #3cc2ba; --c-beta: #a88cf2; --c-dream: #7c98f7;
+  --life: #4bd07a; --stretch: #f2a640; --paradox: #f06a6a; color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-ui);
+  display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+  padding-inline: 16px; padding-block: 10px; box-sizing: border-box;
+}
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { font-family: var(--font-title); font-size: 20px; margin: 0; letter-spacing: .04em; }
+.badge { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 13px; color: var(--fg); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.chip.ex { text-decoration: line-through; color: var(--muted); }
+.chip.only { border-color: var(--life); box-shadow: inset 0 0 0 1px var(--life); }
+.chip:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--life); outline-offset: 2px; }
+details.settings { font-size: 13px; }
+details.settings summary { cursor: pointer; color: var(--muted); }
+.panel {
+  display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; align-items: center;
+  margin-top: 8px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+}
+.panel > span { color: var(--muted); }
+.panel input[type="search"] { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); min-width: 0; width: 100%; max-width: 280px; }
+.panel .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.panel output { font-family: var(--font-data); font-size: 12px; }
+.stage { position: relative; flex: 1; min-height: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+#map { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#map.drag { cursor: grabbing; }
+.zoom { position: absolute; right: 10px; top: 10px; display: flex; gap: 4px; }
+.zoom button { font: inherit; font-size: 13px; min-width: 34px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+#tip {
+  position: absolute; pointer-events: none; max-width: 300px; z-index: 2;
+  background: var(--fg); color: var(--bg); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5;
+}
+#tip b { font-size: 13px; }
+#tip .d { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+#tip .m { opacity: .75; }
+#toast {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 3; max-width: min(520px, calc(100% - 32px));
+  background: var(--paradox); color: var(--bg); border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.5;
+  box-shadow: 0 6px 24px rgb(0 0 0 / .25); cursor: pointer;
+}
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--muted); align-items: center; }
+.legend svg { vertical-align: middle; margin-right: 4px; }
+/* 地図の中身 */
+.edge { fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.t-main { stroke: var(--c-main); } .t-ryugu { stroke: var(--c-ryugu); } .t-beta { stroke: var(--c-beta); } .t-dream { stroke: var(--c-dream); }
+.f-main { fill: var(--c-main); } .f-ryugu { fill: var(--c-ryugu); } .f-beta { fill: var(--c-beta); } .f-dream { fill: var(--c-dream); }
+.glow { fill: none; stroke: var(--stretch); stroke-opacity: .4; stroke-linecap: round; }
+.lk { fill: none; stroke-width: 1.6; stroke-dasharray: 6 4; }
+.k-ryugu { stroke: var(--c-ryugu); } .k-beta { stroke: var(--c-beta); } .k-dream { stroke: var(--c-dream); stroke-dasharray: 2 4; }
+.k-jump { stroke: var(--muted); } .k-loop { stroke: var(--life); } .k-paradox { stroke: var(--paradox); stroke-width: 2.2; }
+.hit { fill: none; stroke: transparent; stroke-width: 16; pointer-events: stroke; }
+.life { stroke: var(--life); stroke-width: 6; stroke-linecap: round; }
+.life.ghost { stroke-dasharray: 2 7; stroke-width: 5; stroke-opacity: .7; }
+.tether { stroke: var(--life); stroke-width: 1.2; stroke-opacity: .6; stroke-dasharray: 2 3; fill: none; }
+.jmp { fill: var(--surface); stroke: var(--life); stroke-width: 2; }
+.card rect.bg { fill: var(--surface); stroke: var(--line); }
+.card text { fill: var(--fg); font-size: 12px; }
+.card.dim { opacity: .22; }
+.card.hl rect.bg { stroke: var(--life); stroke-width: 2; }
+.card.grp rect.bg { fill: var(--fg); stroke: var(--fg); }
+.card.grp text { fill: var(--bg); font-weight: 600; }
+.card { cursor: default; } .card.grp { cursor: pointer; }
+.stem { stroke: var(--line); stroke-width: 1; }
+.lbl { fill: var(--muted); font-size: 11px; }
+.lbl.strong { fill: var(--fg); font-weight: 600; font-size: 12px; }
+.lbl.life-l { fill: var(--life); font-weight: 600; font-size: 12px; }
+.gapl { fill: var(--muted); font-size: 10px; font-family: var(--font-data); }
+.dot { fill: var(--surface); stroke-width: 1.5; }
+@media (max-width: 560px) {
+  .brand h1 { font-size: 17px; }
+  .chip { font-size: 12px; padding: 3px 10px; }
+  .legend { font-size: 11px; }
+}
+</style>
+
+<header class="bar">
+  <div class="brand"><h1>時系列マップ</h1><span class="badge">試作品・サンプルデータ</span></div>
+  <div class="chips" id="views" role="group" aria-label="視点"></div>
+</header>
+<details class="settings" id="settings">
+  <summary>絞り込み・表示の設定</summary>
+  <div class="panel">
+    <span>検索</span>
+    <div class="row"><input id="q" type="search" placeholder="付箋の名前やタグ" aria-label="付箋を検索"></div>
+    <span>タグ</span>
+    <div class="row"><div class="chips" id="tags"></div></div>
+    <span>世界線</span>
+    <div class="row"><div class="chips" id="tracks"></div></div>
+    <span>主体</span>
+    <div class="row"><label><input id="onlySub" type="checkbox"> 選んだ主体に関係する付箋だけ表示</label></div>
+    <span>空白の圧縮</span>
+    <div class="row"><input id="tau" type="range" min="0" max="6" step="0.1" value="2.6" aria-label="そのままの長さで見せる範囲"> <output id="tauOut"></output></div>
+  </div>
+</details>
+<main class="stage" id="stage">
+  <svg id="map" role="img" aria-label="時系列マップ"></svg>
+  <div class="zoom"><button id="zin" aria-label="拡大">＋</button><button id="zout" aria-label="縮小">−</button><button id="fit">全体</button></div>
+  <div id="tip" hidden></div>
+  <div id="toast" hidden role="status"></div>
+</main>
+<footer class="legend">
+  <span><svg width="34" height="10"><path d="M1 5 Q4 1 7 5 T13 5 T19 5 T25 5 T31 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>縮んだ時間</span>
+  <span><svg width="34" height="10"><line x1="2" y1="5" x2="32" y2="5" stroke="var(--stretch)" stroke-opacity=".45" stroke-width="9" stroke-linecap="round"/><line x1="2" y1="5" x2="32" y2="5" stroke="currentColor" stroke-width="2"/></svg>伸びた時間</span>
+  <span><svg width="34" height="10"><line x1="2" y1="5" x2="32" y2="5" stroke="var(--life)" stroke-width="5" stroke-linecap="round"/></svg>主体の生涯線</span>
+  <span><svg width="34" height="10"><line x1="2" y1="5" x2="32" y2="5" stroke="var(--life)" stroke-width="4" stroke-dasharray="2 6"/></svg>同じ時期の2回目以降</span>
+  <span><svg width="34" height="10"><line x1="2" y1="5" x2="32" y2="5" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="6 4"/></svg>分岐・合流・時間移動</span>
+  <span>線にカーソルを合わせる（スマホはタップ）と日時が出ます</span>
+</footer>
+
+<script>
+// ===== 暦 =====
+// 日時は「日の通し番号（ユリウス通日）＋日の中の割合」で持つ。整数部が暦日、小数部が時刻
+const J2000 = 2451545, YEAR = 365.2425, GREG_START = 2299161; // GREG_START = 1582年10月15日
+const fdiv = (a, b) => Math.floor(a / b);
+function jdnGreg(y, m, d) {
+  const a = fdiv(14 - m, 12), yy = y + 4800 - a, mm = m + 12 * a - 3;
+  return d + fdiv(153 * mm + 2, 5) + 365 * yy + fdiv(yy, 4) - fdiv(yy, 100) + fdiv(yy, 400) - 32045;
+}
+function jdnJul(y, m, d) {
+  const a = fdiv(14 - m, 12), yy = y + 4800 - a, mm = m + 12 * a - 3;
+  return d + fdiv(153 * mm + 2, 5) + 365 * yy + fdiv(yy, 4) - 32083;
+}
+// 西暦：1582年10月15日以降はグレゴリオ暦、それより前はユリウス暦。y は天文式（紀元前1年 = 0）
+function W(y, m = 1, d = 1, h = 0, mi = 0) {
+  const g = jdnGreg(y, m, d);
+  return (g >= GREG_START ? g : jdnJul(y, m, d)) + (h * 60 + mi) / 1440;
+}
+const ago = years => J2000 - years * YEAR;
+function ymd(J) {
+  const greg = J >= GREG_START;
+  let shift = 0;
+  if (J < 0) { const k = Math.ceil(-J / 1461); J += k * 1461; shift = 4 * k; } // ユリウス暦は4年で1461日
+  let f = J + 1401;
+  if (greg) f += fdiv(fdiv(4 * J + 274277, 146097) * 3, 4) - 38;
+  const e = 4 * f + 3, g = fdiv(e % 1461, 4), h = 5 * g + 2;
+  const M = (fdiv(h, 153) + 2) % 12 + 1;
+  return [fdiv(e, 1461) - 4716 + fdiv(14 - M, 12) - shift, M, fdiv(h % 153, 5) + 1];
+}
+const sig = (v, n = 3) => +v.toPrecision(n);
+function fmtAgo(y) {
+  if (y >= 1e8) return `約${sig(y / 1e8)}億年前`;
+  if (y >= 1e4) return `約${sig(y / 1e4)}万年前`;
+  return `約${Math.round(y)}年前`;
+}
+function hm(t) { const m = Math.floor((t - Math.floor(t)) * 1440 + 1e-6); return ` ${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; }
+function fmtWest(t, name, prec) {
+  const yearsAgo = (J2000 - t) / YEAR;
+  if (yearsAgo > 12000) return `${name} ${fmtAgo(yearsAgo)}`;
+  const n = Math.floor(t), [y, m, d] = ymd(n);
+  const ys = y <= 0 ? `紀元前${1 - y}年` : `${y}年`;
+  if (prec === 'year') return `${name} ${ys}`;
+  if (prec === 'month') return `${name} ${ys}${m}月`;
+  const jul = n < GREG_START ? '（ユリウス暦）' : '';
+  return `${name} ${ys}${m}月${d}日${prec === 'min' ? hm(t) : ''}${jul}`;
+}
+// 架空の暦の例：夢暦（1年 = 12か月 × 30日）
+const DREAM_MONTHS = ['霧', '猫', '月獣', '翠玉', '黄昏', '星', '夜鬼', '琥珀', '銀鍵', '深淵', '夢見', '覚醒'];
+const DR = (y, m = 1, d = 1) => (y - 1) * 360 + (m - 1) * 30 + (d - 1);
+function fmtDream(t, prec) {
+  const n = Math.floor(t), y = fdiv(n, 360) + 1, r = n - (y - 1) * 360, m = fdiv(r, 30), d = r - m * 30 + 1;
+  if (prec === 'year') return `夢暦 ${y}年`;
+  if (prec === 'month') return `夢暦 ${y}年 ${DREAM_MONTHS[m]}の月`;
+  return `夢暦 ${y}年 ${DREAM_MONTHS[m]}の月${d}日${prec === 'min' ? hm(t) : ''}`;
+}
+function fmtDur(days, yearLen = YEAR) {
+  const y = days / yearLen;
+  if (y >= 1e8) return `${sig(y / 1e8)}億年`;
+  if (y >= 1e4) return `${sig(y / 1e4)}万年`;
+  if (y >= 1) return `${sig(y)}年`;
+  if (days >= 1) return `${Math.round(days)}日`;
+  const mins = Math.round(days * 1440);
+  return mins >= 60 ? `${Math.floor(mins / 60)}時間${mins % 60 ? (mins % 60) + '分' : ''}` : `${mins}分`;
+}
+const precFor = span => span >= 100 * YEAR ? 'year' : span >= 2 * YEAR ? 'month' : span >= 3 ? 'day' : 'min';
+
+// ===== サンプルの世界 =====
+const LOOP_START = W(2025, 8, 17), LOOP_END = W(2025, 8, 31, 23, 59);
+const tracks = [
+  { id: 'main', name: '本線', obj: true, lane: 0, from: ago(13.8e9), to: W(2100), fmt: (t, p) => fmtWest(t, '西暦', p) },
+  { id: 'ryugu', name: '竜宮', obj: false, lane: -1, from: W(720), to: W(723), fmt: (t, p) => fmtWest(t, '西暦;竜宮', p) },
+  { id: 'beta', name: '世界線β', obj: true, lane: 1, from: W(1850, 6, 1, 12), to: W(2100), fmt: (t, p) => fmtWest(t, '西暦;β', p) },
+  { id: 'dream', name: 'ドリームランド', obj: false, lane: 2, from: DR(1), to: DR(2001), fmt: fmtDream, yearLen: 360 },
+];
+// sync: その2点が「同じ瞬間」として結ばれている（分岐・合流・夢との出入り）。時間移動とループは同じ瞬間ではない
+const links = [
+  { a: ['main', W(720)], b: ['ryugu', W(720)], kind: '分岐', sync: true, cls: 'k-ryugu' },
+  { a: ['ryugu', W(723)], b: ['main', W(1020)], kind: '合流', sync: true, cls: 'k-ryugu' },
+  { a: ['main', W(1850, 6, 1, 12)], b: ['beta', W(1850, 6, 1, 12)], kind: '世界線の分岐', sync: true, cls: 'k-beta' },
+  { a: ['main', W(2025, 6, 1, 12)], b: ['beta', W(1850, 6, 1, 12)], kind: '時間移動（パラドックス発生）', paradox: true, cls: 'k-paradox' },
+  { a: ['main', W(1920, 3, 1, 23)], b: ['dream', DR(1203)], kind: '眠ってドリームランドへ', sync: true, cls: 'k-dream' },
+  { a: ['dream', DR(1215)], b: ['main', W(1920, 3, 2, 7)], kind: '目覚めて現実へ', sync: true, cls: 'k-dream' },
+  { a: ['main', W(1985, 10, 26, 1, 35)], b: ['main', W(1955, 11, 5, 6)], kind: '時間移動', cls: 'k-jump' },
+  { a: ['main', W(1955, 11, 12, 22, 4)], b: ['main', W(1985, 10, 26, 1, 24)], kind: '時間移動', cls: 'k-jump' },
+  { a: ['main', LOOP_END], b: ['main', LOOP_START], kind: 'ループ', loop: true, cls: 'k-loop' },
+];
+// 主体の道筋：[世界線, 入った時点, 出た時点] を本人が体験した順に並べる
+const subjects = [
+  { id: 'urashima', name: '浦島太郎', legs: [['main', W(700), W(720)], ['ryugu', W(720), W(723)], ['main', W(1020), W(1020, 1, 5)]] },
+  { id: 'dreamer', name: '夢見る者R', legs: [['main', W(1890, 8, 20), W(1920, 3, 1, 23)], ['dream', DR(1203), DR(1215)], ['main', W(1920, 3, 2, 7), W(1937, 3, 15)]] },
+  { id: 'loop', name: 'ループする少女', legs: [['main', W(2010, 4, 2), LOOP_END], ['main', LOOP_START, LOOP_END], ['main', LOOP_START, W(2090)]] },
+  { id: 'm', name: '時間旅行者M', legs: [['main', W(1968, 6, 12), W(1985, 10, 26, 1, 35)], ['main', W(1955, 11, 5, 6), W(1955, 11, 12, 22, 4)], ['main', W(1985, 10, 26, 1, 24), W(2040)]] },
+  { id: 'k', name: '時間旅行者K', legs: [['main', W(1995, 3, 3), W(2025, 6, 1, 12)], ['beta', W(1850, 6, 1, 12), W(1900)]] },
+];
+const events = [
+  { tr: 'main', t: ago(13.8e9), title: '宇宙の始まり', tags: ['宇宙'] },
+  { tr: 'main', t: ago(4.54e9), title: '地球の誕生', tags: ['宇宙'] },
+  { tr: 'main', t: ago(6.6e7), title: '恐竜の絶滅', tags: ['宇宙'] },
+  { tr: 'main', t: W(719, 6, 1), title: '亀を助ける', tags: ['浦島'] },
+  { tr: 'ryugu', t: W(720, 1, 2), title: '竜宮城に着く', tags: ['浦島'] },
+  { tr: 'ryugu', t: W(721, 7, 7), title: '乙姫の宴', tags: ['浦島'] },
+  { tr: 'main', t: W(1020, 1, 5), title: '玉手箱を開ける', tags: ['浦島'] },
+  { tr: 'main', t: W(1582, 6, 21), title: '本能寺の変', tags: ['歴史'] },
+  { tr: 'main', t: W(1920, 3, 1, 23), title: 'Rが眠りにつく', tags: ['夢'] },
+  { tr: 'dream', t: DR(300), title: '古い夢の伝承', tags: ['夢'] },
+  { tr: 'dream', t: DR(1205, 2, 3), title: '猫の町を訪れる', tags: ['夢'] },
+  { tr: 'dream', t: DR(1210, 9, 9), title: '銀の鍵を得る', tags: ['夢'] },
+  { tr: 'main', t: W(1920, 3, 2, 7), title: 'Rが目覚める', tags: ['夢'] },
+  { tr: 'main', t: W(1955, 11, 12, 22, 4), title: '時計台に雷', tags: ['時間旅行'] },
+  { tr: 'main', t: W(1985, 10, 26, 1, 20), title: '駐車場で実験', tags: ['時間旅行'] },
+  { tr: 'main', t: W(2025, 6, 1, 12), title: 'Kが過去へ跳ぶ', tags: ['時間旅行'] },
+  { tr: 'beta', t: W(1850, 6, 1, 12), title: '見知らぬ男が現れる', tags: ['時間旅行'] },
+  { tr: 'beta', t: W(1851), title: '歴史が変わり始める', tags: ['歴史', '時間旅行'] },
+  { tr: 'main', t: LOOP_START, title: 'ループの始まり', tags: ['ループ'], group: 'summer' },
+  { tr: 'main', t: W(2025, 8, 20, 19), title: '夏祭り', tags: ['ループ'], group: 'summer' },
+  { tr: 'main', t: LOOP_END, title: '夏休み最後の夜', tags: ['ループ'], group: 'summer' },
+];
+const groups = { summer: { title: 'シナリオ：夏の終わりのループ', open: true } };
+const T = Object.fromEntries(tracks.map(t => [t.id, t]));
+
+// ===== 時間の圧縮 =====
+// 隣り合う時点の間隔 dt を「最小の幅 + log(1 + dt/TAU)」の長さで描く。何も起きない長い区間ほど強く縮む
+let TAU = 365;
+const MIN_GAP = 0.35;
+const gap = dt => MIN_GAP + Math.log1p(dt / TAU);
+function makeComp(pts) {
+  const c = [0];
+  for (let i = 1; i < pts.length; i++) c.push(c[i - 1] + gap(pts[i] - pts[i - 1]));
+  const n = pts.length - 1;
+  const seg = (arr, v) => { let lo = 0, hi = n; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (arr[mid] <= v) lo = mid; else hi = mid; } return lo; };
+  return {
+    f(t) {
+      if (t <= pts[0]) return c[0] - (t < pts[0] ? gap(pts[0] - t) : 0);
+      if (t >= pts[n]) return c[n] + (t > pts[n] ? gap(t - pts[n]) : 0);
+      const i = seg(pts, t), D = pts[i + 1] - pts[i];
+      return c[i] + (Math.log1p((t - pts[i]) / TAU) / Math.log1p(D / TAU)) * (c[i + 1] - c[i]);
+    },
+    inv(u) {
+      if (u <= c[0]) { const g = c[0] - u; return pts[0] - (g <= MIN_GAP ? 0 : TAU * Math.expm1(g - MIN_GAP)); }
+      if (u >= c[n]) { const g = u - c[n]; return pts[n] + (g <= MIN_GAP ? 0 : TAU * Math.expm1(g - MIN_GAP)); }
+      const i = seg(c, u), D = pts[i + 1] - pts[i];
+      return pts[i] + TAU * Math.expm1(((u - c[i]) / (c[i + 1] - c[i])) * Math.log1p(D / TAU));
+    },
+  };
+}
+
+// ===== 時点と線 =====
+const nodeTimes = {};
+{
+  const s = Object.fromEntries(tracks.map(t => [t.id, new Set([t.from, t.to])]));
+  for (const l of links) { s[l.a[0]].add(l.a[1]); s[l.b[0]].add(l.b[1]); }
+  for (const e of events) s[e.tr].add(e.t);
+  for (const sub of subjects) for (const [tr, a, b] of sub.legs) { s[tr].add(a); s[tr].add(b); }
+  for (const id in s) nodeTimes[id] = [...s[id]].sort((a, b) => a - b);
+}
+const key = (tr, t) => tr + '|' + t;
+let objComp, objTimes, trComp = {};
+function buildComps() {
+  const obj = new Set();
+  for (const t of tracks) if (t.obj) nodeTimes[t.id].forEach(v => obj.add(v));
+  objTimes = [...obj].sort((a, b) => a - b);
+  objComp = makeComp(objTimes);
+  for (const t of tracks) trComp[t.id] = t.obj ? objComp : makeComp(nodeTimes[t.id]);
+}
+
+// ===== 配置 =====
+const LANE = 130;
+const laneY = (tr, subjectView) => { const L = T[tr].lane; return (subjectView && L >= 0 ? L + 1 : L) * LANE; };
+
+function computeLayout(sub) {
+  const A = Object.fromEntries(tracks.map(t => [t.id, []])); // 世界線ごとの「この時点はこの位置」という錨
+  function tryAnchor(tr, t, x) {
+    const a = A[tr]; let i = 0;
+    while (i < a.length && a[i].t < t) i++;
+    if (i < a.length && a[i].t === t) return false;          // すでに位置が決まっている（2回目の通過など）
+    if (i > 0 && !(a[i - 1].x < x)) return false;             // 左から右へ流れる順序を崩すなら採用しない
+    if (i < a.length && !(x < a[i].x)) return false;
+    a.splice(i, 0, { t, x });
+    return true;
+  }
+  function xOf(tr, t) {
+    const a = A[tr], C = trComp[tr], u = C.f(t), n = a.length - 1;
+    if (t <= a[0].t) return a[0].x - (C.f(a[0].t) - u);
+    if (t >= a[n].t) return a[n].x + (u - C.f(a[n].t));
+    let i = 0; while (a[i + 1].t < t) i++;
+    const u0 = C.f(a[i].t), u1 = C.f(a[i + 1].t);
+    return a[i].x + (u1 > u0 ? (u - u0) / (u1 - u0) : 0) * (a[i + 1].x - a[i].x);
+  }
+  let life = null;
+  if (!sub) {
+    for (const t of tracks) if (t.obj) for (const v of nodeTimes[t.id]) tryAnchor(t.id, v, objComp.f(v));
+  } else {
+    // 生涯線：通った区間を本人の体感時間の順につなぎ、まっすぐ1本に並べる
+    const occ = [], legs = [], taus = [];
+    let tau = 0;
+    sub.legs.forEach(([tr, a, b], li) => {
+      legs.push({ tr, a, b, tau0: tau });
+      for (const v of nodeTimes[tr]) if (v >= a && v <= b) occ.push({ li, tr, t: v, tau: tau + (v - a) });
+      // 生涯線の長さは、その世界線の長さと同じ区切りで測る（客観時間の世界線は本線・βの時点をまとめて使う）
+      for (const v of T[tr].obj ? objTimes : nodeTimes[tr]) if (v >= a && v <= b) taus.push(tau + (v - a));
+      tau += b - a;
+    });
+    const lc = makeComp([...new Set(taus)].sort((p, q) => p - q));
+    for (const o of occ) { o.x = lc.f(o.tau); o.ok = tryAnchor(o.tr, o.t, o.x); }
+    life = { sub, occ, legs, lc };
+  }
+  // 同じ瞬間として結ばれた点を通して、まだ位置の決まっていない世界線に位置を伝える。
+  // 伝える元は「客観時間の世界線」か「錨の範囲内の点」だけ。竜宮や夢の世界の、錨の外側の推定位置は伝えない
+  const settled = (tr, t) => T[tr].obj || (t >= A[tr][0].t && t <= A[tr][A[tr].length - 1].t);
+  for (let pass = 0, changed = true; changed && pass < 10; pass++) {
+    changed = false;
+    for (const l of links) {
+      if (!l.sync) continue;
+      for (const [p, q] of [[l.a, l.b], [l.b, l.a]]) {
+        if (!A[p[0]].length || !settled(p[0], p[1]) || A[q[0]].some(z => z.t === q[1])) continue;
+        if (tryAnchor(q[0], q[1], xOf(p[0], p[1]))) changed = true;
+      }
+    }
+  }
+  for (const t of tracks) if (!A[t.id].length) tryAnchor(t.id, nodeTimes[t.id][0], 0);
+  const pos = {};
+  for (const t of tracks) for (const v of nodeTimes[t.id]) pos[key(t.id, v)] = { x: xOf(t.id, v), y: laneY(t.id, !!sub) };
+  return { pos, life };
+}
+
+// ===== 状態 =====
+const svg = document.getElementById('map'), stage = document.getElementById('stage');
+const tip = document.getElementById('tip'), toast = document.getElementById('toast');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let current = null;   // 目標の配置 { pos, life }
+let draw = {};        // アニメーション中の配置
+let lifeAlpha = 0;
+let cam = { zoom: 8, panX: 0, panY: 0, yOff: 0 };
+let activeSub = null;
+const tagState = {};  // 0: 通常, 1: 除外, 2: これだけ
+const hiddenTracks = new Set();
+let query = '', onlySub = false;
+
+function eventVisible(e) {
+  if (hiddenTracks.has(e.tr)) return false;
+  const only = Object.keys(tagState).filter(k => tagState[k] === 2);
+  if (only.length && !e.tags.some(t => only.includes(t))) return false;
+  if (e.tags.some(t => tagState[t] === 1)) return false;
+  if (onlySub && activeSub && !activeSub.legs.some(([tr, a, b]) => tr === e.tr && e.t >= a && e.t <= b)) return false;
+  return true;
+}
+
+function fitCam(layout) {
+  const W = svg.clientWidth || 800;
+  let lo = Infinity, hi = -Infinity, yl = Infinity, yh = -Infinity;
+  for (const k in layout.pos) { const p = layout.pos[k]; lo = Math.min(lo, p.x); hi = Math.max(hi, p.x); yl = Math.min(yl, p.y); yh = Math.max(yh, p.y); }
+  if (layout.life) {
+    // 主体の視点では、その主体の生涯に合わせて拡大する（宇宙全体は「全体」ボタンで見る）
+    const xs = layout.life.occ.map(o => o.x);
+    lo = Math.min(...xs); hi = Math.max(...xs);
+    const pad = (hi - lo) * .12 + 1; lo -= pad; hi += pad; yl = Math.min(yl, 0);
+  }
+  const zoom = (W - 60 - Math.min(160, W * .2)) / Math.max(1e-9, hi - lo); // 右端の付箋が切れないよう余白を取る
+  return { zoom, panX: 30 - lo * zoom, panY: 0, yOff: -((yl - 110) + (yh + 30)) / 2 };
+}
+
+function setView(sub, refit = true) {
+  activeSub = sub;
+  const next = computeLayout(sub);
+  const from = current ? draw : next.pos;
+  const camFrom = { ...cam }, camTo = refit ? fitCam(next) : cam;
+  current = next;
+  const t0 = performance.now(), dur = reduced || !Object.keys(from).length ? 0 : 750;
+  const startAlpha = lifeAlpha;
+  function step(now) {
+    const k = dur ? Math.min(1, (now - t0) / dur) : 1;
+    const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    const nd = {};
+    for (const id in next.pos) {
+      const a = from[id] || next.pos[id], b = next.pos[id];
+      nd[id] = { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e };
+    }
+    draw = nd;
+    for (const p of ['zoom', 'panX', 'panY', 'yOff']) cam[p] = camFrom[p] + (camTo[p] - camFrom[p]) * e;
+    lifeAlpha = sub ? e : startAlpha * (1 - e);
+    render();
+    if (k < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+  updateChips();
+  egg(sub);
+}
+
+// ===== 描画 =====
+const ctx2d = document.createElement('canvas').getContext('2d');
+let uiFont = '12px sans-serif';
+const textW = s => { ctx2d.font = uiFont; return ctx2d.measureText(s).width; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const f1 = v => Math.round(v * 10) / 10;
+
+function render() {
+  const W = svg.clientWidth, H = svg.clientHeight;
+  const SX = x => x * cam.zoom + cam.panX, SY = y => y + H / 2 + cam.panY + cam.yOff;
+  const P = (tr, t) => draw[key(tr, t)];
+  let back = '', mid = '', front = '';
+
+  // つながり（分岐・合流・時間移動・ループ）。矢印は付けない
+  links.forEach((l, i) => {
+    if (hiddenTracks.has(l.a[0]) || hiddenTracks.has(l.b[0])) return;
+    const p = P(...l.a), q = P(...l.b);
+    const x1 = SX(p.x), y1 = SY(p.y), x2 = SX(q.x), y2 = SY(q.y);
+    let d;
+    if (Math.abs(y1 - y2) < 1) { const h = 26 + Math.min(80, Math.abs(x2 - x1) * .25); d = `M${f1(x1)},${f1(y1)} C${f1(x1)},${f1(y1 + h)} ${f1(x2)},${f1(y1 + h)} ${f1(x2)},${f1(y2)}`; }
+    else { const my = (y1 + y2) / 2; d = `M${f1(x1)},${f1(y1)} C${f1(x1)},${f1(my)} ${f1(x2)},${f1(my)} ${f1(x2)},${f1(y2)}`; }
+    back += `<path class="lk ${l.cls}" d="${d}"/><path class="hit" data-k="l|${i}" d="${d}"/>`;
+  });
+
+  // 世界線。縮んだ区間は波線、伸びた区間は光らせる
+  for (const tr of tracks) {
+    if (hiddenTracks.has(tr.id)) continue;
+    const ts = nodeTimes[tr.id], C = trComp[tr.id];
+    for (let i = 0; i < ts.length - 1; i++) {
+      const a = ts[i], b = ts[i + 1], p = P(tr.id, a), q = P(tr.id, b);
+      const x1 = SX(p.x), x2 = SX(q.x), y = SY(p.y);
+      if (x2 < -40 || x1 > W + 40) continue;
+      const nat = C.f(b) - C.f(a), r = nat > 0 ? (q.x - p.x) / nat : 1;
+      const cx1 = Math.max(x1, -20), cx2 = Math.min(x2, W + 20);
+      if (r > 1.25) back += `<line class="glow" x1="${f1(cx1)}" y1="${f1(y)}" x2="${f1(cx2)}" y2="${f1(y)}" stroke-width="${f1(Math.min(16, 5 + 3 * Math.log2(r)))}"/>`;
+      let d;
+      if (r < .8 && cx2 - cx1 > 4) {
+        const A = Math.min(7, 10 * (1 - r)); let s = `M${f1(cx1)},${f1(y)}`;
+        for (let x = cx1 + 2; x < cx2; x += 2) s += ` L${f1(x)},${f1(y + A * Math.sin((x - x1) / 9 * 2 * Math.PI))}`;
+        d = s + ` L${f1(cx2)},${f1(y)}`;
+      } else d = `M${f1(cx1)},${f1(y)} L${f1(cx2)},${f1(y)}`;
+      mid += `<path class="edge t-${tr.id}" d="${d}"/><path class="hit" data-k="e|${tr.id}|${i}" d="M${f1(cx1)},${f1(y)} L${f1(cx2)},${f1(y)}"/>`;
+      if (cx2 - cx1 > 70 && (b - a >= 50 * YEAR || r < .8 || r > 1.25))
+        mid += `<text class="gapl" x="${f1((cx1 + cx2) / 2)}" y="${f1(y + 18)}" text-anchor="middle">≈${fmtDur(b - a, tr.yearLen)}</text>`;
+    }
+    const first = P(tr.id, ts[0]), lx = Math.min(Math.max(SX(first.x), 8), W - 140);
+    mid += `<text class="lbl strong" x="${f1(lx)}" y="${f1(SY(first.y) + 32)}">${esc(tr.name)}</text>`;
+  }
+  // つながりの端点
+  for (const l of links) for (const [tr, t] of [l.a, l.b]) {
+    if (hiddenTracks.has(tr)) continue;
+    const p = P(tr, t);
+    mid += `<circle class="dot t-${tr}" cx="${f1(SX(p.x))}" cy="${f1(SY(p.y))}" r="3"/>`;
+  }
+
+  // 主体の生涯線（まっすぐな1本）と、世界線へのつなぎ線
+  const life = current && current.life;
+  if (life && lifeAlpha > .01) {
+    let s = `<g opacity="${f1(lifeAlpha)}">`;
+    const y0 = SY(0);
+    life.legs.forEach((leg, li) => {
+      const os = life.occ.filter(o => o.li === li);
+      for (let j = 0; j < os.length - 1; j++) {
+        const g = !os[j + 1].ok;
+        s += `<line class="life${g ? ' ghost' : ''}" x1="${f1(SX(os[j].x))}" y1="${f1(y0)}" x2="${f1(SX(os[j + 1].x))}" y2="${f1(y0)}"/>`;
+      }
+      const xa = SX(os[0].x), xb = SX(os[os.length - 1].x), rest = os.slice(1);
+      const revisit = rest.every(o => !o.ok) ? '（2回目以降）' : rest.some(o => !o.ok) ? '（一部2回目）' : '';
+      s += `<line class="hit" data-k="L|${li}" x1="${f1(xa)}" y1="${f1(y0)}" x2="${f1(Math.max(xb, xa + 4))}" y2="${f1(y0)}"/>`;
+      if (xb - xa > 60) s += `<text class="lbl" x="${f1((xa + xb) / 2)}" y="${f1(y0 - 10)}" text-anchor="middle">${esc(T[leg.tr].name)}・${fmtDur(leg.b - leg.a, T[leg.tr].yearLen)}${revisit}</text>`;
+      // つなぎ線：区間の始まりと終わり、2回目以降の部分の端
+      os.forEach((o, j) => {
+        const edge = j === 0 || j === os.length - 1 || o.ok !== (os[j - 1] || o).ok;
+        if (!edge) return;
+        const p = P(o.tr, o.t), ty = SY(p.y), tx = SX(p.x), fx = SX(o.x);
+        s += `<path class="tether" d="M${f1(fx)},${f1(y0)} C${f1(fx)},${f1((y0 + ty) / 2)} ${f1(tx)},${f1((y0 + ty) / 2)} ${f1(tx)},${f1(ty)}"/>`;
+      });
+      if (li > 0) s += `<rect class="jmp" x="${f1(xa - 5)}" y="${f1(y0 - 5)}" width="10" height="10" transform="rotate(45 ${f1(xa)} ${f1(y0)})"/>`;
+    });
+    const x0 = SX(life.occ[0].x);
+    s += `<text class="lbl life-l" x="${f1(Math.max(8, x0))}" y="${f1(y0 - 26)}">${esc(life.sub.name)}の生涯線</text></g>`;
+    front += s;
+  }
+
+  // 付箋。世界線の上に段を作って重ならないように並べる
+  const perLane = {};
+  const shown = [];
+  const groupFirst = {};
+  events.forEach((e, i) => {
+    if (!eventVisible(e)) return;
+    if (e.group) {
+      const g = groups[e.group];
+      if (!(e.group in groupFirst) || e.t < events[groupFirst[e.group]].t) groupFirst[e.group] = i;
+      if (!g.open) return;
+    }
+    shown.push({ i, e, title: e.title, grp: false });
+  });
+  for (const gid in groupFirst) {
+    const e = events[groupFirst[gid]], g = groups[gid];
+    shown.push({ i: gid, e, title: `${g.open ? '▾' : '▸'} ${g.title}`, grp: true });
+  }
+  for (const c of shown) {
+    const p = P(c.e.tr, c.e.t);
+    c.x = SX(p.x); c.ly = SY(p.y); c.w = textW(c.title) + 18;
+    (perLane[c.e.tr] ||= []).push(c);
+  }
+  const q = query.trim().toLowerCase();
+  for (const tr in perLane) {
+    const list = perLane[tr].sort((a, b) => (a.grp === b.grp ? a.x - b.x : a.grp ? -1 : 1));
+    const rows = []; let hidden = 0;
+    list.sort((a, b) => a.x - b.x || (a.grp ? -1 : 1));
+    for (const c of list) {
+      if (c.x < -300 || c.x > W + 20) continue;
+      const left = c.x - 8;
+      let r = rows.findIndex(end => end + 6 < left);
+      if (r < 0) { if (rows.length >= 4) { hidden++; continue; } r = rows.length; rows.push(0); }
+      rows[r] = left + c.w;
+      const top = c.ly - 18 - r * 25 - 20;
+      const match = q && (c.title.toLowerCase().includes(q) || c.e.tags.some(t => t.toLowerCase().includes(q)));
+      const cls = `card${c.grp ? ' grp' : ''}${q ? (match ? ' hl' : ' dim') : ''}`;
+      front += `<line class="stem" x1="${f1(c.x)}" y1="${f1(c.ly)}" x2="${f1(c.x)}" y2="${f1(top + 20)}"/>`;
+      front += `<g class="${cls}" data-k="${c.grp ? 'g|' + c.i : 'c|' + c.i}"><rect class="bg" x="${f1(left)}" y="${f1(top)}" width="${f1(c.w)}" height="20" rx="4"/>` +
+        (c.grp ? '' : `<rect class="f-${c.e.tr}" x="${f1(left)}" y="${f1(top)}" width="3" height="20" rx="1"/>`) +
+        `<text x="${f1(left + 10)}" y="${f1(top + 14)}">${esc(c.title)}</text></g>`;
+    }
+    if (hidden) {
+      const first = P(tr, nodeTimes[tr][0]);
+      front += `<text class="lbl" x="${f1(Math.min(Math.max(SX(first.x), 8), W - 140) + textW(T[tr].name) + 12)}" y="${f1(SY(first.y) + 32)}">（重なった付箋 ${hidden}件：拡大すると表示）</text>`;
+    }
+  }
+  svg.innerHTML = back + mid + front;
+}
+
+// ===== 日時の読み取り（カーソル・タップ） =====
+function describe(k, px) {
+  const parts = k.split('|');
+  const X = (px - cam.panX) / cam.zoom;
+  if (parts[0] === 'e') {
+    const tr = parts[1], i = +parts[2], ts = nodeTimes[tr], a = ts[i], b = ts[i + 1];
+    const p = draw[key(tr, a)], q = draw[key(tr, b)], C = trComp[tr];
+    const f = Math.min(1, Math.max(0, (X - p.x) / ((q.x - p.x) || 1)));
+    const t = Math.min(b, Math.max(a, C.inv(C.f(a) + f * (C.f(b) - C.f(a)))));
+    const nat = C.f(b) - C.f(a), r = nat > 0 ? (q.x - p.x) / nat : 1;
+    const warp = r < .8 ? `・この視点では縮んでいる（×${sig(r, 2)}）` : r > 1.25 ? `・この視点では伸びている（×${sig(r, 2)}）` : '';
+    return `<b>${esc(T[tr].name)}</b><div class="d">${esc(T[tr].fmt(t, precFor(b - a)))}</div><div class="m">この区間：${fmtDur(b - a, T[tr].yearLen)}${warp}</div>`;
+  }
+  if (parts[0] === 'l') {
+    const l = links[+parts[1]], [ta, va] = l.a, [tb, vb] = l.b;
+    return `<b>${esc(l.kind)}</b><div class="d">${esc(T[ta].fmt(va, 'min'))}</div><div class="d">→ ${esc(T[tb].fmt(vb, 'min'))}</div>`;
+  }
+  if (parts[0] === 'c') {
+    const e = events[+parts[1]], prec = e.t % 1 ? 'min' : 'day';
+    return `<b>${esc(e.title)}</b><div class="d">${esc(T[e.tr].fmt(e.t, prec))}</div><div class="m">${esc(T[e.tr].name)}・タグ：${e.tags.map(esc).join('、')}</div>`;
+  }
+  if (parts[0] === 'g') {
+    const g = groups[parts[1]], n = events.filter(e => e.group === parts[1]).length;
+    return `<b>${esc(g.title)}</b><div class="m">${n}件の出来事をまとめたもの。クリック（タップ）で${g.open ? 'たたむ' : 'ひらく'}</div>`;
+  }
+  if (parts[0] === 'L') {
+    const life = current.life, li = +parts[1], leg = life.legs[li];
+    const tau = Math.min(leg.tau0 + (leg.b - leg.a), Math.max(leg.tau0, life.lc.inv(X)));
+    const t = leg.a + (tau - leg.tau0);
+    return `<b>${esc(life.sub.name)}</b><div class="d">体感 ${fmtDur(tau)}の時点</div><div class="d">${esc(T[leg.tr].fmt(t, precFor(leg.b - leg.a)))}</div><div class="m">${esc(T[leg.tr].name)}にいる</div>`;
+  }
+  return '';
+}
+function showTip(target, clientX, clientY) {
+  const k = target && target.closest('[data-k]')?.dataset.k;
+  if (!k) { tip.hidden = true; return; }
+  const r = stage.getBoundingClientRect();
+  tip.innerHTML = describe(k, clientX - r.left);
+  tip.hidden = false;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = clientX - r.left + 14, y = clientY - r.top + 14;
+  if (x + w > r.width - 8) x = clientX - r.left - w - 14;
+  if (y + h > r.height - 8) y = clientY - r.top - h - 14;
+  tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px';
+}
+
+// ===== 操作：ドラッグで移動、ホイール・ピンチ・ボタンで拡大縮小 =====
+const pointers = new Map();
+let dragMoved = 0, pinch = null;
+function zoomAt(factor, sx) {
+  const z = Math.min(5e6, Math.max(.05, cam.zoom * factor));
+  cam.panX = sx - (sx - cam.panX) * (z / cam.zoom); cam.zoom = z; render();
+}
+svg.addEventListener('pointerdown', e => {
+  svg.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, target: e.target });
+  dragMoved = 0;
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) }; }
+  svg.classList.add('drag');
+});
+svg.addEventListener('pointermove', e => {
+  const prev = pointers.get(e.pointerId);
+  if (!prev) { if (e.pointerType === 'mouse') showTip(e.target, e.clientX, e.clientY); return; }
+  const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+  prev.x = e.clientX; prev.y = e.clientY;
+  if (pointers.size === 2 && pinch) {
+    const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+    const rect = svg.getBoundingClientRect();
+    zoomAt(d / (pinch.d || d), (a.x + b.x) / 2 - rect.left); pinch.d = d; return;
+  }
+  dragMoved += Math.abs(dx) + Math.abs(dy);
+  if (dragMoved > 4) { tip.hidden = true; cam.panX += dx; cam.panY += dy; render(); }
+});
+function endPointer(e) {
+  const prev = pointers.get(e.pointerId);
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinch = null;
+  if (!pointers.size) svg.classList.remove('drag');
+  if (prev && dragMoved <= 4 && e.type === 'pointerup') {
+    const g = prev.target.closest && prev.target.closest('[data-k^="g|"]');
+    if (g) { const gr = groups[g.dataset.k.split('|')[1]]; gr.open = !gr.open; render(); }
+    showTip(prev.target, e.clientX, e.clientY);
+  }
+}
+svg.addEventListener('pointerup', endPointer);
+svg.addEventListener('pointercancel', endPointer);
+svg.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !pointers.size) tip.hidden = true; });
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = svg.getBoundingClientRect();
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { cam.panX -= e.deltaX; render(); return; }
+  zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)), e.clientX - rect.left);
+}, { passive: false });
+document.getElementById('zin').onclick = () => zoomAt(1.6, svg.clientWidth / 2);
+document.getElementById('zout').onclick = () => zoomAt(1 / 1.6, svg.clientWidth / 2);
+document.getElementById('fit').onclick = () => { Object.assign(cam, fitCam(current)); render(); };
+addEventListener('resize', () => { Object.assign(cam, fitCam(current)); render(); });
+
+// ===== 設定パネル =====
+const viewsEl = document.getElementById('views');
+const viewList = [{ id: null, name: '本線（客観）' }, ...subjects];
+viewList.forEach(v => {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.textContent = v.name; b.dataset.id = v.id ?? '';
+  b.onclick = () => setView(v.id ? v : null);
+  viewsEl.append(b);
+});
+function updateChips() { for (const b of viewsEl.children) b.setAttribute('aria-pressed', String((b.dataset.id || null) === (activeSub?.id ?? null))); }
+
+const tagsEl = document.getElementById('tags');
+[...new Set(events.flatMap(e => e.tags))].forEach(t => {
+  tagState[t] = 0;
+  const b = document.createElement('button');
+  b.className = 'chip'; b.textContent = t; b.title = 'クリックで「除外」→「これだけ表示」→「元に戻す」';
+  b.onclick = () => {
+    tagState[t] = (tagState[t] + 1) % 3;
+    b.classList.toggle('ex', tagState[t] === 1); b.classList.toggle('only', tagState[t] === 2);
+    b.textContent = t + (tagState[t] === 1 ? '（除外）' : tagState[t] === 2 ? '（これだけ）' : '');
+    render();
+  };
+  tagsEl.append(b);
+});
+const tracksEl = document.getElementById('tracks');
+tracks.forEach(tr => {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.textContent = tr.name; b.setAttribute('aria-pressed', 'true');
+  b.onclick = () => {
+    hiddenTracks.has(tr.id) ? hiddenTracks.delete(tr.id) : hiddenTracks.add(tr.id);
+    b.setAttribute('aria-pressed', String(!hiddenTracks.has(tr.id))); render();
+  };
+  tracksEl.append(b);
+});
+document.getElementById('q').addEventListener('input', e => { query = e.target.value; render(); });
+document.getElementById('onlySub').addEventListener('change', e => { onlySub = e.target.checked; render(); });
+const tauEl = document.getElementById('tau'), tauOut = document.getElementById('tauOut');
+function applyTau() {
+  TAU = Math.pow(10, +tauEl.value);
+  tauOut.textContent = `${fmtDur(TAU)}くらいまでは、そのままの長さで見せる`;
+  buildComps();
+}
+tauEl.addEventListener('input', () => { applyTau(); setView(activeSub, true); });
+
+// ===== イースターエッグ =====
+function egg(sub) {
+  toast.hidden = true;
+  if (!sub) return;
+  let kind = null;
+  for (let i = 0; i < sub.legs.length - 1; i++) {
+    const [ta, , va] = sub.legs[i], [tb, vb] = sub.legs[i + 1];
+    const l = links.find(l => l.a[0] === ta && l.a[1] === va && l.b[0] === tb && l.b[1] === vb);
+    if (l?.paradox) kind = 'paradox';
+    else if (l?.loop && !kind) kind = 'loop';
+  }
+  if (!kind) {
+    const L = sub.legs;
+    for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++)
+      if (L[i][0] === L[j][0] && L[i][1] < L[j][2] && L[j][1] < L[i][2]) kind = 'self';
+  }
+  const msg = {
+    paradox: '気をつけろ、マーティー！ 過去をいじったせいで、世界線が分かれちまったぞ！',
+    self: 'グレート・スコット！ 同じ時刻に、もう一人の自分がいるぞ！ 鉢合わせだけはするなよ！',
+    loop: 'この夏休み、もう何度目だ……？ エル・プサイ・コングルゥ。',
+  }[kind];
+  if (!msg) return;
+  toast.textContent = msg; toast.hidden = false;
+  clearTimeout(egg.t); egg.t = setTimeout(() => { toast.hidden = true; }, 6000);
+}
+toast.onclick = () => { toast.hidden = true; };
+
+// ===== 開始 =====
+uiFont = '12px ' + getComputedStyle(document.body).fontFamily;
+applyTau();
+setView(null);
+document.fonts?.ready.then(() => { uiFont = '12px ' + getComputedStyle(document.body).fontFamily; render(); });
+</script>
