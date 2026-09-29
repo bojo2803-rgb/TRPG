@@ -140,12 +140,27 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 .leg { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; counter-increment: leg; }
 .leg-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .leg-h b::before { content: "区間" counter(leg); }
+.lbl-in::before { content: "入った"; }
+#s_legs > .leg:first-child .lbl-in::before { content: "生まれた（誕生）"; font-weight: 600; }
 .dlg-actions { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
 .dlg-actions .sp { flex: 1; }
 .dlg-actions button, .mini { font: inherit; font-size: 13px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); cursor: pointer; }
 .mini { justify-self: start; padding: 3px 10px; font-size: 12px; }
 #dlgOk { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .danger { color: var(--paradox) !important; border-color: var(--paradox) !important; }
+#pickHint { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 3; padding: 6px 14px; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 13px; white-space: nowrap; }
+.pick { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.pickdot { fill: var(--accent); pointer-events: none; }
+#list { position: absolute; top: 0; right: 0; bottom: 0; z-index: 3; width: min(380px, 100%); box-sizing: border-box; overflow: auto; padding: 12px 14px; background: var(--surface); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgb(0 0 0 / .12); font-size: 13px; }
+.list-h { position: sticky; top: -12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-block: 6px; background: var(--surface); }
+#list h3 { display: flex; align-items: center; gap: 6px; margin: 14px 0 6px; font-size: 13px; }
+#list h3 .sw { width: 10px; height: 10px; border-radius: 2px; }
+#list ol { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+#list li button { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 10em 1fr; gap: 8px; width: 100%; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+#list li button:hover, #list li button:focus-visible { background: var(--bg); }
+#list .when { font-family: var(--font-data); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#list .kind { margin-left: 6px; font-size: 11px; color: var(--muted); }
+#list li.imp .ttl { font-weight: 600; }
 @media (max-width: 560px) {
   .brand h1 { font-size: 17px; }
   .chip { font-size: 12px; padding: 3px 10px; }
@@ -154,7 +169,7 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 </style>
 
 <header class="bar">
-  <div class="brand"><h1>時系列マップ</h1><span class="badge">試作品 第4版</span></div>
+  <div class="brand"><h1>時系列マップ</h1><span class="badge">試作品 第5版</span></div>
   <div class="chips" id="views" role="group" aria-label="視点"></div>
 </header>
 <div class="bar edit-bar" role="toolbar" aria-label="編集">
@@ -166,8 +181,9 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
     <button class="chip tool" id="editSub" hidden>この主体を編集</button>
     <button class="chip tool" id="undo" disabled title="Ctrl+Z でも戻せます">元に戻す</button>
     <button class="chip tool" id="reset">サンプルに戻す</button>
+    <button class="chip tool" id="listBtn" aria-pressed="false">一覧</button>
   </div>
-  <span class="hint">線をクリック（タップ）すると、その日時に付箋などを足せます。付箋やつながりをクリックすると編集できます</span>
+  <span class="hint">線をクリック（タップ）すると、その日時に付箋などを足せます。付箋やつながりをクリックすると編集できます。つながりは出発点と到着点を順にクリックします</span>
 </div>
 <details class="settings" id="settings">
   <summary>絞り込み・表示の設定</summary>
@@ -190,6 +206,11 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
   <div id="tip" hidden></div>
   <div id="toast" hidden role="status"></div>
   <div id="menu" hidden role="menu"></div>
+  <div id="pickHint" hidden role="status"></div>
+  <aside id="list" hidden aria-label="出来事の一覧">
+    <div class="list-h"><b>出来事の一覧（世界線ごと・時系列順）</b><button type="button" class="mini" id="listClose">閉じる</button></div>
+    <div id="listBody"></div>
+  </aside>
 </main>
 <dialog id="dlg">
   <form id="dlgForm" method="dialog">
@@ -295,21 +316,22 @@ let tracks = [
 ];
 // sync: その2点が「同じ瞬間」として結ばれている（分岐・合流・夢との出入り）。時間移動とループは同じ瞬間ではない
 let links = [
-  { type: 'fork', a: ['main', W(720)], b: ['ryugu', W(720)], kind: '分岐（竜宮へ）', sync: true },
-  { type: 'merge', a: ['ryugu', W(723)], b: ['main', W(1020)], kind: '合流（竜宮から）', sync: true },
-  { type: 'fork', a: ['main', W(1850, 6, 1, 12)], b: ['beta', W(1850, 6, 1, 12)], kind: '世界線の分岐', sync: true },
-  { type: 'jump', a: ['main', W(2025, 6, 1, 12)], b: ['beta', W(1850, 6, 1, 12)], kind: '時間移動（パラドックス発生）', paradox: true },
-  { type: 'cross', a: ['main', W(1920, 3, 1, 23)], b: ['dream', DR(1203)], kind: '眠ってドリームランドへ', sync: true },
-  { type: 'cross', a: ['dream', DR(1215)], b: ['main', W(1920, 3, 2, 7)], kind: '目覚めて現実へ', sync: true },
-  { type: 'jump', a: ['main', W(1985, 10, 26, 1, 35)], b: ['main', W(1955, 11, 5, 6)], kind: '時間移動' },
-  { type: 'jump', a: ['main', W(1955, 11, 12, 22, 4)], b: ['main', W(1985, 10, 26, 1, 24)], kind: '時間移動' },
-  { type: 'loop', a: ['main', LOOP_END], b: ['main', LOOP_START], kind: 'ループ', loop: true },
+  { id: 'l1', type: 'fork', a: ['main', W(720)], b: ['ryugu', W(720)], kind: '分岐（竜宮へ）', sync: true },
+  { id: 'l2', type: 'merge', a: ['ryugu', W(723)], b: ['main', W(1020)], kind: '合流（竜宮から）', sync: true },
+  { id: 'l3', type: 'fork', a: ['main', W(1850, 6, 1, 12)], b: ['beta', W(1850, 6, 1, 12)], kind: '世界線の分岐', sync: true },
+  { id: 'l4', type: 'jump', a: ['main', W(2025, 6, 1, 12)], b: ['beta', W(1850, 6, 1, 12)], kind: '時間移動（パラドックス発生）', paradox: true },
+  { id: 'l5', type: 'cross', a: ['main', W(1920, 3, 1, 23)], b: ['dream', DR(1203)], kind: '眠ってドリームランドへ', sync: true },
+  { id: 'l6', type: 'cross', a: ['dream', DR(1215)], b: ['main', W(1920, 3, 2, 7)], kind: '目覚めて現実へ', sync: true },
+  { id: 'l7', type: 'jump', a: ['main', W(1985, 10, 26, 1, 35)], b: ['main', W(1955, 11, 5, 6)], kind: '時間移動' },
+  { id: 'l8', type: 'jump', a: ['main', W(1955, 11, 12, 22, 4)], b: ['main', W(1985, 10, 26, 1, 24)], kind: '時間移動' },
+  { id: 'loop1', type: 'loop', a: ['main', LOOP_END], b: ['main', LOOP_START], kind: 'ループ', loop: true },
 ];
-// 主体の道筋：[世界線, 入った時点, 出た時点] を本人が体験した順に並べる
+// 主体の道筋：区間 [世界線, 入った時点, 出た時点] を本人が体験した順に並べる。最初の区間の始まりが誕生。
+// { loop: つながりのid, n: 周回数 } は、そのループの期間を n 回くり返す区間
 let subjects = [
   { id: 'urashima', name: '浦島太郎', legs: [['main', W(700), W(720)], ['ryugu', W(720), W(723)], ['main', W(1020), W(1020, 1, 5)]] },
   { id: 'dreamer', name: '夢見る者R', legs: [['main', W(1890, 8, 20), W(1920, 3, 1, 23)], ['dream', DR(1203), DR(1215)], ['main', W(1920, 3, 2, 7), W(1937, 3, 15)]] },
-  { id: 'loop', name: 'ループする少女', legs: [['main', W(2010, 4, 2), LOOP_END], ['main', LOOP_START, LOOP_END], ['main', LOOP_START, W(2090)]] },
+  { id: 'loop', name: 'ループする少女', legs: [['main', W(2010, 4, 2), LOOP_START], { loop: 'loop1', n: 3 }, ['main', LOOP_END, W(2090)]] },
   { id: 'm', name: '時間旅行者M', legs: [['main', W(1968, 6, 12), W(1985, 10, 26, 1, 35)], ['main', W(1955, 11, 5, 6), W(1955, 11, 12, 22, 4)], ['main', W(1985, 10, 26, 1, 24), W(2040)]] },
   { id: 'k', name: '時間旅行者K', legs: [['main', W(1995, 3, 3), W(2025, 6, 1, 12)], ['beta', W(1850, 6, 1, 12), W(1900)]] },
 ];
@@ -317,7 +339,6 @@ let events = [
   { tr: 'main', t: ago(13.8e9), title: '宇宙の始まり', tags: ['宇宙'] },
   { tr: 'main', t: ago(4.54e9), title: '地球の誕生', tags: ['宇宙'] },
   { tr: 'main', t: ago(6.6e7), title: '恐竜の絶滅', tags: ['宇宙'] },
-  { tr: 'main', t: W(700), title: '浦島太郎 誕生', tags: ['浦島'] },
   { tr: 'main', t: W(719, 6, 1), title: '亀を助ける', tags: ['浦島'] },
   { tr: 'ryugu', t: W(720, 1, 2), title: '竜宮城に着く', tags: ['浦島'] },
   { tr: 'ryugu', t: W(721, 7, 7), title: '乙姫の宴', tags: ['浦島'] },
@@ -343,8 +364,18 @@ let groups = { summer: { title: 'シナリオ：夏の終わりのループ', op
 // ===== 時点 =====
 const key = (tr, t) => tr + '|' + t;
 const nodesIn = (tr, a, b) => nodeTimes[tr].filter(v => v >= a && v <= b);
-let T = {}, nodeTimes = {}, LOOPS = [], LINK_ENDS = new Set();
-const OBJECTIVE = { id: null, name: '本線（客観）', legs: [] };
+let T = {}, nodeTimes = {}, LOOPS = [], IMPORTANT = new Set();
+const OBJECTIVE = { id: null, name: '本線（客観）', legs: [], path: [] };
+// 主体の区間を、ループの周回も含めた「体験した順の区間の並び」に展開する
+function pathOf(sub) {
+  const out = [];
+  for (const g of sub.legs) {
+    if (Array.isArray(g)) { out.push(g); continue; }
+    const l = links.find(x => x.id === g.loop && x.loop);
+    if (l) for (let i = 0; i < g.n; i++) out.push([l.a[0], l.b[1], l.a[1]]);
+  }
+  return out;
+}
 // 世界線に表示のしかたを付け、時点を数え直す（編集のたびに呼ぶ）
 function rebuild() {
   T = Object.fromEntries(tracks.map(t => [t.id, t]));
@@ -355,12 +386,21 @@ function rebuild() {
   const s = Object.fromEntries(tracks.map(t => [t.id, new Set([t.from, t.to])]));
   for (const l of links) { s[l.a[0]].add(l.a[1]); s[l.b[0]].add(l.b[1]); }
   for (const e of events) s[e.tr].add(e.t);
-  for (const sub of subjects) for (const [tr, a, b] of sub.legs) { s[tr].add(a); s[tr].add(b); }
+  for (const sub of subjects) {
+    Object.defineProperty(sub, 'path', { value: pathOf(sub), configurable: true, writable: true, enumerable: false });
+    for (const [tr, a, b] of sub.path) { s[tr].add(a); s[tr].add(b); }
+  }
   nodeTimes = {};
   for (const id in s) nodeTimes[id] = [...s[id]].sort((a, b) => a - b);
   LOOPS = links.filter(l => l.loop).map(l => ({ link: l, tr: l.a[0], a: l.b[1], b: l.a[1] }));
-  LINK_ENDS = new Set(links.flatMap(l => [key(...l.a), key(...l.b)]));
-  OBJECTIVE.legs = [['main', T.main.from, T.main.to]];
+  // 重要な出来事：分岐・合流・出入り・時間移動・ループの端、主体の誕生、シナリオ（まとめ）の最初と最後、世界線の端
+  IMPORTANT = new Set(links.flatMap(l => [key(...l.a), key(...l.b)]));
+  for (const sub of subjects) if (sub.path.length) IMPORTANT.add(key(sub.path[0][0], sub.path[0][1]));
+  for (const g in groups) for (const tr of tracks) {
+    const ts = events.filter(e => e.group === g && e.tr === tr.id).map(e => e.t);
+    if (ts.length) { IMPORTANT.add(key(tr.id, Math.min(...ts))); IMPORTANT.add(key(tr.id, Math.max(...ts))); }
+  }
+  OBJECTIVE.legs = OBJECTIVE.path = [['main', T.main.from, T.main.to]];
 }
 
 // ===== 状態 =====
@@ -375,7 +415,7 @@ function eventVisible(e) {
   const only = Object.keys(tagState).filter(k => tagState[k] === 2);
   if (only.length && !e.tags.some(t => only.includes(t))) return false;
   if (e.tags.some(t => tagState[t] === 1)) return false;
-  if (onlySub && activeSub.id && !activeSub.legs.some(([tr, a, b]) => tr === e.tr && e.t >= a && e.t <= b)) return false;
+  if (onlySub && activeSub.id && !activeSub.path.some(([tr, a, b]) => tr === e.tr && e.t >= a && e.t <= b)) return false;
   return true;
 }
 let cards = [], cardCount = {};
@@ -390,6 +430,11 @@ function refreshCards() {
     }
     cards.push({ k: 'c|' + i, e, title: e.title });
   });
+  for (const sub of subjects) {
+    if (!sub.path.length) continue;
+    const e = { tr: sub.path[0][0], t: sub.path[0][1], title: `${sub.name} 誕生`, tags: ['誕生'] };
+    if (eventVisible(e)) cards.push({ k: 'b|' + sub.id, e, title: e.title, birth: true });
+  }
   for (const gid in firstOf) {
     const g = groups[gid];
     cards.push({ k: 'g|' + gid, e: events[firstOf[gid]], title: `${g.open ? '▾' : '▸'} ${g.title}`, grp: true, open: g.open });
@@ -399,16 +444,21 @@ function refreshCards() {
 }
 
 // ===== 長さ =====
-// ひと続きの線（破片）の長さ = 最小の幅 + 付箋の数 + その線全体の時間の桁（1日を単位に、10倍になるごとに1）。
-// 付箋と付箋のあいだの時間で長さを決めることはしない。線の中の位置だけは時間の流れに比例させる
+// 重要な出来事（誕生・分岐・合流・出入り・時間移動・ループ・シナリオの端）から次の重要な出来事までを1区切りとし、
+// 区切りの長さ = 最小の幅 + 区切りの中の付箋の数 + 区切りの時間の桁（1日を単位に、10倍になるごとに1）。
+// ふつうの付箋は区切りを作らない。区切りの中では、時間の流れに比例した位置に置く
 const G0 = 0.3, JOINT = 0.8, LANE = 120, RMAX = 60;
 const timeLen = days => G0 + Math.log10(1 + days);
 function offsets(tr, a, b, curled) {
-  const ns = nodesIn(tr, a, b), D = b - a, tl = timeLen(D);
-  const c = ns.map(t => cardCount[key(tr, t)] || 0);
-  // 付箋は1枚につき幅1（その時点の前後に半分ずつ）。時間の分 tl は時間に比例して配る
-  const o = [0];
-  for (let i = 1; i < ns.length; i++) o.push(o[i - 1] + (c[i - 1] + c[i]) / 2 + tl * (ns[i] - ns[i - 1]) / D);
+  const ns = nodesIn(tr, a, b), c = ns.map(t => cardCount[key(tr, t)] || 0), o = [0];
+  let s0 = 0; // いまの区切りの始まり
+  for (let i = 1; i < ns.length; i++) {
+    let s1 = i; // この時点を含む区切りの終わり
+    while (s1 < ns.length - 1 && !IMPORTANT.has(key(tr, ns[s1]))) s1++;
+    const D = ns[s1] - ns[s0];
+    o.push(o[i - 1] + (c[i - 1] + c[i]) / 2 + timeLen(D) * (ns[i] - ns[i - 1]) / D);
+    if (i === s1) s0 = i;
+  }
   // ループの区間：たたむ（輪にする）ときは横に進まない
   const loops = [];
   for (const lp of LOOPS) {
@@ -436,20 +486,22 @@ function mergeIv(ivs) {
 }
 // 主体の区間どうしのつなぎ目に対応するつながり
 function jointLink(sub, li) {
-  const [ta, , va] = sub.legs[li - 1], [tb, vb] = sub.legs[li];
+  const [ta, , va] = sub.path[li - 1], [tb, vb] = sub.path[li];
   return links.find(l => l.a[0] === ta && l.a[1] === va && l.b[0] === tb && l.b[1] === vb);
 }
+// 前の区間の終わりから、そのまま同じ世界線で続いている（つなぎ目がない）
+const continues = (sub, li) => sub.path[li - 1][0] === sub.path[li][0] && sub.path[li - 1][2] === sub.path[li][1];
 
 // ===== 配置：世界線を切り分けて、主体が体験した順に1本につなぐ =====
 function computeLayout(sub) {
   // ループする主体の視点では輪をほどく。それ以外の視点では輪のまま
-  const unrolled = new Set(sub.legs.map((_, li) => li && jointLink(sub, li)).filter(l => l && l.loop));
+  const unrolled = new Set(sub.path.map((_, li) => li && jointLink(sub, li)).filter(l => l && l.loop));
   const curled = new Set(LOOPS.map(lp => lp.link).filter(l => !unrolled.has(l)));
   const pieces = [], cover = {};
   let x = 0, tau = 0;
   // 1. 中央の線：体験した区間を順に並べる。すでに通った時間はもう一度（2回目として）並べる
-  sub.legs.forEach(([tr, a, b], li) => {
-    if (li) x += JOINT;
+  sub.path.forEach(([tr, a, b], li) => {
+    if (li && !continues(sub, li)) x += JOINT;
     for (const s of splitCovered(cover[tr] || [], a, b)) {
       const off = offsets(tr, s.a, s.b, curled);
       const nodes = off.nodes.map(({ t, o }) => ({ t, x: x + o, y: 0 }));
@@ -477,22 +529,57 @@ function computeLayout(sub) {
       lane.push({ tr: tr.id, a, b, leftCut, rightCut, loops: off.loops, nodes: off.nodes.map(({ t, o }) => ({ t, x: x0 + o })) });
     }
   }
-  // 3. 主体が一度も通らない世界線：「同じ瞬間」のつながりで位置を合わせる
+  // 3. 主体が一度も通らない世界線
+  //   本線と同じ時計の世界線（西暦系で、分岐・合流が同じ日時どうし）は、相手の同じ日時の位置にそろえる。
+  //   時計が違う世界線（竜宮・夢など）は、分岐・合流・出入りの点を相手の位置に合わせ、そのあいだに収める
   const placed = new Set(Object.keys(cover));
-  const xAt = (tr, t) => centerAt[key(tr, t)] ?? lane.find(p => p.tr === tr && p.a <= t && t <= p.b)?.nodes.find(n => n.t === t)?.x;
-  for (let pass = 0; pass < 5; pass++) for (const tr of tracks) {
-    if (placed.has(tr.id)) continue;
-    for (const l of links) {
-      if (!l.sync) continue;
-      const [p, q] = l.a[0] === tr.id ? [l.b, l.a] : l.b[0] === tr.id ? [l.a, l.b] : [];
-      if (!p || !placed.has(p[0])) continue;
-      const ax = xAt(p[0], p[1]);
-      if (ax == null) continue;
-      const off = offsets(tr.id, tr.from, tr.to, curled), oq = off.nodes.find(z => z.t === q[1]).o;
-      lane.push({ tr: tr.id, a: tr.from, b: tr.to, loops: off.loops, nodes: off.nodes.map(({ t, o }) => ({ t, x: ax - oq + o })) });
-      placed.add(tr.id);
-      break;
+  const xAtTime = (tr, t) => {
+    for (const p of [...pieces.filter(q => q.center && !q.dup), ...lane]) {
+      if (p.tr !== tr || t < p.a || t > p.b) continue;
+      const ns = p.nodes; let i = 0;
+      while (i < ns.length - 2 && ns[i + 1].t < t) i++;
+      const f = Math.min(1, Math.max(0, (t - ns[i].t) / ((ns[i + 1].t - ns[i].t) || 1)));
+      return ns[i].x + (ns[i + 1].x - ns[i].x) * f;
     }
+    return null;
+  };
+  const syncWith = (tr, u) => links.filter(l => l.sync && ((l.a[0] === tr && l.b[0] === u) || (l.a[0] === u && l.b[0] === tr)));
+  const sameClock = (tr, u) => { const ls = syncWith(tr, u); return T[tr].cal === 'west' && T[u].cal === 'west' && ls.length > 0 && ls.every(l => l.a[1] === l.b[1]); };
+  for (let pass = 0; pass < tracks.length; pass++) for (const tr of tracks) {
+    if (placed.has(tr.id)) continue;
+    const off = offsets(tr.id, tr.from, tr.to, curled), o = off.nodes.map(n => n.o);
+    let xs = null;
+    const partner = [...placed].find(u => sameClock(tr.id, u));
+    if (partner) {
+      xs = off.nodes.map(n => xAtTime(partner, n.t));
+    } else {
+      // 同じ瞬間の点を錨にする（左から右の順を崩す錨は使わない）
+      const anchors = [];
+      for (const l of links) {
+        if (!l.sync) continue;
+        const [pt, qt] = l.a[0] === tr.id ? [l.b, l.a] : l.b[0] === tr.id ? [l.a, l.b] : [];
+        if (!pt || !placed.has(pt[0])) continue;
+        const ax = xAtTime(pt[0], pt[1]), i = off.nodes.findIndex(n => n.t === qt[1]);
+        if (ax != null && i >= 0) anchors.push({ i, x: ax });
+      }
+      anchors.sort((p, q) => p.i - q.i);
+      const keep = [];
+      for (const an of anchors) if (!keep.length || (an.i > keep[keep.length - 1].i && an.x > keep[keep.length - 1].x)) keep.push(an);
+      if (keep.length) xs = o.map((v, i) => {
+        if (i <= keep[0].i) return keep[0].x - (o[keep[0].i] - v);
+        const last = keep[keep.length - 1];
+        if (i >= last.i) return last.x + (v - o[last.i]);
+        const k = keep.findIndex(an => an.i >= i), A = keep[k - 1], B = keep[k];
+        return A.x + (B.x - A.x) * (v - o[A.i]) / (o[B.i] - o[A.i]);
+      });
+    }
+    if (!xs || xs.every(v => v == null)) continue;
+    // そろえられない時点は、自分の長さで前後から補う。左から右の順は必ず守る
+    const k0 = xs.findIndex(v => v != null);
+    for (let i = k0 - 1; i >= 0; i--) xs[i] = xs[i + 1] - (o[i + 1] - o[i]);
+    for (let i = k0 + 1; i < xs.length; i++) if (xs[i] == null || !(xs[i] > xs[i - 1])) xs[i] = xs[i - 1] + Math.max(o[i] - o[i - 1], 1e-3);
+    lane.push({ tr: tr.id, a: tr.from, b: tr.to, loops: off.loops, nodes: off.nodes.map((n, i) => ({ t: n.t, x: xs[i] })) });
+    placed.add(tr.id);
   }
   for (const tr of tracks) if (!placed.has(tr.id)) {
     const off = offsets(tr.id, tr.from, tr.to, curled);
@@ -540,7 +627,8 @@ function computeLayout(sub) {
   }
   const dupArcs = pieces.filter(p => p.dup).map(p => ({ tr: p.tr, a: [p.seg[0], 's'], b: [`${p.tr}|${p.a}#0`, 's'] }));
   const joints = [];
-  for (let li = 1; li < sub.legs.length; li++) {
+  for (let li = 1; li < sub.path.length; li++) {
+    if (continues(sub, li)) continue;
     const pa = pieces.filter(p => p.center && p.li === li - 1).pop(), pb = pieces.find(p => p.center && p.li === li);
     if (pa && pb) joints.push({ li, link: jointLink(sub, li), a: [pa.seg[pa.seg.length - 1], 'e'], b: [pb.seg[0], 's'] });
   }
@@ -778,6 +866,12 @@ function render() {
       (s.c.grp ? '' : `<rect class="f-c${T[s.c.e.tr].color}" x="${f1(left)}" y="${f1(top)}" width="3" height="20" rx="1"/>`) +
       `<text x="${f1(left + 10)}" y="${f1(top + 14)}">${esc(s.c.title)}</text></g>`;
   }
+  // つながりの仮置き：出発点から、カーソルまで点線を引く
+  if (pick?.a) {
+    const ax = pick.a.x * cam.zoom + cam.panX, ay = pick.a.y + H / 2 + cam.panY;
+    if (pick.mouse) front += `<line class="pick" x1="${f1(ax)}" y1="${f1(ay)}" x2="${f1(pick.mouse[0])}" y2="${f1(pick.mouse[1])}"/>`;
+    front += `<circle class="pickdot" cx="${f1(ax)}" cy="${f1(ay)}" r="5"/>`;
+  }
   // いまの視点（画面の左上に固定）
   const head = cur.sub.id ? `視点：${cur.sub.name}${Wd < 560 ? '' : '（体験した順に並べています）'}` : '視点：本線（客観）';
   front += `<text class="lbl head" x="14" y="24">${esc(head)}</text>`;
@@ -808,7 +902,7 @@ function describe(k, px) {
       `<div class="m">この破片：${esc(T[p.tr].short(p.a, precFor(p.b - p.a)))}〜${esc(T[p.tr].short(p.b, precFor(p.b - p.a)))}${role ? '<br>' + role : ''}</div>`;
   }
   if (parts[0] === 'j') {
-    const li = +parts[1], [ta, , va] = activeSub.legs[li - 1], [tb, vb] = activeSub.legs[li], l = jointLink(activeSub, li);
+    const li = +parts[1], [ta, , va] = activeSub.path[li - 1], [tb, vb] = activeSub.path[li], l = jointLink(activeSub, li);
     return `<b>${esc(l ? l.kind : 'つなぎ目')}</b><div class="d">${esc(T[ta].fmt(va, 'min'))}</div><div class="d">→ ${esc(T[tb].fmt(vb, 'min'))}</div>`;
   }
   if (parts[0] === 'l') {
@@ -818,6 +912,10 @@ function describe(k, px) {
   if (parts[0] === 'c') {
     const e = events[+parts[1]], prec = e.t % 1 ? 'min' : 'day';
     return `<b>${esc(e.title)}</b><div class="d">${esc(T[e.tr].fmt(e.t, prec))}</div><div class="m">${esc(T[e.tr].name)}・タグ：${e.tags.map(esc).join('、')}</div>`;
+  }
+  if (parts[0] === 'b') {
+    const sub = subjects.find(x => x.id === parts[1]), [tr, t] = sub.path[0];
+    return `<b>${esc(sub.name)} 誕生</b><div class="d">${esc(T[tr].fmt(t, t % 1 ? 'min' : 'day'))}</div><div class="m">主体の誕生。クリック（タップ）で主体を編集</div>`;
   }
   if (parts[0] === 'g') {
     const g = groups[parts[1]], n = events.filter(e => e.group === parts[1]).length;
@@ -864,6 +962,7 @@ svg.addEventListener('pointermove', e => {
   const p0 = pointers.get(e.pointerId);
   if (!p0) {
     if (e.pointerType === 'mouse') { showTip(e.target, e.clientX, e.clientY); setFocus(trackOf(e.target)); }
+    if (pick?.a) { const r = stage.getBoundingClientRect(); pick.mouse = [e.clientX - r.left, e.clientY - r.top]; render(); }
     return;
   }
   const dx = e.clientX - p0.x, dy = e.clientY - p0.y;
@@ -883,6 +982,15 @@ function endPointer(e) {
   if (!pointers.size) svg.classList.remove('drag');
   if (p0 && dragMoved <= 4 && e.type === 'pointerup') {
     const k = p0.target.closest?.('[data-k]')?.dataset.k || '', id = k.split('|')[1];
+    if (pick) {
+      const pt = pointAt(p0.target, e.clientX);
+      if (!pt) return;
+      if (!pick.a) { pick.a = pt; pickHint.textContent = '到着点をクリック（Escでやめる）'; render(); return; }
+      const a = pick.a;
+      endPick();
+      return linkForm(null, { a, b: pt });
+    }
+    if (k.startsWith('b|')) return subjectForm(id);
     if (k.startsWith('g|')) { groups[id].open = !groups[id].open; setView(activeSub, false); return; }
     if (k.startsWith('c|')) return cardForm(+id);
     if (k.startsWith('l|')) return linkForm(+id);
@@ -938,6 +1046,11 @@ document.getElementById('onlySub').addEventListener('change', e => { onlySub = e
 const STORE = 'trpg-timemap-proto-v4';
 const snapshot = () => JSON.stringify({ tracks, links, subjects, events, groups });
 function restore(json) { ({ tracks, links, subjects, events, groups } = JSON.parse(json)); }
+// 前の版で保存したデータを今の形に合わせる：つながりにidを付け、主体の誕生と重なる手作りの「誕生」付箋を外す
+function migrate() {
+  for (const l of links) l.id ||= 'l' + uid();
+  events = events.filter(e => !subjects.some(x => { const g = x.legs.find(Array.isArray); return g && e.title === `${x.name} 誕生` && e.tr === g[0] && e.t === g[1]; }));
+}
 function save() { try { localStorage.setItem(STORE, snapshot()); } catch { /* 保存できない環境でも編集は続けられる */ } }
 const undoStack = [], undoBtn = document.getElementById('undo');
 const uid = () => Math.random().toString(36).slice(2, 8);
@@ -950,7 +1063,7 @@ function commit(mutate) {
 }
 function undo() { const s = undoStack.pop(); if (s) { restore(s); afterChange(); } }
 function afterChange() {
-  save(); rebuild(); renderChips();
+  save(); rebuild(); renderChips(); renderList();
   undoBtn.disabled = !undoStack.length;
   setView(subjects.find(s => s.id === activeSub.id) || OBJECTIVE, false);
 }
@@ -1067,7 +1180,7 @@ function cardForm(i, preset = {}) {
 // 世界線
 function refTimes(id) {
   return [...events.filter(e => e.tr === id).map(e => e.t), ...links.flatMap(l => [l.a, l.b]).filter(p => p[0] === id).map(p => p[1]),
-    ...subjects.flatMap(s => s.legs).filter(l => l[0] === id).flatMap(l => [l[1], l[2]])];
+    ...subjects.flatMap(s => s.path).filter(l => l[0] === id).flatMap(l => [l[1], l[2]])];
 }
 function trackForm(id, preset = {}) {
   const tr = id ? T[id] : null, isMain = id === 'main';
@@ -1114,12 +1227,12 @@ function trackForm(id, preset = {}) {
         const t = { id: nid, name, lane: up ? -mag : mag, color: tracks.length % 6, cal: s.cal, from, to };
         if (s.cal === 'fict') { t.calName = s.calName; if (months.length) t.months = months; }
         tracks.push(t);
-        if (fork) links.push({ type: 'fork', a: fork, b: [nid, from], kind: `分岐（${name}へ）`, sync: true });
-        if (merge) links.push({ type: 'merge', a: [nid, to], b: merge, kind: `合流（${name}から）`, sync: true });
+        if (fork) links.push({ id: 'l' + uid(), type: 'fork', a: fork, b: [nid, from], kind: `分岐（${name}へ）`, sync: true });
+        if (merge) links.push({ id: 'l' + uid(), type: 'merge', a: [nid, to], b: merge, kind: `合流（${name}から）`, sync: true });
       });
     },
     tr && !isMain ? () => {
-      const n = { e: events.filter(e => e.tr === id).length, l: links.filter(l => l.a[0] === id || l.b[0] === id).length, s: subjects.filter(s => s.legs.some(l => l[0] === id)).length };
+      const n = { e: events.filter(e => e.tr === id).length, l: links.filter(l => l.a[0] === id || l.b[0] === id).length, s: subjects.filter(s => s.path.some(l => l[0] === id)).length };
       if (n.e || n.l || n.s) throw `この世界線を使っているものがあるので削除できません（付箋${n.e}・つながり${n.l}・主体${n.s}）`;
       commit(() => { tracks = tracks.filter(t => t.id !== id); });
     } : null,
@@ -1140,10 +1253,12 @@ function readDateSafe(p, spec, fallback) { try { return readDate(p, spec); } cat
 const LINK_TYPES = { fork: ['分岐', true], merge: ['合流', true], cross: ['世界線の出入り（夢など）', true], jump: ['時間移動', false], loop: ['ループ', false] };
 function linkForm(i, preset = {}) {
   const l = i != null ? links[i] : null;
+  // preset.a / preset.b：クリックで仮置きした出発点と到着点 { tr, t }
+  const pa = preset.a || { tr: 'main', t: W(2000) }, pb = preset.b || pa;
   const type = l ? l.type || (l.loop ? 'loop' : l.sync ? 'cross' : 'jump') : 'jump';
-  const at = l ? l.a[0] : preset.tr || 'main', av = l ? l.a[1] : preset.t ?? W(2000);
-  const bt = l ? l.b[0] : at, bv = l ? l.b[1] : av;
-  const lt = l?.loop ? l.a[0] : preset.tr || 'main', ls = l?.loop ? l.b[1] : preset.t ?? W(2000), le = l?.loop ? l.a[1] : (preset.t ?? W(2000)) + 14;
+  const at = l ? l.a[0] : pa.tr, av = l ? l.a[1] : pa.t, bt = l ? l.b[0] : pb.tr, bv = l ? l.b[1] : pb.t;
+  const same = pa.tr === pb.tr && pa.t !== pb.t;
+  const lt = l?.loop ? l.a[0] : pa.tr, ls = l?.loop ? l.b[1] : same ? Math.min(pa.t, pb.t) : pa.t, le = l?.loop ? l.a[1] : same ? Math.max(pa.t, pb.t) : Math.min(T[pa.tr].to, pa.t + 14);
   openDlg(l ? 'つながりを編集' : 'つながりを追加', `
     <label>種類<select id="l_type">${Object.entries(LINK_TYPES).map(([k, [nm]]) => `<option value="${k}"${k === type ? ' selected' : ''}>${nm}</option>`).join('')}</select></label>
     <p class="note" id="l_help"></p>
@@ -1164,18 +1279,23 @@ function linkForm(i, preset = {}) {
         inRange(tr, s); inRange(tr, e);
         if (!(s < e)) throw 'ループの終わりは始まりより後にしてください';
         if (links.some((o, k) => k !== i && o.loop && o.a[0] === tr && o.b[1] < e && s < o.a[1])) throw '同じ世界線で、ほかのループと期間が重なっています';
-        obj = { type: ty, a: [tr, e], b: [tr, s], kind, loop: true };
+        obj = { id: l?.id || 'l' + uid(), type: ty, a: [tr, e], b: [tr, s], kind, loop: true };
       } else {
         const a = val('l_aTr'), av2 = readDate('l_a', T[a]), b = val('l_bTr'), bv2 = readDate('l_b', T[b]);
         inRange(a, av2); inRange(b, bv2);
         if (a === b && av2 === bv2) throw '出発と到着が同じです';
-        obj = { type: ty, a: [a, av2], b: [b, bv2], kind };
+        if (l?.loop && subjects.some(x => x.legs.some(g => g.loop === l.id))) throw 'このループを回っている主体がいるので、ループ以外の種類にはできません';
+        obj = { id: l?.id || 'l' + uid(), type: ty, a: [a, av2], b: [b, bv2], kind };
         if (LINK_TYPES[ty][1]) obj.sync = true;
         if (ty === 'jump' && $('l_par').checked) obj.paradox = true;
       }
       commit(() => { if (i != null) links[i] = obj; else links.push(obj); });
     },
-    l ? () => commit(() => links.splice(i, 1)) : null,
+    l ? () => {
+      const users = subjects.filter(x => x.legs.some(g => g.loop === l.id)).map(x => x.name);
+      if (users.length) throw `このループを回っている主体がいるので削除できません（${users.join('、')}）`;
+      commit(() => links.splice(i, 1));
+    } : null,
     ev => {
       const id = ev.target.id;
       if (id === 'l_type') { const ty = ev.target.value; $('l_std').hidden = ty === 'loop'; $('l_loop').hidden = ty !== 'loop'; $('l_parL').hidden = ty !== 'jump'; linkHelp(); }
@@ -1194,19 +1314,38 @@ function linkHelp() {
 }
 
 // 主体
+const loopLabel = l => `${esc(l.kind)}（${esc(T[l.a[0]].name)} ${esc(T[l.a[0]].short(l.b[1], 'day'))}〜${esc(T[l.a[0]].short(l.a[1], 'day'))}）`;
 function subjectForm(id) {
   const s = id ? subjects.find(x => x.id === id) : { name: '', legs: [['main', W(2000), W(2050)]] };
+  const loopLinks = links.filter(l => l.loop);
   let next = s.legs.length;
-  const row = (r, [tr, a, b]) => `<div class="leg" data-r="${r}"><div class="leg-h"><b></b>${trackSel(`s_tr_${r}`, tr)}<button type="button" class="mini" data-del="${r}">この区間を削除</button></div>${dateFld('入った', `s_a_${r}`, T[tr], a)}${dateFld('出た', `s_b_${r}`, T[tr], b)}</div>`;
+  // 区間は2種類：ふつうの区間（世界線・入った・出た）と、ループを回る区間（どのループを何周するか）
+  const row = (r, g) => {
+    const isLoop = !Array.isArray(g), [tr, a, b] = isLoop ? ['main', W(2000), W(2050)] : g;
+    return `<div class="leg" data-r="${r}"><div class="leg-h"><b></b>` +
+      `<select id="s_kind_${r}" aria-label="区間の種類"><option value="leg">ふつうの区間</option><option value="loop"${isLoop ? ' selected' : ''}${loopLinks.length ? '' : ' disabled'}>ループを回る</option></select>` +
+      `<button type="button" class="mini" data-del="${r}">この区間を削除</button></div>` +
+      `<div class="sub" id="s_leg_${r}"${isLoop ? ' hidden' : ''}><label>世界線${trackSel(`s_tr_${r}`, tr)}</label>` +
+      `<div class="fld"><span class="lbl-in"></span><div id="s_a_${r}Box">${dateHTML(`s_a_${r}`, T[tr], a)}</div></div>${dateFld('出た', `s_b_${r}`, T[tr], b)}</div>` +
+      `<div class="sub" id="s_loop_${r}"${isLoop ? '' : ' hidden'}><label>ループ<select id="s_lp_${r}">${loopLinks.map(l => `<option value="${l.id}"${isLoop && g.loop === l.id ? ' selected' : ''}>${loopLabel(l)}</option>`).join('')}</select></label>` +
+      `<label>周回数<input type="number" id="s_n_${r}" min="1" max="99" value="${isLoop ? g.n : 1}"></label></div></div>`;
+  };
   openDlg(id ? '主体を編集' : '主体を追加', `
     <label>名前<input id="s_name" value="${esc(s.name)}" autocomplete="off"></label>
-    <p class="note">本人が体験した順に、区間（どの世界線の、いつからいつまで）を並べます。区間どうしのあいだの時間移動や分岐は「＋ つながり」で作ると、つなぎ目（◆）の説明に出ます。</p>
-    <div id="s_legs">${s.legs.map((l, r) => row(r, l)).join('')}</div>
+    <p class="note">本人が体験した順に区間を並べます。最初の区間の始まりが誕生です。区間どうしのあいだの時間移動や分岐は「＋ つながり」で作ると、つなぎ目（◆）の説明に出ます。ループを何周もする場合は「ループを回る」にして周回数を入れます。</p>
+    <div id="s_legs">${s.legs.map((g, r) => row(r, g)).join('')}</div>
     <button type="button" class="mini" id="s_add">＋ 区間を追加</button>`,
     () => {
       const name = val('s_name').trim(); if (!name) throw '名前を入れてください';
       const legs = [...dlgBody.querySelectorAll('.leg')].map((el, k) => {
-        const r = el.dataset.r, tr = val(`s_tr_${r}`), a = readDate(`s_a_${r}`, T[tr]), b = readDate(`s_b_${r}`, T[tr]);
+        const r = el.dataset.r;
+        if (val(`s_kind_${r}`) === 'loop') {
+          if (k === 0) throw '最初の区間（誕生）は、ふつうの区間にしてください';
+          const n = Math.trunc(+val(`s_n_${r}`));
+          if (!(n >= 1)) throw `区間${k + 1}：周回数は1以上にしてください`;
+          return { loop: val(`s_lp_${r}`), n };
+        }
+        const tr = val(`s_tr_${r}`), a = readDate(`s_a_${r}`, T[tr]), b = readDate(`s_b_${r}`, T[tr]);
         if (!(a < b)) throw `区間${k + 1}：出た日時は、入った日時より後にしてください`;
         inRange(tr, a); inRange(tr, b);
         return [tr, a, b];
@@ -1219,12 +1358,15 @@ function subjectForm(id) {
     },
     id ? () => commit(() => { subjects = subjects.filter(x => x.id !== id); }) : null,
     ev => {
-      const m = ev.target.id.match(/^s_tr_(\d+)$/);
+      let m = ev.target.id.match(/^s_tr_(\d+)$/);
       if (m) { const tr = T[ev.target.value]; redate(`s_a_${m[1]}`, tr, tr.from); redate(`s_b_${m[1]}`, tr, tr.to); }
+      m = ev.target.id.match(/^s_kind_(\d+)$/);
+      if (m) { $(`s_leg_${m[1]}`).hidden = ev.target.value === 'loop'; $(`s_loop_${m[1]}`).hidden = ev.target.value !== 'loop'; }
     },
     ev => {
       if (ev.target.id === 's_add') {
-        const last = [...dlgBody.querySelectorAll('.leg')].pop(), tr = last ? val(`s_tr_${last.dataset.r}`) : 'main';
+        const last = [...dlgBody.querySelectorAll('.leg')].filter(el => val(`s_kind_${el.dataset.r}`) === 'leg').pop();
+        const tr = last ? val(`s_tr_${last.dataset.r}`) : 'main';
         const a = last ? readDateSafe(`s_b_${last.dataset.r}`, T[tr], T[tr].from) : T[tr].from;
         $('s_legs').insertAdjacentHTML('beforeend', row(next++, [tr, a, Math.min(T[tr].to, a + 3650)]));
       }
@@ -1246,7 +1388,7 @@ function openMenu(pi, clientX, clientY) {
     const a = ev.target.dataset.a;
     if (a === 'card') cardForm(null, { tr: p.tr, t });
     if (a === 'fork') trackForm(null, { tr: p.tr, t });
-    if (a === 'link') linkForm(null, { tr: p.tr, t });
+    if (a === 'link') startPick({ tr: p.tr, t, x: (clientX - r.left - cam.panX) / cam.zoom, y: p.nodes[0].y });
     if (a === 'edit') trackForm(p.tr);
   };
   menu.hidden = false;
@@ -1255,10 +1397,66 @@ function openMenu(pi, clientX, clientY) {
   menu.querySelector('button').focus();
 }
 
+// つながりの仮置き：出発点と到着点を順にクリックすると、そのまま編集画面が開く
+let pick = null;
+const pickHint = $('pickHint');
+function startPick(a = null) {
+  hideMenu(); tip.hidden = true;
+  pick = { a, mouse: null };
+  pickHint.textContent = a ? '到着点をクリック（Escでやめる）' : 'つながりの出発点をクリック（Escでやめる）';
+  pickHint.hidden = false;
+  render();
+}
+function endPick() { pick = null; pickHint.hidden = true; render(); }
+// クリックした所の世界線と日時（線ならその位置の日時、付箋ならその付箋の日時）
+function pointAt(target, clientX) {
+  const k = target.closest?.('[data-k]')?.dataset.k || '', id = k.split('|')[1];
+  const r = stage.getBoundingClientRect(), X = (clientX - r.left - cam.panX) / cam.zoom;
+  if (k.startsWith('p|')) { const p = cur.pieces[+id]; return { tr: p.tr, t: Math.round(pieceTimeAt(p, X).t * 1440) / 1440, x: X, y: p.nodes[0].y }; }
+  let tr, t;
+  if (k.startsWith('c|')) ({ tr, t } = events[+id]);
+  else if (k.startsWith('b|')) [tr, t] = subjects.find(x => x.id === id).path[0];
+  else return null;
+  const w = cur.where[key(tr, t)];
+  return { tr, t, x: w.x, y: w.y };
+}
+
+// 一覧：すべての出来事を世界線ごとに時系列順で
+const listEl = $('list'), listBody = $('listBody'), listBtn = $('listBtn');
+function renderList() {
+  if (listEl.hidden) return;
+  const rows = {};
+  const add = (tr, t, title, kind, imp, open) => (rows[tr] ||= []).push({ t, title, kind, imp, open });
+  events.forEach((e, i) => add(e.tr, e.t, e.title, e.group && groups[e.group] ? groups[e.group].title : '', false, () => cardForm(i)));
+  for (const sub of subjects) if (sub.path.length) add(sub.path[0][0], sub.path[0][1], `${sub.name} 誕生`, '主体の誕生', true, () => subjectForm(sub.id));
+  links.forEach((l, i) => {
+    if (l.loop) { add(l.a[0], l.b[1], `${l.kind}の始まり`, 'ループ', true, () => linkForm(i)); add(l.a[0], l.a[1], `${l.kind}の終わり`, 'ループ', true, () => linkForm(i)); return; }
+    add(l.a[0], l.a[1], l.kind, `→ ${T[l.b[0]].name}`, true, () => linkForm(i));
+    add(l.b[0], l.b[1], l.kind, `${T[l.a[0]].name} →`, true, () => linkForm(i));
+  });
+  listBody.replaceChildren();
+  for (const tr of tracks) {
+    const h = document.createElement('h3'), ol = document.createElement('ol');
+    h.innerHTML = `<span class="sw" style="background:var(--c-c${tr.color})"></span>${esc(tr.name)}<span class="kind">${esc(tr.short(tr.from, 'year'))}〜${esc(tr.short(tr.to, 'year'))}</span>`;
+    const list = (rows[tr.id] || []).sort((p, q) => p.t - q.t);
+    for (const r of list) {
+      const li = document.createElement('li'), b = document.createElement('button');
+      if (r.imp) li.className = 'imp';
+      b.innerHTML = `<span class="when">${esc(tr.short(r.t, r.t % 1 ? 'min' : 'day'))}</span><span><span class="ttl">${esc(r.title)}</span>${r.kind ? `<span class="kind">${esc(r.kind)}</span>` : ''}</span>`;
+      b.onclick = r.open;
+      li.append(b); ol.append(li);
+    }
+    if (!list.length) ol.innerHTML = '<li class="kind">まだ出来事がありません</li>';
+    listBody.append(h, ol);
+  }
+}
+listBtn.onclick = () => { listEl.hidden = !listEl.hidden; listBtn.setAttribute('aria-pressed', String(!listEl.hidden)); renderList(); };
+$('listClose').onclick = () => { listEl.hidden = true; listBtn.setAttribute('aria-pressed', 'false'); };
+
 // 編集のボタン
 $('addCard').onclick = () => cardForm(null);
 $('addTrack').onclick = () => trackForm(null);
-$('addLink').onclick = () => linkForm(null);
+$('addLink').onclick = () => startPick();
 $('addSub').onclick = () => subjectForm(null);
 $('editSub').onclick = () => activeSub.id && subjectForm(activeSub.id);
 undoBtn.onclick = undo;
@@ -1269,7 +1467,7 @@ $('reset').onclick = ev => {
   commit(() => restore(SAMPLE));
 };
 addEventListener('keydown', e => {
-  if (e.key === 'Escape') hideMenu();
+  if (e.key === 'Escape') { hideMenu(); if (pick) endPick(); }
   const typing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName);
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !dlg.open && !typing) { e.preventDefault(); undo(); }
 });
@@ -1279,13 +1477,13 @@ function egg(sub) {
   toast.hidden = true;
   if (!sub.id) return;
   let kind = null;
-  for (let li = 1; li < sub.legs.length; li++) {
+  for (let li = 1; li < sub.path.length; li++) {
     const l = jointLink(sub, li);
     if (l?.paradox) kind = 'paradox';
     else if (l?.loop && !kind) kind = 'loop';
   }
   if (!kind) {
-    const L = sub.legs;
+    const L = sub.path;
     for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++)
       if (L[i][0] === L[j][0] && L[i][1] < L[j][2] && L[j][1] < L[i][2]) kind = 'self';
   }
@@ -1306,7 +1504,7 @@ uiFont = '12px ' + getComputedStyle(document.body).fontFamily;
 const SAMPLE = snapshot();
 try {
   const saved = localStorage.getItem(STORE);
-  if (saved) { restore(saved); if (!tracks.some(t => t.id === 'main')) restore(SAMPLE); }
+  if (saved) { restore(saved); if (!tracks.some(t => t.id === 'main')) restore(SAMPLE); migrate(); }
 } catch { restore(SAMPLE); }
 rebuild();
 renderChips();
