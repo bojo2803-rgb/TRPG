@@ -111,12 +111,13 @@ details.settings summary { cursor: pointer; color: var(--muted); }
 .card.grp rect.bg { fill: var(--fg); stroke: var(--fg); }
 .card.grp text { fill: var(--bg); font-weight: 600; }
 .card { cursor: default; } .card.grp { cursor: pointer; }
+.more { cursor: zoom-in; } .more rect { fill: var(--muted); } .more text { fill: var(--bg); font-size: 11px; font-weight: 600; }
 .stem { stroke: var(--line); stroke-width: 1; }
 .lbl { fill: var(--muted); font-size: 11px; }
 .lbl.tr { font-weight: 600; font-size: 11px; }
 .lbl.head { fill: var(--fg); font-weight: 600; font-size: 13px; }
 .gapl { fill: var(--muted); font-size: 10px; font-family: var(--font-data); }
-.focus { stroke: var(--accent); stroke-width: 1.5; stroke-opacity: .45; }
+.focus { stroke: var(--accent); stroke-width: 1.5; stroke-opacity: .45; pointer-events: none; }
 /* 編集 */
 .edit-bar .hint { font-size: 12px; color: var(--muted); }
 .chip.tool { font-size: 12px; }
@@ -192,7 +193,7 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
     <button class="chip tool" id="addSub">＋ 主体</button>
     <button class="chip tool" id="editSub" hidden>この主体を編集</button>
     <button class="chip tool" id="undo" disabled title="Ctrl+Z でも戻せます">元に戻す</button>
-    <button class="chip tool" id="reset">サンプルに戻す</button>
+    <button class="chip tool" id="reset" title="基本のサンプル・白紙・作例の物語を開きます">見本を開く</button>
     <button class="chip tool" id="listBtn" aria-pressed="false">一覧</button>
   </div>
   <span class="hint">付箋・◆・線をクリックで編集。付箋を引っぱると、そこから分岐・移動・ループを延ばせます</span>
@@ -336,8 +337,8 @@ let subjects = [
   { id: 'dreamer', name: '夢見る者R', legs: [{ tr: 'main', a: W(1890, 8, 20), b: W(1920, 3, 1, 23) }, { tr: 'dream', a: DR(1203), b: DR(1215), jump: { label: '眠ってドリームランドへ' } }, { tr: 'main', a: W(1920, 3, 2, 7), b: W(1937, 3, 15), jump: { label: '目覚めて現実へ' } }] },
   { id: 'loop', name: 'ループする少女', legs: [{ tr: 'main', a: W(2010, 4, 2), b: W(2090) }] },
   { id: 'm', name: '時間旅行者M', legs: [{ tr: 'main', a: W(1968, 6, 12), b: W(1985, 10, 26, 1, 35) }, { tr: 'main', a: W(1955, 11, 5, 6), b: W(1955, 11, 12, 22, 4) }, { tr: 'main', a: W(1985, 10, 26, 1, 24), b: W(2040) }] },
-  { id: 'k', name: '時間旅行者K', legs: [{ tr: 'main', a: W(1995, 3, 3), b: W(2025, 6, 1, 12) }, { tr: 'beta', a: W(1850, 6, 1, 12), b: W(1900), jump: { paradox: true, label: '過去へ跳ぶ（パラドックス発生）' } }] },
-  { id: 'o', name: '観測者O', legs: [{ tr: 'main', a: W(2061, 1, 1), b: W(2085, 3, 1) }, { tr: 'main', a: W(2025, 8, 20, 19), ka: 2, b: W(2025, 9, 3), jump: { label: 'ループの2周目の夏祭りへ' } }, { tr: 'main', a: W(2085, 3, 1), b: W(2100) }] },
+  { id: 'k', name: '時間旅行者K', legs: [{ tr: 'main', a: W(1995, 3, 3), b: W(2025, 6, 1, 12) }, { tr: 'beta', a: W(1850, 6, 1, 12), b: W(1900), jump: { label: '過去へ跳ぶ（パラドックス発生）', paradox: true } }] },
+  { id: 'o', name: '観測者O', legs: [{ tr: 'main', a: W(2061, 1, 1), b: W(2085, 3, 1) }, { tr: 'main', a: W(2025, 8, 20, 19), b: W(2025, 9, 3), ka: 2, jump: { label: 'ループの2周目の夏祭りへ' } }, { tr: 'main', a: W(2085, 3, 1), b: W(2100) }] },
 ];
 let events = [
   { tr: 'main', t: ago(13.8e9), title: '宇宙の始まり', tags: ['宇宙'] },
@@ -697,13 +698,15 @@ function computeLayout(sub) {
   }
   // 斜めの線の行き先（区切りの端で表す）：残りは切れ目へ、分かれた世界線は分岐元・合流先へ
   const refAt = (tr, t) => { const o = owner[key(tr, t)]; if (!o) return null; const q = pieces[o.pi]; return o.ni > 0 ? [q.seg[o.ni - 1], 'e'] : [q.seg[0], 's']; };
+  //   行き先が横にずれている（体験の順が時間の順と違う・その日時にそろえて置けなかった）ときは斜めにせず、細い点線で結ぶ
+  const refNear = (q, x) => { const w = where[key(...q)]; return w && Math.abs(w.x - x) < .5 ? refAt(...q) : null; };
+  const cuts = [];
   for (const p of lane) {
-    if (p.leftCut) p.from = refAt(p.tr, p.a);
-    if (p.rightCut) p.to = refAt(p.tr, p.b);
-    if (!p.whole) continue;
-    const t = T[p.tr];
-    if (t.fork && (p.from = refAt(...t.fork))) p.fromC = 'f|' + p.tr;
-    if (t.merge && (p.to = refAt(...t.merge))) p.toC = 'm|' + p.tr;
+    const t = T[p.tr], x0 = p.nodes[0].x, x1 = p.nodes[p.nodes.length - 1].x;
+    if (p.leftCut) { if (!(p.from = refNear([p.tr, p.a], x0))) cuts.push({ tr: p.tr, a: refAt(p.tr, p.a), b: [p.seg[0], 's'] }); }
+    else if (t.fork && p.a === t.from && (p.from = refNear(t.fork, x0))) p.fromC = 'f|' + p.tr;
+    if (p.rightCut) { if (!(p.to = refNear([p.tr, p.b], x1))) cuts.push({ tr: p.tr, a: [p.seg[p.seg.length - 1], 'e'], b: refAt(p.tr, p.b) }); }
+    else if (t.merge && p.b === t.to && (p.to = refNear(t.merge, x1))) p.toC = 'm|' + p.tr;
   }
   // 重なった自分から、1回目の同じ時間へ
   const dupArcs = pieces.filter(p => p.dup).map(p => ({ tr: p.tr, a: [p.seg[0], 's'], b: [`${p.tr}|${p.a}#0`, 's'] }));
@@ -714,7 +717,7 @@ function computeLayout(sub) {
     const pa = pieces.filter(p => p.center && p.pi === i - 1).pop(), pb = pieces.find(p => p.center && p.pi === i);
     if (pa && pb) joints.push({ i, id: q.jump ? q.jump.id : `L${q.lp.id}:${q.k}`, jump: q.jump || null, loop: q.jump ? null : q.lp, k: q.k, a: [pa.seg[pa.seg.length - 1], 'e'], b: [pb.seg[0], 's'] });
   });
-  return { sub, pieces, where, owner, curled, dupArcs, joints };
+  return { sub, pieces, where, owner, curled, dupArcs, joints, cuts: cuts.filter(c => c.a && c.b) };
 }
 
 // ===== アニメーション =====
@@ -722,7 +725,7 @@ function computeLayout(sub) {
 // 線は「区切り（隣り合う時点どうし）」ごとに、どの配置でも同じ名前を持つ。2回目以降の複製は、1回目から出てきて、1回目に戻る
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ease = s => s <= 0 ? 0 : s >= 1 ? 1 : s < .5 ? 2 * s * s : 1 - Math.pow(-2 * s + 2, 2) / 2;
-let prev = null, cur = null, prog = 1, camTo = null, A = null;
+let prev = null, cur = null, prog = 1, camTo = null, A = null, revealNext = null;
 let cam = { zoom: 20, panX: 0, panY: 0 };
 const DURATION = 1500;
 function fitCam(layout, all = false) {
@@ -738,9 +741,20 @@ function setView(sub, refit = true) {
   activeSub = sub;
   refreshCards();
   const camFrom = { ...cam };
-  prev = cur;
+  // 別の世界に入れ替えたとき（見本を開く・元に戻す）は、前の配置にない世界線が出てくるので、動かさずに切り替える
+  prev = cur && cur.pieces.every(p => T[p.tr] && p.loops.every(r => loops.some(l => l.id === r.loop.id))) ? cur : null;
   cur = computeLayout(sub);
   camTo = refit ? fitCam(cur) : { ...cam };
+  // 編集で中央の線が画面から外れた・細くなりすぎたら、映し直す
+  if (!refit) {
+    const Wd = svg.clientWidth || 800, xs = cur.pieces.filter(p => p.center).flatMap(p => p.nodes.map(n => n.x * camTo.zoom + camTo.panX));
+    const lo = Math.max(0, Math.min(...xs)), hi = Math.min(Wd, Math.max(...xs));
+    if (hi - lo < Wd * .25) camTo = fitCam(cur);
+  }
+  // 編集で足したものが画面の外なら、そこが真ん中に来るまで横に動かす
+  const w = revealNext && cur.where[key(...revealNext)];
+  revealNext = null;
+  if (w) { const Wd = svg.clientWidth || 800, sx = w.x * camTo.zoom + camTo.panX; if (sx < 60 || sx > Wd - 60) camTo.panX = Wd / 2 - w.x * camTo.zoom; }
   A = prev ? { g0: geometry(prev, camFrom), g1: geometry(cur, camTo), camFrom } : null;
   const t0 = performance.now(), dur = reduced || !prev ? 0 : DURATION;
   cancelAnimationFrame(setView.raf);
@@ -766,6 +780,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const f1 = v => Math.round(v * 10) / 10;
 const P = q => `${f1(q[0])},${f1(q[1])}`;
 let focusTrack = null; // カーソルを合わせた（タップした）世界線。その破片をすべて光らせる
+let moreCards = []; // 重なりすぎて出せなかった付箋のまとまり（画面上の位置と名前）
 
 // ループの輪：P0 から P1 へ、長さ Lpx の線を k（1 = 輪、0 = まっすぐ）だけ巻いたときの、割合 f の位置
 function arcPoint(P0, P1, Lpx, k, f) {
@@ -795,6 +810,7 @@ function segAt(id, S) {
 }
 function loopAt(id, S) {
   const to = S.g1.loops[id] || S.g1.loops[firstOf(id)], from = S.g0 ? S.g0.loops[id] || S.g0.loops[firstOf(id)] || to : to;
+  if (!to || !from) return to || from || { k: 0, Lpx: 0 };
   return { k: from.k + (to.k - from.k) * S.e, Lpx: from.Lpx + (to.Lpx - from.Lpx) * S.e };
 }
 const refPt = (ref, S) => segAt(ref[0], S)?.[ref[1] === 'e' ? 'e' : 's'];
@@ -967,6 +983,7 @@ function render() {
       if (a && b) back += `<path class="cut ${tone(c.tr)}${trCls(c.tr)}" style="opacity:${f1(op)}" d="${shape(a, b)}"/>`;
     }
   };
+  drawRefs(cur.cuts, prev?.cuts || [], (a, b) => curvePath(a[0], a[1], b[0], b[1]));
   drawRefs(cur.dupArcs, prev?.dupArcs || [], (a, b) => { const h = 40 + Math.min(70, Math.abs(a[0] - b[0]) * .15); return `M${P(a)} C${f1(a[0])},${f1(a[1] - h)} ${f1(b[0])},${f1(Math.min(a[1], b[1]) - h)} ${P(b)}`; });
 
   // 跳んだ時間の文字：ほかの文字と重ならない高さを探す（見つからなければ出さない。カーソルを合わせると出る）
@@ -986,8 +1003,8 @@ function render() {
     const m = mix(a, b, .5), par = j.jump?.paradox ? ' k-paradox' : '';
     front += j.loop ? `<circle class="jt loopj" style="opacity:${f1(op)}" cx="${f1(m[0])}" cy="${f1(m[1])}" r="5"/>`
       : `<rect class="jt${par}" style="opacity:${f1(op)}" x="${f1(m[0] - 6)}" y="${f1(m[1] - 6)}" width="12" height="12" transform="rotate(45 ${P(m)})"/>`;
-    const dist = j.jump ? jumpDist(j.jump) : '';
-    if (dist) jText(dist, m[0], [m[1] + 50, m[1] + 62, m[1] + 74], 'jlbl' + par, op);
+    const dist = j.jump ? jumpDist(j.jump) : `${j.k}周目へ`;
+    if (dist) jText(dist, m[0], j.loop ? [m[1] - 10, m[1] + 50, m[1] + 62] : [m[1] + 50, m[1] + 62, m[1] + 74], 'jlbl' + par, op);
     if (hit) front += `<line class="hit" data-k="j|${j.i}" x1="${f1(m[0] - 8)}" y1="${f1(m[1])}" x2="${f1(m[0] + 8)}" y2="${f1(m[1])}"/>`;
   };
   for (const j of cur.joints) mark(j, anim && !sameSub ? e : 1, true);
@@ -1023,6 +1040,16 @@ function render() {
       (s.c.grp ? '' : `<rect class="f-c${T[s.c.e.tr].color}" x="${f1(left)}" y="${f1(top)}" width="3" height="20" rx="1"/>`) +
       `<text x="${f1(left + 10)}" y="${f1(top + 14)}">${esc(s.c.title)}</text></g>`;
   }
+  // 重なりすぎて出せなかった付箋は「＋N」にまとめる（カーソルで名前、クリックでそこを拡大）
+  moreCards = [];
+  for (const s of spots.filter(s => rows[s.id] < 0 && s.x > -300 && s.x < Wd + 20).sort((a, b) => a.x - b.x)) {
+    const g = moreCards[moreCards.length - 1];
+    if (g && g.row === s.row && s.x - g.x < 60) g.titles.push(s.c.title); else moreCards.push({ x: s.x, y: s.y, row: s.row, titles: [s.c.title] });
+  }
+  moreCards.forEach((g, i) => {
+    const t = `＋${g.titles.length}`, w = textW(t) + 12, top = g.y - 18 - 4 * 25 - 20;
+    front += `<g class="more" data-k="m|${i}"><rect x="${f1(g.x - 8)}" y="${f1(top)}" width="${f1(w)}" height="20" rx="10"/><text x="${f1(g.x - 2)}" y="${f1(top + 14)}">${t}</text></g>`;
+  });
   // つなぐ途中：出発点から、カーソルまで点線を引く
   if (pick?.a) {
     const ax = pick.a.x * cam.zoom + cam.panX, ay = pick.a.y + H / 2 + cam.panY;
@@ -1092,6 +1119,10 @@ function describe(k, px) {
     const sub = subjects.find(x => x.id === parts[1]), { tr, a: t } = sub.path[0];
     return `<b>${esc(sub.name)} 誕生</b><div class="d">${esc(T[tr].fmt(t, t % 1 ? 'min' : 'day'))}</div><div class="m">主体の誕生。クリック（タップ）で主体を編集</div>`;
   }
+  if (parts[0] === 'm') {
+    const g = moreCards[+parts[1]];
+    return g ? `<b>重なって見えない付箋が${g.titles.length}枚</b><div class="m">${g.titles.map(esc).join('<br>')}<br>クリック（タップ）でこのあたりを拡大</div>` : '';
+  }
   if (parts[0] === 'g') {
     const g = groups[parts[1]], n = events.filter(e => e.group === parts[1]).length;
     return `<b>${esc(g.title)}</b><div class="m">${n}件の出来事をまとめたもの。クリック（タップ）で${g.open ? 'たたむ' : 'ひらく'}</div>`;
@@ -1129,6 +1160,7 @@ let ext = null;
 svg.addEventListener('pointerdown', e => {
   e.preventDefault(); // ドラッグで文字が選択されないように
   hideMenu();
+  finishAnim(); // 動いている途中に押したら、動き終えた位置で受け付ける（押した日時がずれないように）
   svg.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, target: e.target });
   dragMoved = 0;
@@ -1178,6 +1210,7 @@ function endPointer(e) {
     }
     if (k.startsWith('b|')) return subjectForm(id);
     if (k.startsWith('g|')) { groups[id].open = !groups[id].open; setView(activeSub, false); return; }
+    if (k.startsWith('m|')) { const g = moreCards[+id]; if (g) zoomAt(2.5, g.x); return; }
     if (k.startsWith('c|')) return cardForm(+id);
     if (k.startsWith('x|')) { const j = JUMPS.find(z => z.id === id); return j && subjectForm(j.sub.id, { focus: j.li }); }
     if (k.startsWith('s|')) return trackForm(parts[2]);
@@ -1287,7 +1320,9 @@ function undo() { const s = undoStack.pop(); if (s) { restore(s); afterChange();
 function afterChange() {
   save(); rebuild(); renderChips(); renderList();
   undoBtn.disabled = !undoStack.length;
-  setView(subjects.find(s => s.id === activeSub.id) || OBJECTIVE, false);
+  // 視点の主体が変わったとき（主体を足した・消した）は、その主体の線に合わせて映し直す
+  const next = subjects.find(s => s.id === activeSub.id) || OBJECTIVE;
+  setView(next, next.id !== cur?.sub.id);
 }
 
 // 入力画面
@@ -1331,7 +1366,8 @@ function partsOf(spec, t) {
   const hhmm = `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
   if (spec.cal === 'fict') { const y = fdiv(n, 360) + 1, r = n - (y - 1) * 360, m = fdiv(r, 30); return { mode: 'ad', y, m: m + 1, d: r - m * 30 + 1, hm: hhmm }; }
   const ya = (J2000 - t) / YEAR;
-  if (ya > 12000) { const u = ya >= 1e8 ? 1e8 : 1e4; return { mode: 'ago', n: sig(ya / u, 4), u }; }
+  // 〜年前：開いて保存しただけで日時が変わらないよう、丸めずに出す（割り切れない年数は「年」で）
+  if (ya > 12000) { const r = Math.round(ya * 1e3) / 1e3, u = [1e8, 1e4, 1].find(u => Number.isInteger(r / u * 1e4)); return { mode: 'ago', n: +(r / u).toPrecision(15), u }; }
   const [y, m, d] = ymd(n);
   return { mode: 'ad', bc: y <= 0, y: y <= 0 ? 1 - y : y, m, d, hm: hhmm };
 }
@@ -1350,7 +1386,7 @@ function timeOf(spec, v) {
 }
 function dateHTML(p, spec, t) {
   const v = partsOf(spec, t), fict = spec.cal === 'fict', isAgo = v.mode === 'ago';
-  return `<span class="dt">` +
+  return `<span class="dt" data-t="${t}">` +
     (fict ? `<span class="cal">${esc(spec.calName || '架空の暦')}</span>` :
       `<select id="${p}_mode" aria-label="入力のしかた"><option value="ad">西暦</option><option value="ago"${isAgo ? ' selected' : ''}>〜年前</option></select>`) +
     `<span class="ad"${isAgo ? ' hidden' : ''}>` +
@@ -1363,9 +1399,13 @@ function dateHTML(p, spec, t) {
       `<select id="${p}_u" aria-label="単位"><option value="1">年</option><option value="10000"${v.u === 1e4 ? ' selected' : ''}>万年</option><option value="100000000"${v.u === 1e8 ? ' selected' : ''}>億年</option></select>前</span>`) +
     `</span>`;
 }
+// 入力欄が開いたときと同じ日時を指していれば、元の値をそのまま返す（開いて保存しただけで、分より細かい端数や「〜年前」の値が変わらないように）
 function readDate(p, spec) {
   const g = s => $(`${p}_${s}`);
-  return timeOf(spec, { mode: g('mode')?.value || 'ad', bc: g('bc')?.checked, y: g('y').value, m: g('m').value, d: g('d').value, hm: g('hm').value, n: g('n')?.value, u: +(g('u')?.value || 1) });
+  const t = timeOf(spec, { mode: g('mode')?.value || 'ad', bc: g('bc')?.checked, y: g('y').value, m: g('m').value, d: g('d').value, hm: g('hm').value, n: g('n')?.value, u: +(g('u')?.value || 1) });
+  const orig = +g('y').closest('.dt').dataset.t;
+  try { if (Number.isFinite(orig) && timeOf(spec, partsOf(spec, orig)) === t) return orig; } catch { /* 元の値が今の暦で表せないときは、入力どおり */ }
+  return t;
 }
 const dateFld = (label, p, spec, t) => `<div class="fld"><span>${label}</span><div id="${p}Box">${dateHTML(p, spec, t)}</div></div>`;
 const redate = (p, spec, t) => { $(`${p}Box`).innerHTML = dateHTML(p, spec, t); };
@@ -1397,6 +1437,7 @@ function cardForm(i, preset = {}) {
         const obj = { tr, t, title, tags };
         if (group) obj.group = group;
         if (i != null) events[i] = obj; else events.push(obj);
+        revealNext = [tr, t];
       });
     },
     i != null ? () => commit(() => events.splice(i, 1)) : null,
@@ -1491,6 +1532,7 @@ function trackForm(id, preset = {}) {
         if (merge) t.merge = merge;
         tracks.push(t);
         if (alt) events.push({ tr: nid, t: from, title: alt, tags: src ? [...src.tags] : [] });
+        revealNext = [nid, from];
       });
     },
     tr && !isMain ? () => {
@@ -1501,7 +1543,8 @@ function trackForm(id, preset = {}) {
     ev => {
       const i = ev.target.id, v = ev.target.value;
       if (i === 'k_cal') { const s = spec(); $('k_calBox').hidden = s.cal !== 'fict'; redate('k_from', s, s.cal === 'fict' ? DR(1) : from0); redate('k_to', s, s.cal === 'fict' ? DR(1001) : to0); }
-      if (i === 'k_calName') { const s = spec(); redate('k_from', s, readDateSafe('k_from', s, DR(1))); redate('k_to', s, readDateSafe('k_to', s, DR(1001))); }
+      // 暦の名前は表示だけ直す（入力欄を作り直すと、次にクリックした欄が消えて入力が迷子になる）
+      if (i === 'k_calName') for (const el of dlgBody.querySelectorAll('.dt .cal')) el.textContent = spec().calName;
       if (i === 'k_forkTr') redate('k_fork', T[v], T[v].from);
       if (i === 'k_mergeTr') redate('k_merge', T[v], T[v].to);
       if (i === 'k_fork_on') $('k_forkRow').hidden = !ev.target.checked;
@@ -1529,7 +1572,7 @@ function loopForm(id, preset = {}) {
       if (!(n >= 1 && n <= 99)) throw '回数は1〜99にしてください';
       if (loops.some(o => o !== l && o.tr === tr && o.a < b && a < o.b)) throw '同じ世界線で、ほかのループと期間が重なっています';
       const obj = { id: l?.id || 'lp' + uid(), tr, a, b, n, kind: val('lp_kind').trim() || 'ループ' };
-      commit(() => { if (l) loops[loops.indexOf(l)] = obj; else loops.push(obj); });
+      commit(() => { if (l) loops[loops.indexOf(l)] = obj; else loops.push(obj); revealNext = [tr, a]; });
     },
     l ? () => commit(() => { loops = loops.filter(x => x !== l); }) : null,
     ev => { if (ev.target.id === 'lp_tr') { const t = T[ev.target.value]; redate('lp_a', t, t.from); redate('lp_b', t, Math.min(t.to, t.from + 14)); } });
@@ -1700,8 +1743,8 @@ function renderList() {
   for (const c of CONNS) { add(c.a[0], c.a[1], c.label, `→ ${T[c.b[0]].name}`, true, () => trackForm(c.tr)); add(c.b[0], c.b[1], c.label, `${T[c.a[0]].name} →`, true, () => trackForm(c.tr)); }
   for (const j of JUMPS) {
     const open = () => subjectForm(j.sub.id, { focus: j.li }), what = `${JUMP_TYPES[j.type][0]}${jumpDist(j) ? ' ' + jumpDist(j) : ''}`;
-    add(j.a.tr, j.a.t, `${j.sub.name}：${j.label}`, `${what} → ${T[j.b.tr].name}${j.b.k ? `（${j.b.k}周目）` : ''}`, true, open);
-    add(j.b.tr, j.b.t, `${j.sub.name}：${j.label}`, `${T[j.a.tr].name}${j.a.k ? `（${j.a.k}周目）` : ''} → ${what}`, true, open);
+    add(j.a.tr, j.a.t, `${j.sub.name}：${j.label}`, `${what}：${T[j.b.tr].name}${j.b.k ? `（${j.b.k}周目）` : ''}へ`, true, open);
+    add(j.b.tr, j.b.t, `${j.sub.name}：${j.label}`, `${what}：${T[j.a.tr].name}${j.a.k ? `（${j.a.k}周目）` : ''}から`, true, open);
   }
   for (const l of loops) { add(l.tr, l.a, `${l.kind}の始まり`, `ループ（${l.n}周）`, true, () => loopForm(l.id)); add(l.tr, l.b, `${l.kind}の終わり`, `ループ（${l.n}周）`, true, () => loopForm(l.id)); }
   listBody.replaceChildren();
@@ -1730,12 +1773,16 @@ $('addLink').onclick = () => startPick();
 $('addSub').onclick = () => subjectForm(null);
 $('editSub').onclick = () => activeSub.id && subjectForm(activeSub.id);
 undoBtn.onclick = undo;
+// 見本を開く：いまの世界と入れ替わる（「元に戻す」で戻せる）
 $('reset').onclick = ev => {
-  const b = ev.currentTarget;
-  if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'もう一度押すとサンプルに戻す'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'サンプルに戻す'; }, 4000); return; }
-  delete b.dataset.armed; b.textContent = 'サンプルに戻す';
-  commit(() => restore(SAMPLE));
+  const r = ev.currentTarget.getBoundingClientRect();
+  showMenu('見本を開く<br><span>いまの世界と入れ替わります（元に戻すで戻せます）</span>', [
+    ['基本のサンプル', () => openWorld(SAMPLE)],
+    ['白紙（本線だけ）', () => openWorld(BLANK)],
+    ...EXAMPLES.map(x => [x.name, () => openWorld(JSON.stringify(x.data))]),
+  ], r.left, r.bottom);
 };
+function openWorld(json) { hiddenTracks.clear(); activeSub = OBJECTIVE; cur = null; commit(() => restore(json)); }
 addEventListener('keydown', e => {
   if (e.key === 'Escape') { hideMenu(); if (pick) endPick(); }
   const typing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName);
@@ -1758,10 +1805,20 @@ function egg(sub) {
 }
 toast.onclick = () => { toast.hidden = true; };
 
+// ===== 作例の物語（見本を開く） =====
+// { name: メニューに出す名前, data: 保存データと同じ形 }。どれも画面の操作だけで作ったもの（設計メモ §10 第6版の作例）
+const EXAMPLES = [
+  { name: "物語1「電話レンジ（仮）」：Dメールで世界線を移り、タイムリープをくり返す", data: {"tracks":[{"id":"main","name":"α世界線","lane":0,"color":0,"cal":"west","from":2447893,"to":2462867},{"id":"tolm1n6","name":"β世界線","lane":1,"color":1,"cal":"west","from":2455406.8333333335,"to":2462867,"fork":["main",2455406.8333333335]},{"id":"thnivhv","name":"γ世界線","lane":-2,"color":2,"cal":"west","from":2455414.5,"to":2462867,"fork":["tolm1n6",2455414.5]}],"loops":[],"subjects":[{"id":"sj945tg","name":"まゆり（α）","legs":[{"tr":"main","a":2449385,"b":2462867}]},{"id":"sd6l0n7","name":"まゆり（β）","legs":[{"tr":"main","a":2449385,"b":2455406.8333333335},{"tr":"tolm1n6","a":2455406.8333333335,"b":2455422.829861111}]},{"id":"sr2p7yq","name":"岡部","legs":[{"tr":"main","a":2448605,"b":2455419.5},{"tr":"tolm1n6","a":2455419.5,"b":2455422.829861111,"jump":{"label":"Dメールでβへ（リーディングシュタイナー）"}},{"tr":"tolm1n6","a":2455420.8333333335,"b":2455422.829861111,"jump":{"label":"タイムリープ（1回目）"}},{"tr":"tolm1n6","a":2455420.8333333335,"b":2455421.5,"jump":{"label":"タイムリープ（2回目）"}},{"tr":"thnivhv","a":2455421.5,"b":2455423.375,"jump":{"label":"Dメールでγへ"}},{"tr":"main","a":2455423.375,"b":2462867,"jump":{"label":"Dメールを取り消してαへ"}}]}],"events":[{"tr":"main","t":2455406.5,"title":"ラボで電話レンジを発見","tags":["電話レンジ"]},{"tr":"main","t":2455406.8333333335,"title":"ロト6の抽選（外れ）","tags":["Dメール"]},{"tr":"main","t":2455418.4166666665,"title":"SERNのハッキング","tags":["電話レンジ"]},{"tr":"tolm1n6","t":2455406.8333333335,"title":"ロト6の抽選（Dメールの番号で当たり）","tags":["Dメール"]},{"tr":"tolm1n6","t":2455422.8194444445,"title":"ラウンダーの襲撃","tags":["β"]},{"tr":"tolm1n6","t":2455422.829861111,"title":"まゆりが倒れる","tags":["β"]},{"tr":"tolm1n6","t":2455414.5,"title":"フェイリスの父の飛行機事故","tags":["Dメール"]},{"tr":"thnivhv","t":2455414.5,"title":"フェイリスの父が飛行機に乗らない","tags":["Dメール"]}],"groups":{}} },
+  { name: "物語2「七夜祭」：村の七日間が5周。途中の周へ跳ぶ旅人と、未来から戻る巫女", data: {"tracks":[{"id":"main","name":"宵ヶ淵村","lane":0,"color":0,"cal":"west","from":2433283,"to":2488070}],"loops":[{"id":"lpw3h01y","tr":"main","a":2458697,"b":2458703.9993055556,"n":5,"kind":"七夜祭のループ"}],"subjects":[{"id":"sef1alp","name":"巫女ハル","legs":[{"tr":"main","a":2452734,"b":2466155},{"tr":"main","a":2458702.5,"b":2458716,"ka":5,"jump":{"label":"5周目の祭りへ戻る"}}]},{"id":"s4yznd0","name":"村人タロウ","legs":[{"tr":"main","a":2448044,"b":2473460}]},{"id":"swbe6ov","name":"旅人ソラ","legs":[{"tr":"main","a":2473522,"b":2481131},{"tr":"main","a":2458699.4166666665,"b":2458701.9166666665,"ka":2,"kb":4,"jump":{"label":"ループの2周目へ"}},{"tr":"main","a":2481131,"b":2488070,"jump":{"label":"元の時代へ"}}]}],"events":[{"tr":"main","t":2458697.25,"title":"祭りの始まり","tags":["七夜祭"],"group":"g2osm6e"},{"tr":"main","t":2458700.7916666665,"title":"神楽の夜","tags":["七夜祭"],"group":"g2osm6e"},{"tr":"main","t":2458703.9583333335,"title":"神隠し","tags":["七夜祭"],"group":"g2osm6e"},{"tr":"main","t":2458700.8541666665,"title":"花火が上がらない（3周目だけ）","tags":["七夜祭"],"group":"g2osm6e"}],"groups":{"g2osm6e":{"title":"シナリオ：七夜祭","open":true}}} },
+  { name: "物語3「妖精郷の百年」：時の流れが違う世界との往復と、妖精郷のループ", data: {"tracks":[{"id":"main","name":"本線","lane":0,"color":0,"cal":"west","from":2195883,"to":2462503},{"id":"trdikfm","name":"妖精郷","lane":-1,"color":1,"cal":"fict","from":0,"to":107999,"calName":"妖精暦","months":["霜","芽","花","若葉","夏至","蜜","麦","実り","霧","落葉","雪","夜"],"merge":["main",2447893]}],"loops":[{"id":"lpljlfdb","tr":"trdikfm","a":35642,"b":35644,"n":3,"kind":"終わらない舞踏会"}],"subjects":[{"id":"s1843ch","name":"妖精の女王","legs":[{"tr":"trdikfm","a":0,"b":107999}]},{"id":"sdf2fob","name":"騎士アルト","legs":[{"tr":"main","a":2233200,"b":2239834},{"tr":"trdikfm","a":35640,"b":35647,"jump":{"label":"妖精の輪から妖精郷へ"}},{"tr":"main","a":2276359,"b":2276390,"jump":{"label":"人間界へ戻る"}},{"tr":"trdikfm","a":35670,"b":35671,"jump":{"label":"もう一度妖精郷へ"}},{"tr":"main","a":2323711,"b":2325537,"jump":{"label":"人間界へ戻る"}}]},{"id":"s6k2nrq","name":"魔女モルガ","legs":[{"tr":"main","a":2261628,"b":2269237},{"tr":"trdikfm","a":35643,"b":35645,"ka":2,"jump":{"label":"舞踏会の2周目へ入り込む"}},{"tr":"main","a":2269238,"b":2279891,"jump":{"label":"人間界へ戻る"}}]}],"events":[{"tr":"main","t":2239834,"title":"騎士が妖精の輪に踏み込む","tags":["妖精"]},{"tr":"main","t":2276359,"title":"見知らぬ村に戻る騎士（100年後）","tags":["妖精"]},{"tr":"main","t":2323711,"title":"騎士が再び現れる","tags":["妖精"]},{"tr":"trdikfm","t":35640,"title":"妖精の宴に招かれる","tags":["妖精"]},{"tr":"trdikfm","t":35642,"title":"舞踏会の始まり","tags":["妖精"]},{"tr":"trdikfm","t":107999,"title":"妖精郷が人間界に溶ける","tags":["妖精"]},{"tr":"main","t":2447893,"title":"町に妖精の気配が満ちる","tags":["妖精"]}],"groups":{}} },
+  { name: "物語4「時を超える影」：イスの大いなる種族との心の入れ替わり（クトゥルフ神話TRPG）", data: {"tracks":[{"id":"main","name":"本線","lane":0,"color":0,"cal":"west","from":-5040344048455,"to":2488070},{"id":"tau3gj8","name":"ティンダロス","lane":1,"color":1,"cal":"fict","from":0,"to":359640,"calName":"角度の刻"}],"loops":[],"subjects":[{"id":"s24rek9","name":"ピーズリー（体）","legs":[{"tr":"main","a":2404429,"b":2428002}]},{"id":"sl0q2hr","name":"ピーズリー（心）","legs":[{"tr":"main","a":2404429,"b":2418076.4305555555},{"tr":"main","a":-54783923455,"b":-54783921628.7875,"jump":{"label":"イスの種族と心が入れ替わる"}},{"tr":"main","a":2420038.46875,"b":2428002,"jump":{"label":"自分の体に戻る"}}]},{"id":"s5b1n08","name":"イスの精神","legs":[{"tr":"main","a":-54783930759.85,"b":-54783923455},{"tr":"main","a":2418076.4305555555,"b":2420038.46875,"jump":{"label":"ピーズリーの体へ"}},{"tr":"main","a":-54783921628.7875,"b":-54783912497.725,"jump":{"label":"自分の体へ戻る"}}]},{"id":"srqrbt1","name":"チャーマーズ","legs":[{"tr":"main","a":2411430,"b":2425431.0416666665},{"tr":"main","a":-1095725048455,"b":-1095725048089.7576,"jump":{"label":"遼丹で時をさかのぼる"}},{"tr":"main","a":2425431.0833333335,"b":2425431.1298611113,"jump":{"label":"部屋に戻る"}}]},{"id":"sj0gtsb","name":"ティンダロスの猟犬","legs":[{"tr":"tau3gj8","a":0,"b":1440},{"tr":"main","a":2425431.125,"b":2425431.1298611113,"jump":{"label":"部屋の角から現れる"}},{"tr":"tau3gj8","a":1441,"b":359640,"jump":{"label":"角へ帰る"}}]}],"events":[{"tr":"main","t":-54783923455,"title":"イスの大いなる種族の都市","tags":["クトゥルフ"]},{"tr":"main","t":2418076.4305555555,"title":"ピーズリー教授、講義中に倒れる","tags":["クトゥルフ"]},{"tr":"main","t":2420038.46875,"title":"ピーズリー教授、記憶が戻る","tags":["クトゥルフ"]},{"tr":"main","t":2425431.1298611113,"title":"チャーマーズ、角のない部屋で死ぬ","tags":["クトゥルフ"]},{"tr":"main","t":2428001,"title":"オーストラリアの砂漠で遺跡を発見","tags":["クトゥルフ"]},{"tr":"tau3gj8","t":1080,"title":"猟犬が匂いを嗅ぎつける","tags":["クトゥルフ"]}],"groups":{}} },
+];
+
 // ===== 開始 =====
 if (innerWidth < 560) document.getElementById('legend').open = false; // スマホでは凡例をたたんで地図を広く
 uiFont = '12px ' + getComputedStyle(document.body).fontFamily;
 const SAMPLE = snapshot();
+const BLANK = JSON.stringify({ tracks: [{ ...tracks[0] }], loops: [], subjects: [], events: [], groups: {} });
 try {
   const saved = localStorage.getItem(STORE);
   if (saved) { restore(saved); if (!tracks.some(t => t.id === 'main')) restore(SAMPLE); }
