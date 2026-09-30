@@ -2,6 +2,9 @@
 <!--
   試作品（捨てる前提）。設計メモ §10 の「時系列マップを先に試す」ためのもの。
   本体を作るときにこのコードは流用しない。編集内容はこのブラウザの中にだけ保存する（本体ではGoogleドライブ）。
+  第7版：世界のデータ（サンプル・作例）はプログラムに書かず、examples/ のファイルや保存したファイルから読み込む。
+  ループは「分かれて何周もくり返す世界線」（ループの中のループ・ループに入る人と入らない人）。周ごとの出来事は1周目のコピーで、周ごとに書き換えられる。
+  分岐点の出来事と、分岐で現れる分身。斜めの線は時間の流れない「すき間」。視点の切り替えはどれも同じ決まりで動く。
   第6版：分岐・合流は世界線の性質（端と一緒に動く）。主体の区間どうしの移り方（タイムトラベル／移動）は自動で決める。
   ループは世界が何周もくり返す期間で、通る主体は周回ごとに体験する。同じ時間を2回通るのは「自分が重なる」。
   第4版：付箋・世界線・つながり・主体を画面から編集できる。
@@ -86,7 +89,7 @@ details.settings summary { cursor: pointer; color: var(--muted); }
 /* 地図の中身 */
 .t-c0 { stroke: var(--c-c0); } .t-c1 { stroke: var(--c-c1); } .t-c2 { stroke: var(--c-c2); } .t-c3 { stroke: var(--c-c3); } .t-c4 { stroke: var(--c-c4); } .t-c5 { stroke: var(--c-c5); }
 .f-c0 { fill: var(--c-c0); } .f-c1 { fill: var(--c-c1); } .f-c2 { fill: var(--c-c2); } .f-c3 { fill: var(--c-c3); } .f-c4 { fill: var(--c-c4); } .f-c5 { fill: var(--c-c5); }
-.pc { fill: none; stroke-width: 3; stroke-linecap: round; transition: opacity .2s; }
+.pc { fill: none; stroke-width: 3; stroke-linecap: round; }
 .pc.ctr { stroke-width: 7; }
 .pc.dup { stroke-dasharray: 7 6; stroke-linecap: butt; }
 .pc.old { stroke-width: 2; stroke-dasharray: 2 5; opacity: .35; }
@@ -107,6 +110,8 @@ details.settings summary { cursor: pointer; color: var(--muted); }
 .card text { fill: var(--fg); font-size: 12px; }
 .card.dim { opacity: .22; }
 .card.again { opacity: .55; }
+.card.bp rect.bg { stroke: var(--accent); }
+.bpi { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; }
 .card.hl rect.bg { stroke: var(--accent); stroke-width: 2; }
 .card.grp rect.bg { fill: var(--fg); stroke: var(--fg); }
 .card.grp text { fill: var(--bg); font-weight: 600; }
@@ -182,7 +187,7 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 </style>
 
 <header class="bar">
-  <div class="brand"><h1>時系列マップ</h1><span class="badge">試作品 第6版</span></div>
+  <div class="brand"><h1>時系列マップ</h1><span class="badge">試作品 第7版</span></div>
   <div class="chips" id="views" role="group" aria-label="視点"></div>
 </header>
 <div class="bar edit-bar" role="toolbar" aria-label="編集">
@@ -191,9 +196,12 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
     <button class="chip tool" id="addTrack">＋ 世界線</button>
     <button class="chip tool" id="addLink" title="出発点と行き先を順にクリックして、主体の移動やループを作ります">＋ つなぐ</button>
     <button class="chip tool" id="addSub">＋ 主体</button>
-    <button class="chip tool" id="editSub" hidden>この主体を編集</button>
+    <button class="chip tool" id="editSub" disabled title="主体の視点で使えます">この主体を編集</button>
     <button class="chip tool" id="undo" disabled title="Ctrl+Z でも戻せます">元に戻す</button>
     <button class="chip tool" id="reset" title="基本のサンプル・白紙・作例の物語を開きます">見本を開く</button>
+    <button class="chip tool" id="importBtn" title="書き出したファイル（.json）を開きます">読み込む</button>
+    <button class="chip tool" id="exportBtn" title="いまの世界をファイル（.json）に保存します">書き出す</button>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
     <button class="chip tool" id="listBtn" aria-pressed="false">一覧</button>
   </div>
   <span class="hint">付箋・◆・線をクリックで編集。付箋を引っぱると、そこから分岐・移動・ループを延ばせます</span>
@@ -243,7 +251,8 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
   <span><svg width="34" height="14"><path d="M2 3 H10 L20 12 H32" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>分かれた世界線・主体が通らなかった残り（斜めに分かれて、斜めに合流）</span>
   <span><svg width="34" height="10"><line x1="3" y1="5" x2="31" y2="5" stroke="currentColor" stroke-width="6" stroke-dasharray="7 6"/></svg>自分が重なる時間（同じ時間にもう一人の自分）</span>
   <span><svg width="14" height="12"><rect x="3" y="2" width="8" height="8" transform="rotate(45 7 6)" fill="none" stroke="currentColor" stroke-width="2"/></svg>主体の移り方（タイムトラベル・移動）</span>
-  <span><svg width="22" height="14"><path d="M2 3 H20 M11 3 a5 5 0 1 0 .01 0" fill="none" stroke="currentColor" stroke-width="2"/></svg>ループ（通る主体を選ぶと周回ごとにほどけ、○で折り返す）</span>
+  <span><svg width="22" height="14"><path d="M2 3 H20 M11 3 a5 5 0 1 0 .01 0" fill="none" stroke="currentColor" stroke-width="2"/></svg>ループ（分かれて何周もくり返す世界線。通る主体を選ぶと周回ごとにほどけ、○で折り返す）</span>
+  <span><svg width="16" height="14"><path d="M3 7 l9 -5 M3 7 l9 5" fill="none" stroke="var(--accent)" stroke-width="1.8"/></svg>分岐点の出来事（ここで世界が分かれうる）</span>
   <span><svg width="34" height="10"><line x1="0" y1="5" x2="34" y2="5" stroke="var(--accent)" stroke-width="1.5" stroke-opacity=".6"/></svg>いま焦点を当てている線</span>
   <span>線の長さ＝付箋の数 ＋ 重要な出来事の間の時間の桁。「≈」は目に見える印から次の印までの時間、「≈30年前へ」は跳んだ時間</span>
 </footer></details>
@@ -317,56 +326,16 @@ function fmtDur(days, yearLen = YEAR) {
 }
 const precFor = span => span >= 100 * YEAR ? 'year' : span >= 2 * YEAR ? 'month' : span >= 3 ? 'day' : 'min';
 
-// ===== サンプルの世界 =====
-// cal：'west'（西暦系）か 'fict'（架空の暦）。color：線の色の番号。lane：本線より上（負）か下（正）か
-// fork：始まりで [世界線, 日時] から分かれた。merge：終わりで [世界線, 日時] に合流する。どちらも世界線の端と一緒に動く
-const LOOP_START = W(2025, 8, 17), LOOP_END = W(2025, 8, 31, 23, 59);
-let tracks = [
-  { id: 'main', name: '本線', lane: 0, color: 0, cal: 'west', from: ago(13.8e9), to: W(2100) },
-  { id: 'ryugu', name: '竜宮', lane: -1, color: 1, cal: 'west', from: W(720), to: W(723), fork: ['main', W(720)], merge: ['main', W(1020)] },
-  { id: 'beta', name: '世界線β', lane: 1, color: 2, cal: 'west', from: W(1850, 6, 1, 12), to: W(2100), fork: ['main', W(1850, 6, 1, 12)] },
-  { id: 'gamma', name: '世界線γ', lane: -2, color: 4, cal: 'west', from: W(1582, 6, 21), to: W(2100), fork: ['main', W(1582, 6, 21)] },
-  { id: 'dream', name: 'ドリームランド', lane: 2, color: 3, cal: 'fict', calName: '夢暦', months: DREAM_MONTHS, from: DR(1), to: DR(2001) },
-];
-// ループ：世界線の a〜b の期間を、世界が n 周くり返す。この期間を通る主体は、周回を順に体験する
-let loops = [{ id: 'loop1', tr: 'main', a: LOOP_START, b: LOOP_END, n: 3, kind: '夏休みのループ' }];
-// 主体の道筋：区間 { tr: 世界線, a: 入った, b: 出た } を本人が体験した順に並べる。最初の区間の始まりが誕生。
-// ループの期間の中で入る・出るときは ka / kb に何周目かを書く。区間どうしの移り方は自動で決まり、jump に名前・種類・パラドックスを書き足せる
-let subjects = [
-  { id: 'urashima', name: '浦島太郎', legs: [{ tr: 'main', a: W(700), b: W(720) }, { tr: 'ryugu', a: W(720), b: W(723) }, { tr: 'main', a: W(1020), b: W(1020, 1, 5) }] },
-  { id: 'dreamer', name: '夢見る者R', legs: [{ tr: 'main', a: W(1890, 8, 20), b: W(1920, 3, 1, 23) }, { tr: 'dream', a: DR(1203), b: DR(1215), jump: { label: '眠ってドリームランドへ' } }, { tr: 'main', a: W(1920, 3, 2, 7), b: W(1937, 3, 15), jump: { label: '目覚めて現実へ' } }] },
-  { id: 'loop', name: 'ループする少女', legs: [{ tr: 'main', a: W(2010, 4, 2), b: W(2090) }] },
-  { id: 'm', name: '時間旅行者M', legs: [{ tr: 'main', a: W(1968, 6, 12), b: W(1985, 10, 26, 1, 35) }, { tr: 'main', a: W(1955, 11, 5, 6), b: W(1955, 11, 12, 22, 4) }, { tr: 'main', a: W(1985, 10, 26, 1, 24), b: W(2040) }] },
-  { id: 'k', name: '時間旅行者K', legs: [{ tr: 'main', a: W(1995, 3, 3), b: W(2025, 6, 1, 12) }, { tr: 'beta', a: W(1850, 6, 1, 12), b: W(1900), jump: { label: '過去へ跳ぶ（パラドックス発生）', paradox: true } }] },
-  { id: 'o', name: '観測者O', legs: [{ tr: 'main', a: W(2061, 1, 1), b: W(2085, 3, 1) }, { tr: 'main', a: W(2025, 8, 20, 19), b: W(2025, 9, 3), ka: 2, jump: { label: 'ループの2周目の夏祭りへ' } }, { tr: 'main', a: W(2085, 3, 1), b: W(2100) }] },
-];
-let events = [
-  { tr: 'main', t: ago(13.8e9), title: '宇宙の始まり', tags: ['宇宙'] },
-  { tr: 'main', t: ago(4.54e9), title: '地球の誕生', tags: ['宇宙'] },
-  { tr: 'main', t: ago(6.6e7), title: '恐竜の絶滅', tags: ['宇宙'] },
-  { tr: 'main', t: W(719, 6, 1), title: '亀を助ける', tags: ['浦島'] },
-  { tr: 'ryugu', t: W(720, 1, 2), title: '竜宮城に着く', tags: ['浦島'] },
-  { tr: 'ryugu', t: W(721, 7, 7), title: '乙姫の宴', tags: ['浦島'] },
-  { tr: 'ryugu', t: W(722, 12, 1), title: '故郷が恋しくなる', tags: ['浦島'] },
-  { tr: 'main', t: W(1020, 1, 5), title: '玉手箱を開ける', tags: ['浦島'] },
-  { tr: 'main', t: W(1582, 6, 21), title: '本能寺の変', tags: ['歴史'] },
-  { tr: 'gamma', t: W(1582, 6, 21), title: '本能寺の変（信長が脱出する）', tags: ['歴史'] },
-  { tr: 'gamma', t: W(1590, 8, 1), title: '信長が天下を統一', tags: ['歴史'] },
-  { tr: 'main', t: W(1920, 3, 1, 23), title: 'Rが眠りにつく', tags: ['夢'] },
-  { tr: 'dream', t: DR(300), title: '古い夢の伝承', tags: ['夢'] },
-  { tr: 'dream', t: DR(1205, 2, 3), title: '猫の町を訪れる', tags: ['夢'] },
-  { tr: 'dream', t: DR(1210, 9, 9), title: '銀の鍵を得る', tags: ['夢'] },
-  { tr: 'main', t: W(1920, 3, 2, 7), title: 'Rが目覚める', tags: ['夢'] },
-  { tr: 'main', t: W(1955, 11, 12, 22, 4), title: '時計台に雷', tags: ['時間旅行'] },
-  { tr: 'main', t: W(1985, 10, 26, 1, 20), title: '駐車場で実験', tags: ['時間旅行'] },
-  { tr: 'main', t: W(2025, 6, 1, 12), title: 'Kが過去へ跳ぶ', tags: ['時間旅行'] },
-  { tr: 'beta', t: W(1850, 6, 1, 12), title: '見知らぬ男が現れる', tags: ['時間旅行'] },
-  { tr: 'beta', t: W(1851), title: '歴史が変わり始める', tags: ['歴史', '時間旅行'] },
-  { tr: 'main', t: LOOP_START, title: 'ループの始まり', tags: ['ループ'], group: 'summer' },
-  { tr: 'main', t: W(2025, 8, 20, 19), title: '夏祭り', tags: ['ループ'], group: 'summer' },
-  { tr: 'main', t: LOOP_END, title: '夏休み最後の夜', tags: ['ループ'], group: 'summer' },
-];
-let groups = { summer: { title: 'シナリオ：夏の終わりのループ', open: true } };
+// ===== 世界のデータ =====
+// このプログラムは見せるだけ。世界のデータ（サンプル・作例の物語・自分で作った世界）はプログラムに書かず、ファイルやブラウザの保存から読み込む
+// 世界線 { id, name, lane（本線より上は負・下は正）, color, cal（'west' 西暦系か 'fict' 架空の暦。calName・months）, from, to,
+//   fork: [世界線, 日時, 何周目]（始まりでそこから分かれた）, merge: [世界線, 日時, 何周目]（終わりでそこに合流する）, loop: n（始まりから終わりまでを n 周くり返すループの世界線） }
+//   分岐点・合流点は世界線の端と一緒に動く。何周目は、ループの世界線から分かれる・へ戻るときだけ
+// 主体 { id, name, legs: [{ tr, a, b, ka, kb, jump }], origin }：区間を体験した順に並べる。ループの世界線の中で入る・出るときは ka / kb に何周目か。
+//   jump：前の区間からの移り方（自動で決まり、名前・種類・パラドックスを書き足せる）。origin：分岐で現れた分身なら、分かれる前の本人の id
+// 付箋 { tr, t, title, tags, group, branch（分岐点）, k（ループの k 周目だけの出来事）, per（周ごとの書き換え { 周: { title, tags } か null＝その周では起こらない }）}
+let tracks = [], subjects = [], events = [], groups = {};
+const blankWorld = () => ({ tracks: [{ id: 'main', name: '本線', lane: 0, color: 0, cal: 'west', from: ago(13.8e9), to: W(2100) }], subjects: [], events: [], groups: {} });
 
 // ===== 時点 =====
 const key = (tr, t) => tr + '|' + t;
@@ -375,37 +344,36 @@ const nodesIn = (tr, a, b) => nodeTimes[tr].filter(v => v >= a && v <= b);
 let T = {}, nodeTimes = {}, IMPORTANT = new Set(), CLOCK = {}, CONNS = [], JUMPS = [], SYNC = [];
 const OBJECTIVE = { id: null, name: '本線（客観）', legs: [], path: [] };
 const JUMP_TYPES = { travel: ['タイムトラベル', 'タイムトラベル（過去や未来へ跳ぶ）'], move: ['移動', '移動（瞬間移動・世界線の出入り。同じ瞬間のまま）'] };
-const samePt = (p, tr, t) => !!p && p[0] === tr && p[1] === t;
-const loopsOn = tr => loops.filter(l => l.tr === tr).sort((p, q) => p.a - q.a);
+// 点 p＝[世界線, 日時, 何周目] が、その世界線・日時（・周）と同じか。周はどちらかが決まっていなければ問わない
+const samePt = (p, tr, t, k) => !!p && p[0] === tr && p[1] === t && (!p[2] || !k || p[2] === k);
+// ループの世界線なら、その周回の決まり
+const loopOf = tr => T[tr]?.loop ? { id: tr, a: T[tr].from, b: T[tr].to, n: T[tr].loop } : null;
+const loopsOn = tr => loopOf(tr) ? [loopOf(tr)] : [];
 const kOf = (lp, k) => Math.min(lp.n, Math.max(1, Math.trunc(k) || 1));
 // 区間1つを、ループの周回ごとに分けた破片の並びにする。k：何周目か（ループの外は0）。ret：この破片の前でループが始まりに戻った
+//   ループの世界線の終わりまでいて出たなら、最後の周まで回ったことにする
 function expandLeg(g, li) {
-  const out = [], lps = loopsOn(g.tr);
-  const push = (a, b, k, lp, ret) => out.push({ tr: g.tr, a, b, k, lp, li, ret });
-  let t = g.a, lp = lps.find(l => l.a <= t && t < l.b) || null, k = lp ? kOf(lp, g.ka) : 0, ret = false;
-  while (out.length < 1e4) {
-    if (!lp) {
-      const nx = lps.find(l => l.a >= t && l.a < g.b);
-      if (!nx) { if (g.b > t) push(t, g.b, 0, null, ret); break; }
-      if (nx.a > t) push(t, nx.a, 0, null, ret);
-      t = nx.a; lp = nx; k = 1; ret = false; continue;
-    }
-    const endsIn = lp.a < g.b && g.b <= lp.b;
-    const kEnd = endsIn ? (g.kb != null ? kOf(lp, g.kb) : g.b > t ? k : Math.min(lp.n, k + 1)) : lp.n;
-    if (k < kEnd) { push(t, lp.b, k, lp, ret); t = lp.a; k++; ret = true; continue; }
-    if (endsIn) { if (g.b > t) push(t, g.b, k, lp, ret); break; }
-    push(t, lp.b, k, lp, ret); t = lp.b; lp = null; k = 0; ret = false;
-  }
+  const lp = loopOf(g.tr);
+  if (!lp) return g.b > g.a ? [{ tr: g.tr, a: g.a, b: g.b, k: 0, lp: null, li, ret: false }] : [];
+  const out = [];
+  let t = g.a, k = kOf(lp, g.ka), ret = false;
+  const kb = g.kb != null ? kOf(lp, g.kb) : g.b === lp.b ? lp.n : g.b > t ? k : Math.min(lp.n, k + 1);
+  while (k < kb && out.length < 1e4) { out.push({ tr: g.tr, a: t, b: lp.b, k, lp, li, ret }); t = lp.a; k++; ret = true; }
+  if (g.b > t) out.push({ tr: g.tr, a: t, b: g.b, k, lp, li, ret });
   return out;
 }
-// 主体の道筋を、体験した順の破片の並びにする。区間の切れ目で途切れていれば、そこが移動（jump）
-function pathOf(sub) {
-  const out = [];
+// 主体の道筋を、体験した順の破片の並びにする。区間の切れ目で途切れていれば、そこが移動（jump）。
+// 分身は、分かれる前の本人の人生（分岐点まで）を受け継ぐ（inh：受け継いだ破片、src：その持ち主）
+function pathOf(sub, depth = 0) {
+  const out = [], o = sub.origin && subjects.find(x => x.id === sub.origin), f = sub.legs[0] && T[sub.legs[0].tr]?.fork;
+  if (o && o !== sub && f && depth < 8) {
+    const op = pathOf(o, depth + 1), i = op.findIndex(q => q.tr === f[0] && q.a <= f[1] && f[1] <= q.b && (!f[2] || q.k === f[2]));
+    if (i >= 0) for (const q of [...op.slice(0, i), { ...op[i], b: f[1] }]) out.push({ ...q, src: q.src || o.id, inh: true });
+  }
   sub.legs.forEach((g, li) => {
     const es = expandLeg(g, li), p = out[out.length - 1], q = es[0];
     if (!q) return;
-    const flows = p && p.tr === q.tr && p.b === q.a &&
-      (p.k === q.k || (!p.k && q.k === 1 && q.a === q.lp.a) || (!q.k && p.k === p.lp.n && p.b === p.lp.b));
+    const flows = p && p.tr === q.tr && p.b === q.a && (p.k === q.k || (!p.k && q.k === 1 && q.a === q.lp.a) || (!q.k && p.k === p.lp.n && p.b === p.lp.b));
     if (p && !flows) q.jump = true;
     out.push(...es);
   });
@@ -414,8 +382,8 @@ function pathOf(sub) {
 // 移り方の自動判定：分岐・合流をたどる移動、または同じ時計で同じ瞬間なら「移動」、同じ時計で時間が違えば「タイムトラベル」。
 // 時計を比べられない世界（夢など）への出入りは「移動」とみなす
 function classify(A, B) {
-  if (samePt(T[B.tr].fork, A.tr, A.b) && B.a === T[B.tr].from) return ['move', 'f|' + B.tr];
-  if (samePt(T[A.tr].merge, B.tr, B.a) && A.b === T[A.tr].to) return ['move', 'm|' + A.tr];
+  if (samePt(T[B.tr].fork, A.tr, A.b, A.k) && B.a === T[B.tr].from) return ['move', 'f|' + B.tr];
+  if (samePt(T[A.tr].merge, B.tr, B.a, B.k) && A.b === T[A.tr].to) return ['move', 'm|' + A.tr];
   if (CLOCK[A.tr] === CLOCK[B.tr]) return [A.b === B.a && A.k === B.k ? 'move' : 'travel', null];
   return ['move', null];
 }
@@ -436,46 +404,44 @@ function rebuild() {
     if (t.cal === 'fict') { t.fmt = (x, p) => fmtFict(x, p, t); t.short = (x, p) => fmtFict(x, p, t, false); t.yearLen = 360; }
     else { const nm = t.id === 'main' ? '西暦' : `西暦;${t.name}`; t.fmt = (x, p) => fmtWest(x, nm, p); t.short = (x, p) => fmtWest(x, '', p); delete t.yearLen; }
   }
-  // 同じ時計：西暦系で、分岐・合流の両側の日時がそろっている世界線どうし（竜宮のように合流の日時がずれると別の時計）
+  // 同じ時計：分岐・合流の両側の日時がそろっている、同じ種類の暦の世界線どうし（時の流れが違う異界のように、合流の日時がずれると別の時計）
   CLOCK = Object.fromEntries(tracks.map(t => [t.id, t.id]));
   for (let pass = 0; pass < tracks.length; pass++) for (const t of tracks) {
     const cs = [t.fork && [t.fork, t.from], t.merge && [t.merge, t.to]].filter(Boolean);
-    if (t.cal === 'west' && cs.length && cs.every(([[u, ut], v]) => ut === v && T[u]?.cal === 'west')) CLOCK[t.id] = CLOCK[cs[0][0][0]];
+    if (cs.length && cs.every(([[u, ut], v]) => ut === v && T[u]?.cal === t.cal && (t.cal === 'west' || T[u].calName === t.calName))) CLOCK[t.id] = CLOCK[cs[0][0][0]];
   }
   CONNS = tracks.flatMap(t => [
-    t.fork && { id: 'f|' + t.id, tr: t.id, a: t.fork, b: [t.id, t.from], label: `${t.name}が分かれる` },
-    t.merge && { id: 'm|' + t.id, tr: t.id, a: [t.id, t.to], b: t.merge, label: `${t.name}が合流する` },
+    t.fork && T[t.fork[0]] && { id: 'f|' + t.id, tr: t.id, a: t.fork, b: [t.id, t.from], label: t.loop ? `${t.name}（ループ）が始まる` : `${t.name}が分かれる` },
+    t.merge && T[t.merge[0]] && { id: 'm|' + t.id, tr: t.id, a: [t.id, t.to], b: t.merge, label: t.loop ? `${t.name}（ループ）が終わって戻る` : `${t.name}が合流する` },
   ].filter(Boolean));
   const s = Object.fromEntries(tracks.map(t => [t.id, new Set([t.from, t.to])]));
   for (const c of CONNS) { s[c.a[0]].add(c.a[1]); s[c.b[0]].add(c.b[1]); }
-  for (const l of loops) { s[l.tr].add(l.a); s[l.tr].add(l.b); }
-  for (const e of events) s[e.tr].add(e.t);
+  for (const e of events) s[e.tr]?.add(e.t);
+  for (const sub of subjects) Object.defineProperty(sub, 'path', { value: pathOf(sub), configurable: true, writable: true, enumerable: false });
   JUMPS = [];
-  for (const sub of subjects) {
-    Object.defineProperty(sub, 'path', { value: pathOf(sub), configurable: true, writable: true, enumerable: false });
-    sub.path.forEach((q, i) => {
-      s[q.tr].add(q.a); s[q.tr].add(q.b);
-      if (!q.jump) return;
-      const A = sub.path[i - 1], meta = sub.legs[q.li].jump || {}, [auto, struct] = classify(A, q);
-      const j = { id: `${sub.id}:${q.li}`, sub, li: q.li, a: { tr: A.tr, t: A.b, k: A.k }, b: { tr: q.tr, t: q.a, k: q.k }, type: meta.type || auto, auto, struct, paradox: !!meta.paradox, meta };
-      j.label = jumpLabel(j);
-      q.jump = j;
-      JUMPS.push(j);
-    });
-  }
+  for (const sub of subjects) sub.path.forEach((q, i) => {
+    s[q.tr].add(q.a); s[q.tr].add(q.b);
+    if (!q.jump || q.inh) return;
+    const A = sub.path[i - 1], meta = sub.legs[q.li].jump || {}, [auto, struct] = classify(A, q);
+    const j = { id: `${sub.id}:${q.li}`, sub, li: q.li, a: { tr: A.tr, t: A.b, k: A.k }, b: { tr: q.tr, t: q.a, k: q.k }, type: meta.type || auto, auto, struct, paradox: !!meta.paradox, meta };
+    j.label = jumpLabel(j);
+    q.jump = j;
+    JUMPS.push(j);
+  });
+  // 受け継いだ人生の中の移り方は、本人の移り方そのもの
+  for (const sub of subjects) for (const q of sub.path) if (q.inh && q.jump) q.jump = JUMPS.find(j => j.sub.id === q.src && j.li === q.li) || null;
   nodeTimes = {};
   for (const id in s) nodeTimes[id] = [...s[id]].sort((a, b) => a - b);
   const pts = j => [[j.a.tr, j.a.t], [j.b.tr, j.b.t]];
   SYNC = [...CONNS.map(c => [c.a, c.b]), ...JUMPS.filter(j => j.type === 'move').map(pts)];
-  // 重要な出来事：分岐・合流・移動・ループの端、主体の誕生、シナリオ（まとめ）の最初と最後（世界線の端は offsets が区切りにする）
-  IMPORTANT = new Set([...CONNS.map(c => [c.a, c.b]), ...JUMPS.map(pts)].flat().map(q => key(...q)));
-  for (const l of loops) { IMPORTANT.add(key(l.tr, l.a)); IMPORTANT.add(key(l.tr, l.b)); }
-  for (const sub of subjects) if (sub.path.length) IMPORTANT.add(key(sub.path[0].tr, sub.path[0].a));
+  // 重要な出来事：分岐・合流・移動の端（ループの世界線の端も含む）、主体の誕生、分岐点の出来事、シナリオ（まとめ）の最初と最後（世界線の端は offsets が区切りにする）
+  IMPORTANT = new Set([...CONNS.map(c => [c.a, c.b]), ...JUMPS.map(pts)].flat().map(q => key(q[0], q[1])));
+  for (const sub of subjects) { const q = sub.path.find(q => !q.inh); if (q) IMPORTANT.add(key(q.tr, q.a)); }
+  for (const e of events) if (e.branch) IMPORTANT.add(key(e.tr, e.t));
   for (const g in groups) for (const tr of tracks) {
     const ts = events.filter(e => e.group === g && e.tr === tr.id).map(e => e.t);
     if (ts.length) { IMPORTANT.add(key(tr.id, Math.min(...ts))); IMPORTANT.add(key(tr.id, Math.max(...ts))); }
   }
-  // 客観の視点はループをほどかない（輪のまま）
   OBJECTIVE.legs = [{ tr: 'main', a: T.main.from, b: T.main.to }];
   OBJECTIVE.path = [{ tr: 'main', a: T.main.from, b: T.main.to, k: 0, li: 0 }];
 }
@@ -488,6 +454,15 @@ function versionsOf(e) {
     if (p) events.forEach((o, i) => { if (o !== e && samePt(q, o.tr, o.t)) out.push(i); });
   }
   return out;
+}
+// ある瞬間に、ある世界線で生きている主体（分岐・ループで影響を受けうる人）。受け継いだ人生は本人の方で数える
+const aliveAt = (tr, t) => subjects.filter(s => s.path.some(q => !q.inh && q.tr === tr && q.a <= t && t < q.b));
+// ループの周回ごとの付箋の見え方：k 周目に出るか、出るならその名前とタグ（1周目のコピー、またはその周だけの書き換え）
+function evIn(e, k) {
+  if (!k) return e.k ? null : e;
+  if (e.k) return e.k === k ? e : null;
+  const o = e.per?.[k];
+  return o === null ? null : o ? { ...e, ...o, over: true } : e;
 }
 
 // ===== 状態 =====
@@ -518,8 +493,9 @@ function refreshCards() {
     cards.push({ k: 'c|' + i, e, title: e.title });
   });
   for (const sub of subjects) {
-    if (!sub.path.length) continue;
-    const e = { tr: sub.path[0].tr, t: sub.path[0].a, title: `${sub.name} 誕生`, tags: ['誕生'] };
+    const q = sub.path.find(q => !q.inh);
+    if (!q) continue;
+    const e = { tr: q.tr, t: q.a, title: `${sub.name} ${sub.origin ? '分かれて現れる' : '誕生'}`, tags: ['誕生'] };
     if (eventVisible(e)) cards.push({ k: 'b|' + sub.id, e, title: e.title, birth: true });
   }
   for (const gid in firstOf) {
@@ -534,7 +510,9 @@ function refreshCards() {
 // 重要な出来事（誕生・分岐・合流・出入り・時間移動・ループ・シナリオの端）から次の重要な出来事までを1区切りとし、
 // 区切りの長さ = 最小の幅 + 区切りの中の付箋の数 + 区切りの時間の桁（1日を単位に、10倍になるごとに1）。
 // ふつうの付箋は区切りを作らない。区切りの中では、時間の流れに比例した位置に置く
-const G0 = 0.3, JOINT = 0.8, LANE = 100, RMAX = 60;
+const G0 = 0.3, LANE = 100, RMAX = 60;
+// すき間（分岐・合流・移り方の斜めの線や◆を置く、時間の流れないところ）の幅：もとの長さの4.5%（最小0.8）
+const GAPF = .045, GAPMIN = .8;
 const timeLen = days => G0 + Math.log10(1 + days);
 function offsets(tr, a, b, curled) {
   const ns = nodesIn(tr, a, b), c = ns.map(t => cardCount[key(tr, t)] || 0), o = [0];
@@ -546,17 +524,13 @@ function offsets(tr, a, b, curled) {
     o.push(o[i - 1] + (c[i - 1] + c[i]) / 2 + timeLen(D) * (ns[i] - ns[i - 1]) / D);
     if (i === s1) s0 = i;
   }
-  // ループの期間：たたむ（輪にする）ときは横に進まない
-  const rings = [];
-  for (const lp of loops) {
-    if (lp.tr !== tr) continue;
-    const i0 = ns.indexOf(lp.a), i1 = ns.indexOf(lp.b);
-    if (i0 < 0 || i1 < 0) continue;
-    const L = o[i1] - o[i0], s = o.slice(i0, i1 + 1).map(v => v - o[i0]), cl = curled.has(lp);
-    rings.push({ loop: lp, i0, i1, L, s, curled: cl });
-    if (cl) for (let i = i0 + 1; i < ns.length; i++) o[i] = i < i1 ? o[i0] : o[i] - L;
-  }
-  return { nodes: ns.map((t, i) => ({ t, o: o[i] })), loops: rings };
+  return { nodes: ns.map((t, i) => ({ t, o: o[i] })), loops: ringsOf(tr, ns, o, curled) };
+}
+// ループの世界線を始まりから終わりまで見せる破片は、輪として描く（周回をほどく視点では輪にしない）。輪にしても横の長さは変えない
+function ringsOf(tr, ts, xs, curled) {
+  const lp = loopOf(tr), n = ts.length;
+  if (!lp || !curled.has(tr) || ts[0] !== lp.a || ts[n - 1] !== lp.b || n < 2) return [];
+  return [{ loop: lp, i0: 0, i1: n - 1, L: xs[n - 1] - xs[0], s: xs.map(v => v - xs[0]), curled: curled.has(tr) }];
 }
 // 区間 [a, b] を「すでに通った部分」と「初めての部分」に分ける
 function splitCovered(ivs, a, b) {
@@ -572,16 +546,98 @@ function mergeIv(ivs) {
   return out;
 }
 
-// ===== 配置：世界線を切り分けて、主体が体験した順に1本につなぐ =====
-function computeLayout(sub) {
-  // 主体が通るループは周回ごとにほどく。それ以外は輪のまま
-  const unrolled = new Set(sub.path.filter(q => q.k).map(q => q.lp));
-  const curled = new Set(loops.filter(l => !unrolled.has(l)));
+// ===== 配置 =====
+// 本線（客観）の視点：すべての世界線を、同じ瞬間どうしがそろうように並べる。分岐と合流のあいだは、そのあいだに入るものがいちばん長い世界線に長さを合わせる。
+// 主体の視点：世界線を切り分けて、主体が体験した順に中央の1本につなぐ。通らなかった部分は上下に退く。
+// どちらも、分岐・合流・移り方の斜めの線と◆は「すき間」（時間の流れないところ）に置く。斜めの線の上では時間が進まない
+function computeLayout(sub) { return sub.id ? subjectLayout(sub) : objectiveLayout(); }
+
+function objectiveLayout() {
+  const curled = new Set(tracks.filter(t => t.loop).map(t => t.id));
+  const off = Object.fromEntries(tracks.map(t => [t.id, offsets(t.id, t.from, t.to, curled)]));
+  const G = Math.max(GAPMIN, off.main.nodes[off.main.nodes.length - 1].o * GAPF);
+  const ownO = (tr, t) => { const ns = off[tr].nodes; let i = 0; while (i < ns.length - 2 && ns[i + 1].t < t) i++; const A = ns[i], B = ns[i + 1] || A; return B.t === A.t ? A.o : A.o + (B.o - A.o) * (t - A.t) / (B.t - A.t); };
+  // 1. 時点：同じ時計の世界線どうしは互いの時点を足してそろえる。子が分かれる・合流する時点には、すき間の後の時点（^）を足す
+  const gapAt = Object.fromEntries(tracks.map(t => [t.id, new Set()]));
+  for (const c of CONNS) { const [P, t] = c.id[0] === 'f' ? c.a : c.b; gapAt[P].add(t); }
+  const nodes = {}, byT = {};
+  for (const t of tracks) {
+    const set = new Set(off[t.id].nodes.map(n => n.t));
+    for (const u of tracks) if (u !== t && CLOCK[u.id] === CLOCK[t.id]) for (const n of off[u.id].nodes) if (n.t > t.from && n.t < t.to) set.add(n.t);
+    nodes[t.id] = [...set].sort((a, b) => a - b).flatMap(v => gapAt[t.id].has(v) ? [{ t: v, id: `${t.id}|${v}` }, { t: v, gap: true, id: `${t.id}|${v}^` }] : [{ t: v, id: `${t.id}|${v}` }]);
+    byT[t.id] = new Map(nodes[t.id].map(n => [n.t + (n.gap ? '^' : ''), n.id]));
+  }
+  // 2. 世界線に沿った長さ（すき間は G）と、「同じ位置」にする節点どうし
+  const edges = [];
+  for (const t of tracks) { const ns = nodes[t.id]; for (let i = 1; i < ns.length; i++) edges.push([ns[i - 1].id, ns[i].id, ns[i].gap ? G : ownO(t.id, ns[i].t) - ownO(t.id, ns[i - 1].t)]); }
+  const par = {};
+  const find = x => { while (par[x] && par[x] !== x) x = par[x]; return x; };
+  const reach = (a, b) => {
+    const adj = {};
+    for (const [u, v] of edges) (adj[find(u)] ||= []).push(find(v));
+    const seen = new Set([a]), st = [a];
+    while (st.length) { const u = st.pop(); if (u === b) return true; for (const v of adj[u] || []) if (!seen.has(v)) { seen.add(v); st.push(v); } }
+    return false;
+  };
+  // 矛盾する（前後が逆になる）ものは結ばない
+  const same = (a, b) => { if (!a || !b) return; const ra = find(a), rb = find(b); if (ra !== rb && !reach(ra, rb) && !reach(rb, ra)) par[ra] = rb; };
+  for (const c of tracks) {
+    if (c.fork && byT[c.fork[0]]) same(byT[c.id].get(c.from + ''), byT[c.fork[0]].get(c.fork[1] + '^'));
+    if (c.merge && byT[c.merge[0]]) same(byT[c.id].get(c.to + ''), byT[c.merge[0]].get(c.merge[1] + ''));
+  }
+  for (const u of tracks) for (const v of tracks) {
+    if (u.id >= v.id || CLOCK[u.id] !== CLOCK[v.id]) continue;
+    const forks = (c, P, t) => c.fork?.[0] === P.id && c.from === t;
+    for (const n of nodes[u.id]) {
+      if (!n.gap && (forks(u, v, n.t) || forks(v, u, n.t))) continue;
+      same(n.id, byT[v.id].get(n.t + (n.gap ? '^' : '')));
+    }
+  }
+  for (const j of JUMPS) if (j.type === 'move' && !j.struct) same(byT[j.a.tr]?.get(j.a.t + ''), byT[j.b.tr]?.get(j.b.t + ''));
+  // 3. いちばん長い道のり（左から順に、前の節点＋長さのうち最大）
+  const all = tracks.flatMap(t => nodes[t.id].map(n => n.id)), roots = [...new Set(all.map(find))];
+  const adj = Object.fromEntries(roots.map(r => [r, []])), indeg = Object.fromEntries(roots.map(r => [r, 0])), X = Object.fromEntries(roots.map(r => [r, 0]));
+  for (const [u, v, w] of edges) { const a = find(u), b = find(v); if (a !== b) { adj[a].push([b, w]); indeg[b]++; } }
+  const q = roots.filter(r => !indeg[r]);
+  while (q.length) { const u = q.pop(); for (const [v, w] of adj[u]) { X[v] = Math.max(X[v], X[u] + w); if (!--indeg[v]) q.push(v); } }
+  const members = {};
+  for (const id of all) members[find(id)] = (members[find(id)] || 0) + 1;
+  // 4. ほかの世界線とそろえる節点のあいだは、自分の長さの割合で並べ直す。最初・最後の節点より外は自分の長さで
+  const pieces = tracks.map(t => {
+    const ns = nodes[t.id], o = [0];
+    for (let i = 1; i < ns.length; i++) o.push(o[i - 1] + (ns[i].gap ? G : ownO(t.id, ns[i].t) - ownO(t.id, ns[i - 1].t)));
+    const x = ns.map(n => X[find(n.id)]), anc = ns.map((n, i) => members[find(n.id)] > 1 ? i : -1).filter(i => i >= 0);
+    if (anc.length) {
+      for (let i = anc[0] - 1; i >= 0; i--) x[i] = x[anc[0]] - (o[anc[0]] - o[i]);
+      for (let a = 0; a < anc.length - 1; a++) {
+        const i = anc[a], j = anc[a + 1];
+        for (let m = i + 1; m < j; m++) x[m] = x[i] + (x[j] - x[i]) * (o[j] > o[i] ? (o[m] - o[i]) / (o[j] - o[i]) : (m - i) / (j - i));
+      }
+      const l = anc[anc.length - 1];
+      for (let i = l + 1; i < ns.length; i++) x[i] = x[l] + (o[i] - o[l]);
+    } else for (let i = 0; i < ns.length; i++) x[i] = o[i];
+    const p = { tr: t.id, a: t.from, b: t.to, center: t.id === 'main', whole: true, nodes: ns.map((n, i) => ({ t: n.t, x: x[i], gap: !!n.gap, y: 0 })), loops: ringsOf(t.id, ns.map(n => n.t), x, curled) };
+    if (t.fork && gapAt[t.fork[0]]?.has(t.fork[1])) { p.fromPt = { gapSeg: `${t.fork[0]}|${t.fork[1]}^`, side: 's' }; p.fromC = 'f|' + t.id; }
+    if (t.merge && gapAt[t.merge[0]]?.has(t.merge[1])) { p.toPt = { gapSeg: `${t.merge[0]}|${t.merge[1]}^`, side: 'e' }; p.toC = 'm|' + t.id; }
+    return p;
+  });
+  const lane = pieces.filter(p => !p.center);
+  laneRows(lane, new Set());
+  return finish(OBJECTIVE, pieces, [], curled);
+}
+
+function subjectLayout(sub) {
+  // 主体が通るループの世界線は周回ごとにほどく。それ以外は輪のまま
+  const unrolled = new Set(sub.path.filter(q => q.k).map(q => q.tr));
+  const curled = new Set(tracks.filter(t => t.loop && !unrolled.has(t.id)).map(t => t.id));
+  const nat = sub.path.reduce((v, q) => { const ns = offsets(q.tr, q.a, q.b, curled).nodes; return v + ns[ns.length - 1].o; }, 0);
+  const G = Math.max(GAPMIN, nat * GAPF);
   const pieces = [], cover = {}, coverTr = {};
   let x = 0, tau = 0;
-  // 1. 中央の線：体験した順に並べる。ループの周回はそれぞれ別の場所。同じ場所・同じ時間をもう一度通るのは「自分が重なる」時間（dup）
+  // 1. 中央の線：体験した順に並べる。移り方（◆）とループの折り返し（○）の所にはすき間。
+  //    ループの周回はそれぞれ別の場所。同じ場所・同じ時間をもう一度通るのは「自分が重なる」時間（dup）
   sub.path.forEach((q, i) => {
-    if (i && (q.jump || q.ret)) x += JOINT;
+    if (i && (q.jump || q.ret)) x += G;
     const place = q.k ? `${q.tr}@${q.k}` : q.tr;
     for (const s of splitCovered(cover[place] || [], q.a, q.b)) {
       const off = offsets(q.tr, s.a, s.b, curled);
@@ -594,9 +650,10 @@ function computeLayout(sub) {
     tau += q.b - q.a;
   });
   const centerAt = {};
-  for (const p of pieces) if (!p.dup) for (const n of p.nodes) centerAt[key(p.tr, n.t)] ??= n.x;
-  // 2. 通らなかった残り：切れ目から斜めに分かれて、次の切れ目で斜めに戻る
-  const lane = [];
+  for (const p of pieces) if (!p.dup) for (const n of p.nodes) { centerAt[key(p.tr, n.t)] ??= n.x; if (p.k) centerAt[`${p.tr}|${n.t}@${p.k}`] ??= n.x; }
+  const cAt = pt => pt && (pt[2] && centerAt[`${pt[0]}|${pt[1]}@${pt[2]}`] !== undefined ? centerAt[`${pt[0]}|${pt[1]}@${pt[2]}`] : centerAt[key(pt[0], pt[1])]);
+  // 2. 通らなかった残り：両側の切れ目（または分岐点・合流点）のあいだに収め、切れ目から斜めに分かれて斜めに戻る
+  const lane = [], cuts = [];
   for (const tr of tracks) {
     const cov = mergeIv(coverTr[tr.id] || []);
     if (!cov.length) continue;
@@ -606,18 +663,28 @@ function computeLayout(sub) {
     if (prev < tr.to) rest.push([prev, tr.to]);
     for (const [a, b] of rest) {
       const off = offsets(tr.id, a, b, curled), L = off.nodes[off.nodes.length - 1].o;
-      const leftCut = a !== tr.from, rightCut = b !== tr.to;
-      const x0 = leftCut ? centerAt[key(tr.id, a)] : centerAt[key(tr.id, b)] - L;
-      lane.push({ tr: tr.id, a, b, leftCut, rightCut, loops: off.loops, nodes: off.nodes.map(({ t, o }) => ({ t, x: x0 + o })) });
+      const lp = a !== tr.from ? [tr.id, a] : tr.fork && cAt(tr.fork) !== undefined ? tr.fork : null;
+      const rp = b !== tr.to ? [tr.id, b] : tr.merge && cAt(tr.merge) !== undefined ? tr.merge : null;
+      // すき間は、両側の切れ目のあいだに収まる大きさまで縮める（体験の順が時間の順と同じなら、必ず両側とも斜めの線になる）
+      const L0 = lp ? cAt(lp) : null, R0 = rp ? cAt(rp) : null, g = L0 != null && R0 != null && R0 > L0 ? Math.min(G, (R0 - L0) / 3) : G;
+      const lx = L0 != null ? L0 + g : null, rx = R0 != null ? R0 - g : null;
+      const fits = lx != null && rx != null && rx > lx;
+      const map = fits ? o => lx + (rx - lx) * o / (L || 1) : lx != null ? o => lx + o : rx != null ? o => rx - L + o : o => o;
+      const p = { tr: tr.id, a, b, loops: off.loops, nodes: off.nodes.map(({ t, o }) => ({ t, x: map(o) })) };
+      if (lp) { p.fromPt = lp; if (a === tr.from) p.fromC = 'f|' + tr.id; }
+      if (rp && (fits || lx == null)) { p.toPt = rp; if (b === tr.to) p.toC = 'm|' + tr.id; }
+      else if (rp && b !== tr.to) p.farTo = rp; // 体験の順が時間の順と違うときは、細い点線で結ぶ
+      lane.push(p);
     }
   }
   // 3. 主体が一度も通らない世界線
-  //   同じ時計の世界線（西暦系で、分岐・合流の日時がそろう）は、相手の同じ日時の位置にそろえる。
-  //   時計が違う世界線（竜宮・夢など）は、「同じ瞬間」の点（分岐・合流・移動）を相手の位置に合わせ、そのあいだに収める
+  //   同じ時計の世界線は、相手の同じ日時の位置にそろえる。時計が違う世界線（時の流れが違う異界・夢など）は「同じ瞬間」の点を相手の位置に合わせ、そのあいだに収める。
+  //   分かれる所・合流する所は、すき間 G の分だけ離して斜めの線を置く
   const placed = new Set(Object.keys(coverTr));
-  const xAtTime = (tr, t) => {
-    for (const p of [...pieces.filter(q => q.center && !q.dup), ...lane]) {
-      if (p.tr !== tr || t < p.a || t > p.b) continue;
+  // k：ループの世界線なら何周目の位置か（決まっていなければどの周でも）
+  const xAtTime = (tr, t, k) => {
+    for (const p of [...pieces.filter(q => !q.dup), ...lane]) {
+      if (p.tr !== tr || t < p.a || t > p.b || (k && p.k && p.k !== k)) continue;
       const ns = p.nodes; let i = 0;
       while (i < ns.length - 2 && ns[i + 1].t < t) i++;
       const f = Math.min(1, Math.max(0, (t - ns[i].t) / ((ns[i + 1].t - ns[i].t) || 1)));
@@ -625,88 +692,110 @@ function computeLayout(sub) {
     }
     return null;
   };
-  for (let pass = 0; pass < tracks.length; pass++) for (const tr of tracks) {
+  for (let pass = 0; pass <= tracks.length; pass++) for (const tr of tracks) {
     if (placed.has(tr.id)) continue;
-    const off = offsets(tr.id, tr.from, tr.to, curled), o = off.nodes.map(n => n.o);
+    const off = offsets(tr.id, tr.from, tr.to, curled), o = off.nodes.map(n => n.o), n = o.length, last = pass === tracks.length;
     let xs = null;
     const partner = [...placed].find(u => CLOCK[u] === CLOCK[tr.id]);
-    if (partner) {
-      xs = off.nodes.map(n => xAtTime(partner, n.t));
-    } else {
+    if (partner) xs = off.nodes.map(v => xAtTime(partner, v.t));
+    else {
       // 同じ瞬間の点を錨にする（左から右の順を崩す錨は使わない）
       const anchors = [];
       for (const [P, Q] of SYNC) {
         const [mine, other] = P[0] === tr.id ? [P, Q] : Q[0] === tr.id ? [Q, P] : [];
         if (!mine || !placed.has(other[0])) continue;
-        const ax = xAtTime(other[0], other[1]), i = off.nodes.findIndex(n => n.t === mine[1]);
-        if (ax != null && i >= 0) anchors.push({ i, x: ax });
+        const ax = xAtTime(other[0], other[1]), i = off.nodes.findIndex(v => v.t === mine[1]);
+        if (ax != null && i >= 0) anchors.push({ i, x: ax + (i === 0 && tr.fork ? G : i === n - 1 && tr.merge ? -G : 0) });
       }
       anchors.sort((p, q) => p.i - q.i || p.x - q.x);
       const keep = [];
       for (const an of anchors) if (!keep.length || (an.i > keep[keep.length - 1].i && an.x > keep[keep.length - 1].x)) keep.push(an);
       if (keep.length) xs = o.map((v, i) => {
         if (i <= keep[0].i) return keep[0].x - (o[keep[0].i] - v);
-        const last = keep[keep.length - 1];
-        if (i >= last.i) return last.x + (v - o[last.i]);
+        const lastA = keep[keep.length - 1];
+        if (i >= lastA.i) return lastA.x + (v - o[lastA.i]);
         const k = keep.findIndex(an => an.i >= i), A = keep[k - 1], B = keep[k];
         return A.x + (B.x - A.x) * (v - o[A.i]) / (o[B.i] - o[A.i]);
       });
     }
-    if (!xs || xs.every(v => v == null)) continue;
+    if (!xs || xs.every(v => v == null)) { if (!last) continue; xs = o.slice(); }
     // そろえられない時点は、自分の長さで前後から補う。左から右の順は必ず守る
     const k0 = xs.findIndex(v => v != null);
     for (let i = k0 - 1; i >= 0; i--) xs[i] = xs[i + 1] - (o[i + 1] - o[i]);
-    for (let i = k0 + 1; i < xs.length; i++) if (xs[i] == null || !(xs[i] > xs[i - 1])) xs[i] = xs[i - 1] + Math.max(o[i] - o[i - 1], 1e-3);
-    lane.push({ tr: tr.id, a: tr.from, b: tr.to, whole: true, loops: off.loops, nodes: off.nodes.map((n, i) => ({ t: n.t, x: xs[i] })) });
+    for (let i = k0 + 1; i < n; i++) if (xs[i] == null || !(xs[i] > xs[i - 1])) xs[i] = xs[i - 1] + Math.max(o[i] - o[i - 1], 1e-3);
+    // 分かれる・合流する所：すき間 G だけ離す（その線の時間はすき間の後から始まり、前で終わる）
+    const fx = tr.fork ? xAtTime(...tr.fork) : null, mx = tr.merge ? xAtTime(...tr.merge) : null;
+    const g = fx != null && mx != null && mx > fx ? Math.min(G, (mx - fx) / 3) : G; // 短い世界線でも両側に斜めの線が入るよう、すき間を縮める
+    if (fx != null && mx != null && mx - g > fx + g) { const a0 = xs[0], a1 = xs[n - 1], A = fx + g, B = mx - g; for (let i = 0; i < n; i++) xs[i] = a1 > a0 ? A + (B - A) * (xs[i] - a0) / (a1 - a0) : A + (B - A) * i / Math.max(1, n - 1); }
+    else if (fx != null) { xs[0] = fx + G; for (let i = 1; i < n; i++) if (!(xs[i] > xs[i - 1])) xs[i] = xs[i - 1] + 1e-3; }
+    else if (mx != null) { xs[n - 1] = mx - G; for (let i = n - 2; i >= 0; i--) if (!(xs[i] < xs[i + 1])) xs[i] = xs[i + 1] - 1e-3; }
+    const p = { tr: tr.id, a: tr.from, b: tr.to, whole: true, loops: ringsOf(tr.id, off.nodes.map(v => v.t), xs, curled), nodes: off.nodes.map((v, i) => ({ t: v.t, x: xs[i] })) };
+    if (fx != null) { p.fromPt = tr.fork; p.fromC = 'f|' + tr.id; }
+    if (mx != null) { p.toPt = tr.merge; p.toC = 'm|' + tr.id; }
+    lane.push(p);
     placed.add(tr.id);
   }
-  for (const tr of tracks) if (!placed.has(tr.id)) {
-    const off = offsets(tr.id, tr.from, tr.to, curled);
-    lane.push({ tr: tr.id, a: tr.from, b: tr.to, whole: true, loops: off.loops, nodes: off.nodes.map(({ t, o }) => ({ t, x: o })) });
-  }
-  // 4. 段：竜宮などは上、それ以外は下。同じ世界線の破片が重なるときは段を増やす
+  laneRows(lane, new Set(Object.keys(coverTr)));
+  pieces.push(...lane);
+  return finish(sub, pieces, cuts, curled);
+}
+
+// 段：「本線の上」の世界線は上、それ以外は下。主体が通った世界線の残りを中央の線のすぐ隣に。
+// 横に重ならなければ、ほかの世界線と同じ段に入れる（分岐元より外側の段に置く）
+function laneRows(lane, near) {
+  let most = 0;
   const assign = (list, sign) => {
-    let used = 0;
+    const rows = [], rowOf = {};
     for (const tr of list) {
       const ps = lane.filter(p => p.tr === tr.id).sort((p, q) => p.nodes[0].x - q.nodes[0].x);
-      if (!ps.length) continue;
-      const rows = [];
+      const min = tr.fork && rowOf[tr.fork[0]] != null ? rowOf[tr.fork[0]] + 1 : 0;
       for (const p of ps) {
         const s = p.nodes[0].x, e = p.nodes[p.nodes.length - 1].x;
-        let r = rows.findIndex(end => end + .6 < s);
-        if (r < 0) { r = rows.length; rows.push(e); } else rows[r] = e;
-        p.y = sign * (used + 1 + r) * LANE;
+        let r = min;
+        while (rows[r]?.some(([a, b]) => s < b + .6 && a < e + .6)) r++;
+        (rows[r] ||= []).push([s, e]);
+        rowOf[tr.id] = Math.max(rowOf[tr.id] ?? 0, r);
+        p.y = sign * (r + 1);
       }
-      used += rows.length;
     }
+    most += rows.length;
   };
-  // 主体が通った世界線の残りを中央の線のすぐ隣に。そのほかは lane の順
-  const near = t => coverTr[t.id] ? 0 : 1;
-  assign(tracks.filter(t => t.lane < 0).sort((p, q) => near(p) - near(q) || q.lane - p.lane), -1);
-  assign(tracks.filter(t => t.lane >= 0).sort((p, q) => near(p) - near(q) || p.lane - q.lane), 1);
-  for (const p of lane) for (const n of p.nodes) n.y = p.y;
-  pieces.push(...lane);
-  // 各時点の「本来の位置」（重なり・2周目以降ではない方）。中央の線を優先する
-  const where = {}, owner = {};
-  pieces.forEach((p, pi) => { if (!p.dup) p.nodes.forEach((n, ni) => { const k = key(p.tr, n.t); if (!where[k]) { where[k] = { x: n.x, y: n.y }; owner[k] = { pi, ni }; } }); });
-  // アニメーションのための名前：区切り（隣り合う時点どうし）とループの、何回目の登場か
+  const nr = t => near.has(t.id) ? 0 : 1;
+  assign(tracks.filter(t => t.lane < 0).sort((p, q) => nr(p) - nr(q) || q.lane - p.lane), -1);
+  assign(tracks.filter(t => t.lane >= 0).sort((p, q) => nr(p) - nr(q) || p.lane - q.lane), 1);
+  // 段が多いときは、画面の高さに収まるよう段の間を詰める（付箋が入る分は残す）
+  const lanePx = Math.max(60, Math.min(LANE, ((svg.clientHeight || 600) - 170) / Math.max(1, most)));
+  for (const p of lane) { p.y *= lanePx; for (const n of p.nodes) n.y = p.y; }
+}
+
+// 仕上げ：各時点の本来の位置、区切りの名前（アニメーションで同じものを追うため）、斜めの線・つなぎ目・点線の行き先
+function finish(sub, pieces, _cuts, curled) {
+  const where = {}, owner = {}, ownerK = {};
+  pieces.forEach((p, pi) => {
+    if (p.dup) return;
+    p.nodes.forEach((n, ni) => {
+      const k = key(p.tr, n.t);
+      if (!where[k]) { where[k] = { x: n.x, y: n.y }; owner[k] = { pi, ni }; }
+      if (p.k) ownerK[`${k}@${p.k}`] ??= { pi, ni };
+    });
+  });
+  // 区切り（隣り合う時点どうし）とループの輪に、何回目の登場かを付けた名前。すき間の区切りは「^」
   const cnt = {};
   const nth = b => `${b}#${cnt[b] = (cnt[b] ?? -1) + 1}`;
   for (const p of pieces) {
-    p.seg = p.nodes.slice(0, -1).map(n => nth(`${p.tr}|${n.t}`));
+    p.seg = p.nodes.slice(0, -1).map((n, j) => nth(`${p.tr}|${n.t}${p.nodes[j + 1].gap && p.nodes[j + 1].t === n.t ? '^' : ''}`));
     for (const lp of p.loops) lp.id = nth('L' + lp.loop.id);
   }
-  // 斜めの線の行き先（区切りの端で表す）：残りは切れ目へ、分かれた世界線は分岐元・合流先へ
-  const refAt = (tr, t) => { const o = owner[key(tr, t)]; if (!o) return null; const q = pieces[o.pi]; return o.ni > 0 ? [q.seg[o.ni - 1], 'e'] : [q.seg[0], 's']; };
-  //   行き先が横にずれている（体験の順が時間の順と違う・その日時にそろえて置けなかった）ときは斜めにせず、細い点線で結ぶ
-  const refNear = (q, x) => { const w = where[key(...q)]; return w && Math.abs(w.x - x) < .5 ? refAt(...q) : null; };
+  const nodeRef = (pi, ni) => { const q = pieces[pi]; return ni > 0 ? [q.seg[ni - 1], 'e'] : [q.seg[0], 's']; };
+  const refAt = (tr, t, k) => { const o = (k && ownerK[`${key(tr, t)}@${k}`]) || owner[key(tr, t)]; return o ? nodeRef(o.pi, o.ni) : null; };
+  const ptRef = pt => pt.gapSeg ? [`${pt.gapSeg}#0`, pt.side] : refAt(pt[0], pt[1], pt[2]);
   const cuts = [];
-  for (const p of lane) {
-    const t = T[p.tr], x0 = p.nodes[0].x, x1 = p.nodes[p.nodes.length - 1].x;
-    if (p.leftCut) { if (!(p.from = refNear([p.tr, p.a], x0))) cuts.push({ tr: p.tr, a: refAt(p.tr, p.a), b: [p.seg[0], 's'] }); }
-    else if (t.fork && p.a === t.from && (p.from = refNear(t.fork, x0))) p.fromC = 'f|' + p.tr;
-    if (p.rightCut) { if (!(p.to = refNear([p.tr, p.b], x1))) cuts.push({ tr: p.tr, a: [p.seg[p.seg.length - 1], 'e'], b: refAt(p.tr, p.b) }); }
-    else if (t.merge && p.b === t.to && (p.to = refNear(t.merge, x1))) p.toC = 'm|' + p.tr;
+  for (const p of pieces) {
+    if (p.fromPt) p.from = ptRef(p.fromPt);
+    if (p.toPt) p.to = ptRef(p.toPt);
+    if (p.farTo) { const r = refAt(p.farTo[0], p.farTo[1]); if (r) cuts.push({ tr: p.tr, a: [p.seg[p.seg.length - 1], 'e'], b: r }); }
+    if (!p.from) delete p.fromC;
+    if (!p.to) delete p.toC;
   }
   // 重なった自分から、1回目の同じ時間へ
   const dupArcs = pieces.filter(p => p.dup).map(p => ({ tr: p.tr, a: [p.seg[0], 's'], b: [`${p.tr}|${p.a}#0`, 's'] }));
@@ -717,15 +806,18 @@ function computeLayout(sub) {
     const pa = pieces.filter(p => p.center && p.pi === i - 1).pop(), pb = pieces.find(p => p.center && p.pi === i);
     if (pa && pb) joints.push({ i, id: q.jump ? q.jump.id : `L${q.lp.id}:${q.k}`, jump: q.jump || null, loop: q.jump ? null : q.lp, k: q.k, a: [pa.seg[pa.seg.length - 1], 'e'], b: [pb.seg[0], 's'] });
   });
-  return { sub, pieces, where, owner, curled, dupArcs, joints, cuts: cuts.filter(c => c.a && c.b) };
+  return { sub, pieces, where, owner, ownerK, curled, dupArcs, joints, cuts, nodeRef, refAt };
 }
 
 // ===== アニメーション =====
-// どの視点からどの視点へ移るときも同じ動き：動く前の画面上の位置から、動いた後の画面上の位置へ、まっすぐ同じ速さで動かす。
-// 線は「区切り（隣り合う時点どうし）」ごとに、どの配置でも同じ名前を持つ。2回目以降の複製は、1回目から出てきて、1回目に戻る
+// どの視点からどの視点へ移るときも、同じ決まりで動く：
+//   動く前の場面と動いた後の場面を、部品（区切り・輪・付箋・文字・斜めの線・◆など）ごとに名前で突き合わせる。
+//   両方にある部品は、画面上の位置から位置へまっすぐ動く（線の太さや付箋の段も少しずつ変わる）。
+//   片方にしかない部品は、同じ速さで薄れる・現れる（2回目以降の複製は、1回目の所から出てきて、1回目の所へ戻る）。
+//   だから A→B の途中の絵と、B→A の同じだけ戻った途中の絵は同じになる
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ease = s => s <= 0 ? 0 : s >= 1 ? 1 : s < .5 ? 2 * s * s : 1 - Math.pow(-2 * s + 2, 2) / 2;
-let prev = null, cur = null, prog = 1, camTo = null, A = null, revealNext = null;
+let cur = null, prog = 1, camTo = null, A = null, revealNext = null, lastScene = null;
 let cam = { zoom: 20, panX: 0, panY: 0 };
 const DURATION = 1500;
 function fitCam(layout, all = false) {
@@ -735,16 +827,20 @@ function fitCam(layout, all = false) {
   const pad = (hi - lo) * .06;
   lo -= pad; hi += pad;
   const zoom = (W - 60 - Math.min(160, W * .2)) / Math.max(1e-9, hi - lo); // 右端の付箋が切れないよう余白を取る
-  return { zoom, panX: 30 - lo * zoom, panY: 0 }; // panY = 0：焦点の線が画面の縦の真ん中に来る
+  // 縦：焦点の線を画面の縦の真ん中に置く。上下の段（と、その上の付箋）がはみ出すときだけ、はみ出さないようにずらす
+  const H = svg.clientHeight || 600, ys = layout.pieces.map(p => p.nodes[0].y);
+  const lo2 = -H / 2 - (Math.min(0, ...ys) - 130), hi2 = H / 2 - (Math.max(0, ...ys) + 40);
+  const panY = lo2 <= hi2 ? Math.min(hi2, Math.max(lo2, 0)) : (lo2 + hi2) / 2;
+  return { zoom, panX: 30 - lo * zoom, panY };
 }
 function setView(sub, refit = true) {
+  finishAnim();
+  // 動く前の場面：いま画面に出ている絵そのもの（編集で消えた世界線があっても、そのまま使える）
+  const s0 = cur ? (lastScene?.lay === cur ? lastScene : buildScene(cur, cam)) : null;
   activeSub = sub;
   refreshCards();
-  const camFrom = { ...cam };
-  // 別の世界に入れ替えたとき（見本を開く・元に戻す）は、前の配置にない世界線が出てくるので、動かさずに切り替える
-  prev = cur && cur.pieces.every(p => T[p.tr] && p.loops.every(r => loops.some(l => l.id === r.loop.id))) ? cur : null;
   cur = computeLayout(sub);
-  camTo = refit ? fitCam(cur) : { ...cam };
+  camTo = refit || !s0 ? fitCam(cur) : { ...cam };
   // 編集で中央の線が画面から外れた・細くなりすぎたら、映し直す
   if (!refit) {
     const Wd = svg.clientWidth || 800, xs = cur.pieces.filter(p => p.center).flatMap(p => p.nodes.map(n => n.x * camTo.zoom + camTo.panX));
@@ -755,8 +851,10 @@ function setView(sub, refit = true) {
   const w = revealNext && cur.where[key(...revealNext)];
   revealNext = null;
   if (w) { const Wd = svg.clientWidth || 800, sx = w.x * camTo.zoom + camTo.panX; if (sx < 60 || sx > Wd - 60) camTo.panX = Wd / 2 - w.x * camTo.zoom; }
-  A = prev ? { g0: geometry(prev, camFrom), g1: geometry(cur, camTo), camFrom } : null;
-  const t0 = performance.now(), dur = reduced || !prev ? 0 : DURATION;
+  A = s0 ? { s0, s1: buildScene(cur, camTo) } : null;
+  if (!A) Object.assign(cam, camTo);
+  const t0 = performance.now(), dur = reduced || !A ? 0 : DURATION;
+  prog = dur ? 0 : 1;
   cancelAnimationFrame(setView.raf);
   const step = now => {
     prog = dur ? Math.min(1, (now - t0) / dur) : 1;
@@ -768,7 +866,7 @@ function setView(sub, refit = true) {
   updateChips();
 }
 // 動いている途中に操作されたら、動きを終わらせてから操作を受け付ける
-function finishAnim() { if (prog < 1) { cancelAnimationFrame(setView.raf); prog = 1; Object.assign(cam, camTo); } }
+function finishAnim() { if (prog < 1) { cancelAnimationFrame(setView.raf); prog = 1; Object.assign(cam, camTo); render(); } }
 
 // ===== 描画 =====
 const svg = document.getElementById('map'), stage = document.getElementById('stage');
@@ -781,126 +879,35 @@ const f1 = v => Math.round(v * 10) / 10;
 const P = q => `${f1(q[0])},${f1(q[1])}`;
 let focusTrack = null; // カーソルを合わせた（タップした）世界線。その破片をすべて光らせる
 let moreCards = []; // 重なりすぎて出せなかった付箋のまとまり（画面上の位置と名前）
-
-// ループの輪：P0 から P1 へ、長さ Lpx の線を k（1 = 輪、0 = まっすぐ）だけ巻いたときの、割合 f の位置
-function arcPoint(P0, P1, Lpx, k, f) {
-  const th = 2 * Math.PI * k;
-  if (th < 1e-3) return [P0[0] + (P1[0] - P0[0]) * f, P0[1] + (P1[1] - P0[1]) * f];
-  const r = Math.min(Lpx / th, RMAX), ph = th * f;
-  const ex = r * Math.sin(th), ey = r * (1 - Math.cos(th));
-  return [P0[0] + r * Math.sin(ph) + f * (P1[0] - P0[0] - ex), P0[1] + r * (1 - Math.cos(ph)) + f * (P1[1] - P0[1] - ey)];
-}
-// 配置を、あるカメラで見たときの画面上の形
-function geometry(lay, cm) {
-  const H = svg.clientHeight, SX = x => x * cm.zoom + cm.panX, SY = y => y + H / 2 + cm.panY;
-  const seg = {}, loops = {};
-  for (const p of lay.pieces) {
-    for (let j = 0; j < p.nodes.length - 1; j++) seg[p.seg[j]] = { s: [SX(p.nodes[j].x), SY(p.nodes[j].y)], e: [SX(p.nodes[j + 1].x), SY(p.nodes[j + 1].y)] };
-    for (const lp of p.loops) loops[lp.id] = { k: lp.curled ? 1 : 0, Lpx: lp.L * cm.zoom };
-  }
-  return { seg, loops };
-}
 const firstOf = id => id.slice(0, id.lastIndexOf('#')) + '#0';
 const mix = (a, b, e) => [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e];
-// 区切りの両端の、いまの画面上の位置（片方の配置にしかない複製は、1回目の位置から／へ動く）
-function segAt(id, S) {
-  const to = S.g1.seg[id] || S.g1.seg[firstOf(id)], from = S.g0 ? S.g0.seg[id] || S.g0.seg[firstOf(id)] || to : to;
-  if (!to) return from;
-  return { s: mix(from.s, to.s, S.e), e: mix(from.e, to.e, S.e) };
-}
-function loopAt(id, S) {
-  const to = S.g1.loops[id] || S.g1.loops[firstOf(id)], from = S.g0 ? S.g0.loops[id] || S.g0.loops[firstOf(id)] || to : to;
-  if (!to || !from) return to || from || { k: 0, Lpx: 0 };
-  return { k: from.k + (to.k - from.k) * S.e, Lpx: from.Lpx + (to.Lpx - from.Lpx) * S.e };
-}
-const refPt = (ref, S) => segAt(ref[0], S)?.[ref[1] === 'e' ? 'e' : 's'];
-// 破片1本の、いまの形（時点ごとの位置と、描く線）。wt：斜めの線の出方（0 = まだ出ていない、1 = 出きった）
+const lerp = (a, b, e) => a + (b - a) * e;
 const trOfRef = ref => ref[0].slice(0, ref[0].indexOf('|'));
-function pieceGeo(p, S, wt = { from: 1, to: 1 }) {
-  const n = p.nodes.length, sg = p.seg.map(id => segAt(id, S));
-  const pts = p.nodes.map((_, j) => [...(j < n - 1 ? sg[j].s : sg[n - 2].e)]), base = pts.map(q => q[1]);
-  const poly = [[pts[0][0], pts[0][1], true]], add = (q, m = false) => poly.push([q[0], q[1], m]);
-  for (let j = 0; j < n - 1; j++) {
-    const lp = p.loops.find(z => z.i0 === j);
-    if (lp) {
-      const P0 = sg[lp.i0].s, P1 = sg[lp.i1 - 1].e, L = loopAt(lp.id, S);
-      for (let m = lp.i0 + 1; m < lp.i1; m++) { pts[m] = arcPoint(P0, P1, L.Lpx, L.k, lp.s[m - lp.i0] / (lp.L || 1e-9)); base[m] = P0[1]; }
-      add(P0);
-      for (let q = 1; q <= 48; q++) add(arcPoint(P0, P1, L.Lpx, L.k, q / 48));
-      j = lp.i1 - 1;
-      continue;
-    }
-    // 前の視点で切れていた所は、くっつくまで線を描かない
-    const last = j ? sg[j - 1].e : sg[0].s, apart = Math.hypot(sg[j].s[0] - last[0], sg[j].s[1] - last[1]) > .5;
-    add(sg[j].s, apart); add(sg[j].e);
-  }
-  // 斜めの線：始まりは分かれた所から、終わりは合流する所へ、横に進みながら斜めに寄せる（45度。短い破片では急に）
-  const anchor = (ref, w, at) => { if (!ref || w <= 0 || hiddenTracks.has(trOfRef(ref))) return null; const q = refPt(ref, S); return q && mix(at, q, w); };
-  const x0 = pts[0][0], x1 = pts[n - 1][0], wid = Math.max(0, x1 - x0);
-  const Q = anchor(p.from, wt.from, pts[0]), R = anchor(p.to, wt.to, pts[n - 1]);
-  let dQ = Q ? Q[1] - pts[0][1] : 0, dR = R ? R[1] - pts[n - 1][1] : 0;
-  // 両端とも寄せる短い破片は、とがった谷にならないよう浅くする（45度で届く深さまで）
-  if (Q && R && wid * .45 < Math.min(Math.abs(dQ), Math.abs(dR)) / 3) {
-    const sh = dQ - Math.sign(dQ) * wid * .45;
-    for (const q of poly) q[1] += sh;
-    for (const q of pts) q[1] += sh;
-    for (let i = 0; i < n; i++) base[i] += sh;
-    dQ -= sh; dR -= sh;
-  }
-  const DQ = Math.min(Math.abs(dQ), wid * .45), DR = Math.min(Math.abs(dR), wid * .45);
-  const warp = (x, y) => y + (dQ && x < x0 + DQ ? dQ * (1 - Math.max(0, x - x0) / (DQ || 1)) : 0) + (dR && x > x1 - DR ? dR * (1 - Math.max(0, x1 - x) / (DR || 1)) : 0);
-  const brk = [dQ && x0 + DQ, dR && x1 - DR].filter(v => v);
-  const out = [];
-  poly.forEach((q, i) => {
-    if (i && !q[2]) {
-      const pr = poly[i - 1];
-      for (const bx of q[0] >= pr[0] ? brk : [...brk].reverse())
-        if ((pr[0] - bx) * (q[0] - bx) < 0) out.push([bx, pr[1] + (q[1] - pr[1]) * (bx - pr[0]) / (q[0] - pr[0]), false]);
-    }
-    out.push(q);
-  });
-  for (const q of out) q[1] = warp(q[0], q[1]);
-  for (const q of pts) q[1] = warp(q[0], q[1]);
-  if (Q) out.unshift([Q[0], Q[1], true]), out[1][2] = false;
-  if (R) out.push([R[0], R[1], false]);
-  const d = out.map(([x, y, m], i) => `${i === 0 || m ? 'M' : 'L'}${f1(x)},${f1(y)}`).join(' ');
-  return { p, pts, base, d };
-}
-// 付箋の置き場所（本来の位置に1枚。重なった自分の時間と、ループの2周目以降には薄い複製）
-function cardSpots(lay, G) {
-  const out = [];
-  for (const c of cards) {
-    const ow = lay.owner[key(c.e.tr, c.e.t)];
-    if (!ow || !G[ow.pi]) continue;
-    const at = (pi, ni, again) => out.push({ id: `${c.k}|${pi}|${ni}`, c, x: G[pi].pts[ni][0], y: G[pi].base[ni], nodeY: G[pi].pts[ni][1], row: lay.pieces[pi].nodes[ni].y, again, w: textW(c.title) + 18 });
-    at(ow.pi, ow.ni, false);
-    if (c.grp) continue;
-    const home = lay.pieces[ow.pi].nodes[ow.ni];
-    lay.pieces.forEach((p, pi) => {
-      if (pi === ow.pi || !G[pi] || !(p.dup || p.k)) return;
-      const ni = p.nodes.findIndex(n => n.t === c.e.t);
-      if (ni >= 0 && !(p.nodes[ni].x === home.x && p.nodes[ni].y === home.y)) at(pi, ni, true);
-    });
-  }
-  return out;
-}
-function assignRows(spots) {
-  const rows = {}, byRow = {};
-  for (const s of spots) (byRow[s.row] ||= []).push(s);
-  for (const r in byRow) {
-    const ends = [];
-    for (const s of byRow[r].sort((a, b) => a.x - b.x || (a.c.grp ? -1 : 1))) {
-      const left = s.x - 8;
-      let k = ends.findIndex(end => end + 6 < left);
-      if (k < 0) { if (ends.length >= 4) { rows[s.id] = -1; continue; } k = ends.length; ends.push(0); }
-      ends[k] = left + s.w; rows[s.id] = k;
-    }
-  }
-  return rows;
-}
-const refKey = c => c.a.join() + '/' + c.b.join();
-const anchKey = (p, side) => side === 'from' ? p.from[0] + '>' + p.seg[0] : p.seg[p.seg.length - 1] + '>' + p.to[0];
 const ptText = (tr, t, k, prec = 'min') => `${T[tr].fmt(t, prec)}${k ? `（ループ${k}周目）` : ''}`;
+// 目に見える印（付箋・分岐や移動の端・破片の端）のある時点
+const isMark = (tr, t) => cardCount[key(tr, t)] > 0 || IMPORTANT.has(key(tr, t));
+
+// ループの輪：P0 から P1 への線の真ん中に、輪をひとつ下げた形。k（1 = 輪、0 = まっすぐ）で輪の大きさが変わる。
+// 割合 f（ループの1周の時間のうちの割合）の位置を返す。線の長さ（＝時間の長さ）は変えず、輪は目印として足す
+function arcPoint(P0, P1, k, f) {
+  const dx = P1[0] - P0[0], dy = P1[1] - P0[1], D = Math.hypot(dx, dy) || 1e-9, u = [dx / D, dy / D], n = [-u[1], u[0]];
+  const r = Math.min(RMAX / 2, Math.max(10, D * .12)) * k, wf = 2 * Math.PI * r / (D + 2 * Math.PI * r), f1 = (1 - wf) / 2;
+  if (r < 1e-3 || f <= f1 || f >= 1 - f1) { const g = f <= f1 ? f / (1 - wf) : (f - wf) / (1 - wf); return [P0[0] + dx * g, P0[1] + dy * g]; }
+  const th = 2 * Math.PI * (f - f1) / wf, M = [P0[0] + dx / 2, P0[1] + dy / 2];
+  return [M[0] + r * (Math.sin(th) * u[0] + (1 - Math.cos(th)) * n[0]), M[1] + r * (Math.sin(th) * u[1] + (1 - Math.cos(th)) * n[1])];
+}
+// 形（区切りと輪）の上の点：{ seg, side } は区切りの始まりか終わり、{ ring, f } は輪の上の割合 f の所
+function resolve(ref, G) {
+  if (!ref) return null;
+  const onRing = (id, f) => { const r = G.rings[id]; return r ? arcPoint(r.P0, r.P1, r.k, f) : null; };
+  if (ref.ring) return onRing(ref.ring, ref.f);
+  const s = G.segs[ref.seg];
+  if (!s) return null;
+  // 輪の中の区切りなら、輪の上の位置（rw：輪がほどける・巻かれる途中は、まっすぐな位置とのあいだ）
+  const q = s[ref.side === 'e' ? 'e' : 's'], rp = s.ring && s.rf && onRing(s.ring, s.rf[ref.side === 'e' ? 1 : 0]);
+  return rp ? (s.rw >= 1 ? rp : mix(q, rp, s.rw)) : q;
+}
+const R = a => a && { seg: a[0], side: a[1] };
 // その配置で、斜めの線やつなぎ目（◆）として描かれている分岐・合流・移動
 function represented(lay) {
   const s = new Set();
@@ -908,158 +915,274 @@ function represented(lay) {
   for (const j of lay.joints) if (j.jump) { s.add(j.jump.id); if (j.jump.struct) s.add(j.jump.struct); }
   return s;
 }
-// 目に見える印（付箋・分岐や移動の端・ループの端・破片の端）のある時点
-const isMark = (tr, t) => cardCount[key(tr, t)] > 0 || IMPORTANT.has(key(tr, t));
-
-function render() {
-  const Wd = svg.clientWidth, H = svg.clientHeight;
-  const anim = prog < 1 && A;
-  const S = anim ? { g0: A.g0, g1: A.g1, e: ease(prog) } : { g0: null, g1: geometry(cur, cam), e: 1 };
-  const e = S.e, sameSub = anim && prev.sub.id === cur.sub.id;
-  const tone = tr => T[tr] ? `t-c${T[tr].color}` : '';
-  const trCls = tr => focusTrack ? (focusTrack === tr ? ' on' : ' off') : '';
-  // 斜めの線は、前の視点になかったものだけ伸びながら出てくる
-  const prevAnch = new Set(anim ? prev.pieces.flatMap(p => ['from', 'to'].filter(sd => p[sd]).map(sd => anchKey(p, sd))) : []);
-  const grow = (p, sd) => !p[sd] || !anim || prevAnch.has(anchKey(p, sd)) ? 1 : e;
-  const G = cur.pieces.map(p => hiddenTracks.has(p.tr) ? null : pieceGeo(p, S, { from: grow(p, 'from'), to: grow(p, 'to') }));
-  const scr = (tr, t) => { const o = cur.owner[key(tr, t)]; return o && G[o.pi] ? G[o.pi].pts[o.ni] : null; };
-  let back = '', mid = '', front = '';
-
-  // いま焦点を当てている線の高さに、左右を貫く横線
-  back += `<line class="focus" x1="0" y1="${f1(H / 2)}" x2="${Wd}" y2="${f1(H / 2)}"/>`;
-  if (anim) {
-    // 元の位置に薄い跡を残す
-    for (const p of prev.pieces) {
-      if (hiddenTracks.has(p.tr) || !T[p.tr]) continue;
-      const pts = p.seg.map(id => A.g0.seg[id]).filter(Boolean);
-      if (pts.length) back += `<path class="pc old ${tone(p.tr)}" style="opacity:${f1(.35 * (1 - e))}" d="M${P(pts[0].s)} ${pts.map(q => `L${P(q.e)}`).join(' ')}"/>`;
-    }
-    // 前の視点にだけあった重なり・2周目以降は、1回目の位置へ戻りながら消える。斜めの線は縮みながら消える
-    const curAnch = new Set(cur.pieces.flatMap(p => ['from', 'to'].filter(sd => p[sd]).map(sd => anchKey(p, sd))));
-    for (const p of prev.pieces) {
-      if (hiddenTracks.has(p.tr) || !T[p.tr]) continue;
-      if ((p.dup || p.k) && !p.seg.every(id => id in A.g1.seg)) mid += `<path class="pc ctr${p.dup ? ' dup' : ''} ${tone(p.tr)}" style="opacity:${f1(1 - e)}" d="${pieceGeo(p, S, { from: 0, to: 0 }).d}"/>`;
-      for (const sd of ['from', 'to']) {
-        if (!p[sd] || curAnch.has(anchKey(p, sd))) continue;
-        const a = refPt(p[sd], S), b = refPt(sd === 'from' ? [p.seg[0], 's'] : [p.seg[p.seg.length - 1], 'e'], S);
-        if (a && b) back += `<path class="pc ${tone(p.tr)}" style="opacity:${f1(1 - e)}" d="M${P(a)} L${P(b)}"/>`;
-      }
-    }
+// 付箋を置く所：本来の位置に1枚。重なった自分の時間には薄い複製。
+// ループの世界線の付箋は、周回ごとに置く（2周目以降は1周目のコピーを薄く。その周だけ書き換えたものは濃く）
+function cardPlaces(lay, c) {
+  const e = c.e, out = [];
+  // tag：視点が変わっても同じ付箋を追うための名前（h＝本来の位置・1周目、k2…＝その周、d1…＝重なった自分の時間の複製）
+  const seen = {}, tag = t => t + ((seen[t] = (seen[t] ?? -1) + 1) || '');
+  if (T[e.tr]?.loop && !c.grp && !c.birth) {
+    lay.pieces.forEach((p, pi) => {
+      if (p.tr !== e.tr) return;
+      const ni = p.nodes.findIndex(n => n.t === e.t && !n.gap), v = ni >= 0 && (p.k ? evIn(e, p.k) : e);
+      if (v) out.push({ pi, ni, again: !!p.dup || (p.k > 1 && !v.over && !e.k), title: v.title, k: p.k, tag: tag(p.dup ? 'd' : p.k > 1 ? 'k' + p.k : 'h') });
+    });
+    return out;
   }
+  const ow = lay.owner[key(e.tr, e.t)];
+  if (!ow) return out;
+  out.push({ pi: ow.pi, ni: ow.ni, again: false, title: c.title, tag: 'h' });
+  if (c.grp) return out;
+  const home = lay.pieces[ow.pi].nodes[ow.ni];
+  lay.pieces.forEach((p, pi) => {
+    if (pi === ow.pi || !(p.dup || p.k)) return;
+    const ni = p.nodes.findIndex(n => n.t === e.t);
+    if (ni >= 0 && !(p.nodes[ni].x === home.x && p.nodes[ni].y === home.y)) out.push({ pi, ni, again: true, title: c.title, tag: tag('d') });
+  });
+  return out;
+}
+// 付箋の段：ほかの付箋と重なるときは上に積む（4段まで。あふれたものは「＋N」にまとめる）。
+// 別の高さの線の付箋とも重ならないよう、画面の上の四角どうしで確かめる。中央の線に近い付箋から先に置く
+function assignRows(spots) {
+  const rows = {}, placed = [];
+  for (const s of [...spots].sort((a, b) => Math.abs(a.row) - Math.abs(b.row) || a.row - b.row || a.x - b.x || (a.c.grp ? -1 : 1))) {
+    const left = s.x - 8, top = k => s.row - 38 - k * 25;
+    let k = 0;
+    while (k < 4 && placed.some(p => left < p.r + 6 && p.l < left + s.w + 6 && top(k) < p.b && p.t < top(k) + 20)) k++;
+    if (k >= 4) { rows[s.id] = -1; continue; }
+    placed.push({ l: left, r: left + s.w, t: top(k), b: top(k) + 20 });
+    rows[s.id] = k;
+  }
+  return rows;
+}
 
-  // 世界線の破片
-  const labelEnds = {};
-  G.forEach((g, pi) => {
-    if (!g) return;
-    const p = g.p, n = g.pts.length, x1 = g.pts[0][0], x2 = g.pts[n - 1][0], y = g.base[0], tr = T[p.tr];
-    mid += `<path class="pc ${tone(p.tr)}${p.center ? ' ctr' : ''}${p.dup ? ' dup' : ''}${trCls(p.tr)}" d="${g.d}"/><path class="hit" data-k="p|${pi}" d="${g.d}"/>`;
-    const pr = precFor(p.b - p.a);
-    const name = `${p.dup ? '重なり・' : ''}${p.k ? `${p.k}周目・` : ''}${tr.name} ${tr.short(p.a, pr)}〜${tr.short(p.b, pr)}（${fmtDur(p.b - p.a, tr.yearLen)}）`;
-    const lx = Math.max(x1, 6), lw = textW(name) * .92, rowKey = p.nodes[0].y;
-    if ((x2 - x1 > lw + 8 || !p.center) && lx > (labelEnds[rowKey] ?? -Infinity) + 10) {
-      labelEnds[rowKey] = lx + lw;
-      mid += `<text class="lbl tr" x="${f1(lx)}" y="${f1(y + (p.center ? 22 : 18))}" style="fill:var(--c-c${tr.color})">${esc(name)}</text>`;
+// 場面：ある配置を、あるカメラで見たときの部品。どの部品にも、視点が変わっても同じになる名前を付ける
+function buildScene(lay, cm) {
+  const H = svg.clientHeight || 600, Wd = svg.clientWidth || 800;
+  const SX = x => x * cm.zoom + cm.panX, SY = y => y + H / 2 + cm.panY;
+  const sc = { lay, cm, segs: {}, rings: {}, els: {}, hits: [], more: [] };
+  const vis = lay.pieces.map(p => !!T[p.tr] && !hiddenTracks.has(p.tr));
+  const hid = ref => !ref || hiddenTracks.has(trOfRef(ref)) || !T[trOfRef(ref)];
+  // 形：区切り（隣り合う時点どうし）と、ループの輪
+  lay.pieces.forEach((p, pi) => {
+    if (!vis[pi]) return;
+    const w = p.center ? 7 : 3, rings = p.loops, ringAt = j => rings.find(r => j >= r.i0 && j < r.i1);
+    for (let j = 0; j < p.nodes.length - 1; j++)
+      sc.segs[p.seg[j]] = { s: [SX(p.nodes[j].x), SY(p.nodes[j].y)], e: [SX(p.nodes[j + 1].x), SY(p.nodes[j + 1].y)], tr: p.tr, w, dash: p.dup ? 1 : 0, ring: ringAt(j)?.id || null };
+    for (const r of rings) {
+      // P0・P1：輪の両端（視点によって輪の中の時点の数が違っても、両端は同じ所を指す）
+      const P0 = sc.segs[p.seg[r.i0]].s, P1 = sc.segs[p.seg[r.i1 - 1]].e, at = j => arcPoint(P0, P1, r.curled ? 1 : 0, r.s[j - r.i0] / (r.L || 1e-9));
+      sc.rings[r.id] = { a: p.seg[r.i0], b: p.seg[r.i1 - 1], P0, P1, k: r.curled ? 1 : 0, tr: p.tr, w, dash: p.dup ? 1 : 0 };
+      // 輪の中の区切りが実際に描かれている位置（輪から出てくる・輪へ戻る部品のため）
+      for (let j = r.i0; j < r.i1; j++) Object.assign(sc.segs[p.seg[j]], { rs: at(j), re: at(j + 1), rf: [r.s[j - r.i0] / (r.L || 1e-9), r.s[j + 1 - r.i0] / (r.L || 1e-9)], rw: 1 });
     }
-    // 「≈」：目に見える印から次の印までの、その世界線の時間。文字が入るときだけ
-    const ring = i => p.loops.some(lp => lp.curled && i >= lp.i0 && i < lp.i1);
+  });
+  const pos = ref => resolve(ref, sc);
+  const nref = (p, j) => { const r = p.loops.find(r => j > r.i0 && j < r.i1); return r ? { ring: r.id, f: r.s[j - r.i0] / (r.L || 1e-9) } : j < p.nodes.length - 1 ? { seg: p.seg[j], side: 's' } : { seg: p.seg[j - 1], side: 'e' }; };
+  const bref = (p, j) => { const r = p.loops.find(r => j > r.i0 && j < r.i1); return r ? { seg: p.seg[r.i0], side: 's' } : nref(p, j); };
+  const lref = (tr, t) => R(lay.refAt(tr, t));
+  // 線の名前と「≈」（目に見える印から次の印までの時間。文字が入るときだけ）
+  const labelEnds = {};
+  lay.pieces.forEach((p, pi) => {
+    if (!vis[pi]) return;
+    const tr = T[p.tr], n = p.nodes.length, x1 = SX(p.nodes[0].x), x2 = SX(p.nodes[n - 1].x), pr = precFor(p.b - p.a), id = `${p.tr}|${p.a}|${p.b}|${p.k || 0}|${p.dup ? 1 : 0}`;
+    const name = `${p.dup ? '重なり・' : ''}${p.k ? `${p.k}周目・` : ''}${tr.loop ? '↻' : ''}${tr.name} ${tr.short(p.a, pr)}〜${tr.short(p.b, pr)}（${fmtDur(p.b - p.a, tr.yearLen)}）`;
+    const lx = Math.max(x1, 6), lw = textW(name) * .92, row = p.nodes[0].y;
+    if ((x2 - x1 > lw + 8 || !p.center) && x2 > 40 && x1 < Wd && lx > (labelEnds[row] ?? -Infinity) + 10) {
+      labelEnds[row] = lx + lw;
+      sc.els[`pl|${id}`] = { kind: 'plabel', ref: nref(p, 0), dy: p.center ? 22 : 18, text: name, color: tr.color };
+    }
+    const curledRing = j => p.loops.some(r => r.curled && j >= r.i0 && j < r.i1);
     let m0 = 0;
     for (let i = 1; i < n; i++) {
       if (i < n - 1 && !isMark(p.tr, p.nodes[i].t)) continue;
-      const gx1 = g.pts[m0][0], gx2 = g.pts[i][0], txt = `≈${fmtDur(p.nodes[i].t - p.nodes[m0].t, tr.yearLen)}`;
+      const txt = `≈${fmtDur(p.nodes[i].t - p.nodes[m0].t, tr.yearLen)}`, gx1 = SX(p.nodes[m0].x), gx2 = SX(p.nodes[i].x);
       let inRing = false;
-      for (let j = m0; j < i; j++) if (ring(j)) inRing = true;
-      if (!inRing && gx2 - gx1 > textW(txt) * .85 + 12) mid += `<text class="gapl" x="${f1((gx1 + gx2) / 2)}" y="${f1(g.base[m0] + (p.center ? 36 : 32))}" text-anchor="middle">${esc(txt)}</text>`;
+      for (let j = m0; j < i; j++) if (curledRing(j)) inRing = true;
+      if (!inRing && p.nodes[i].t > p.nodes[m0].t && gx2 - gx1 > textW(txt) * .85 + 12)
+        sc.els[`gl|${id}|${p.nodes[m0].t}|${p.nodes[i].t}`] = { kind: 'glabel', r1: nref(p, m0), r2: nref(p, i), base: bref(p, m0), dy: p.center ? 36 : 32, text: txt };
       m0 = i;
     }
   });
-
-  // 重なった自分から1回目の同じ時間へ。前の視点にだけあったものは縮みながら消える
-  const drawRefs = (list, prevList, shape) => {
-    const now = new Set(list.map(refKey));
-    const all = [...list.map(c => [c, 1]), ...(anim ? prevList.filter(c => !now.has(refKey(c))).map(c => [c, 1 - e]) : [])];
-    for (const [c, op] of all) {
-      if (hiddenTracks.has(c.tr) || !T[c.tr] || op <= .01) continue;
-      const a = refPt(c.a, S), b = refPt(c.b, S);
-      if (a && b) back += `<path class="cut ${tone(c.tr)}${trCls(c.tr)}" style="opacity:${f1(op)}" d="${shape(a, b)}"/>`;
-    }
-  };
-  drawRefs(cur.cuts, prev?.cuts || [], (a, b) => curvePath(a[0], a[1], b[0], b[1]));
-  drawRefs(cur.dupArcs, prev?.dupArcs || [], (a, b) => { const h = 40 + Math.min(70, Math.abs(a[0] - b[0]) * .15); return `M${P(a)} C${f1(a[0])},${f1(a[1] - h)} ${f1(b[0])},${f1(Math.min(a[1], b[1]) - h)} ${P(b)}`; });
-
-  // 跳んだ時間の文字：ほかの文字と重ならない高さを探す（見つからなければ出さない。カーソルを合わせると出る）
+  // 斜めの線（分岐・合流・切れ目。すき間をまたぐだけで、時間は進まない）
+  lay.pieces.forEach((p, pi) => {
+    if (!vis[pi]) return;
+    if (p.from && !hid(p.from)) sc.els[`dg|<${p.seg[0]}`] = { kind: 'diag', a: R(p.from), b: nref(p, 0), tr: p.tr };
+    if (p.to && !hid(p.to)) sc.els[`dg|>${p.seg[p.seg.length - 1]}`] = { kind: 'diag', a: nref(p, p.nodes.length - 1), b: R(p.to), tr: p.tr };
+  });
+  // 細い点線：遠い切れ目、重なった自分から1回目の同じ時間へ
+  for (const c of lay.cuts) if (!hid(c.a) && !hid(c.b)) sc.els[`ct|${c.a.join()}|${c.b.join()}`] = { kind: 'cut', a: R(c.a), b: R(c.b), tr: c.tr };
+  for (const c of lay.dupArcs) if (!hid(c.a) && !hid(c.b)) sc.els[`du|${c.a.join()}|${c.b.join()}`] = { kind: 'dup', a: R(c.a), b: R(c.b), tr: c.tr };
+  // 跳んだ時間の文字は、ほかの文字と重ならない高さを探す（見つからなければ出さない。カーソルを合わせると出る）
   const boxes = [];
-  const jText = (txt, x, ys, cls, op) => {
-    const w = textW(txt) * .85 + 6;
-    const y = ys.find(y => !boxes.some(b => Math.abs(b.x - x) < (b.w + w) / 2 && Math.abs(b.y - y) < 12));
-    if (y == null) return;
-    boxes.push({ x, y, w });
-    front += `<text class="${cls}" style="opacity:${f1(op)}" x="${f1(x)}" y="${f1(y)}" text-anchor="middle">${esc(txt)}</text>`;
-  };
-  // つなぎ目（◆ = 移り方、○ = ループの折り返し）。点線が縮んで◆に変わり、◆がほどけて点線になる
-  const jNow = new Set(cur.joints.map(j => j.id));
-  const mark = (j, op, hit) => {
-    const a = refPt(j.a, S), b = refPt(j.b, S);
-    if (!a || !b || op <= .01) return;
-    const m = mix(a, b, .5), par = j.jump?.paradox ? ' k-paradox' : '';
-    front += j.loop ? `<circle class="jt loopj" style="opacity:${f1(op)}" cx="${f1(m[0])}" cy="${f1(m[1])}" r="5"/>`
-      : `<rect class="jt${par}" style="opacity:${f1(op)}" x="${f1(m[0] - 6)}" y="${f1(m[1] - 6)}" width="12" height="12" transform="rotate(45 ${P(m)})"/>`;
-    const dist = j.jump ? jumpDist(j.jump) : `${j.k}周目へ`;
-    if (dist) jText(dist, m[0], j.loop ? [m[1] - 10, m[1] + 50, m[1] + 62] : [m[1] + 50, m[1] + 62, m[1] + 74], 'jlbl' + par, op);
-    if (hit) front += `<line class="hit" data-k="j|${j.i}" x1="${f1(m[0] - 8)}" y1="${f1(m[1])}" x2="${f1(m[0] + 8)}" y2="${f1(m[1])}"/>`;
-  };
-  for (const j of cur.joints) mark(j, anim && !sameSub ? e : 1, true);
-  if (anim && !sameSub) for (const j of prev.joints) if (!jNow.has(j.id)) mark(j, 1 - e, false);
+  const slot = (txt, at, dys) => { if (!at) return null; const w = textW(txt) * .85 + 6; const dy = dys.find(dy => !boxes.some(b => Math.abs(b.x - at[0]) < (b.w + w) / 2 && Math.abs(b.y - (at[1] + dy)) < 12)); if (dy == null) return null; boxes.push({ x: at[0], y: at[1] + dy, w }); return dy; };
+  // つなぎ目（◆ = 移り方、○ = ループの折り返し）
+  for (const j of lay.joints) {
+    if (hid(j.a) || hid(j.b)) continue;
+    sc.els[`jt|${j.id}`] = { kind: 'joint', a: R(j.a), b: R(j.b), loop: !!j.loop, par: !!j.jump?.paradox, hit: `j|${j.i}` };
+    const txt = j.jump ? (T[j.jump.a.tr] && T[j.jump.b.tr] ? jumpDist(j.jump) : '') : `${j.k}周目へ`, pa = pos(R(j.a)), pb = pos(R(j.b));
+    const dy = txt && pa && pb && slot(txt, mix(pa, pb, .5), j.loop ? [-10, 50, 62] : [50, 62, 74]);
+    if (dy != null && txt) sc.els[`jl|${j.id}`] = { kind: 'jlabel', a: R(j.a), b: R(j.b), dy, text: txt, par: !!j.jump?.paradox };
+  }
   // 斜めの線やつなぎ目で表せていない分岐・合流・移動は、点線で結ぶ
-  const repNow = represented(cur), repPrev = anim && !sameSub ? represented(prev) : new Set();
+  const rep = represented(lay);
   const lines = [
-    ...CONNS.map(c => ({ id: c.id, a: c.a, b: c.b, cls: 'lk conn', style: `stroke:var(--c-c${T[c.tr].color})`, k: 's|' + c.id })),
-    ...JUMPS.filter(j => !j.struct).map(j => ({ id: j.id, a: [j.a.tr, j.a.t], b: [j.b.tr, j.b.t], cls: 'lk' + (j.paradox ? ' k-paradox' : ''), style: '', k: 'x|' + j.id, dist: jumpDist(j), par: j.paradox })),
+    ...CONNS.map(c => ({ id: c.id, a: c.a, b: c.b, conn: true, color: T[c.tr].color, k: 's|' + c.id })),
+    ...JUMPS.filter(j => !j.struct).map(j => ({ id: j.id, a: [j.a.tr, j.a.t], b: [j.b.tr, j.b.t], par: j.paradox, k: 'x|' + j.id, dist: T[j.a.tr] && T[j.b.tr] ? jumpDist(j) : '' })),
   ];
   for (const l of lines) {
-    const now = repNow.has(l.id), before = repPrev.has(l.id);
-    const op = now && (before || !anim || sameSub) ? 0 : now ? 1 - e : before ? e : 1;
-    const p = scr(...l.a), q = scr(...l.b);
-    if (!p || !q || op <= .01) continue;
-    const d = curvePath(p[0], p[1], q[0], q[1]);
-    back += `<path class="${l.cls}" style="opacity:${f1(op)};${l.style}" d="${d}"/>` + (op > .5 ? `<path class="hit" data-k="${l.k}" d="${d}"/>` : '');
-    if (l.dist) { const m = curveMid(p[0], p[1], q[0], q[1]); jText(l.dist, m[0], [m[1] + 14, m[1] + 26, m[1] + 38, m[1] + 2], 'jlbl' + (l.par ? ' k-paradox' : ''), op); }
+    if (rep.has(l.id) || !T[l.a[0]] || !T[l.b[0]] || hiddenTracks.has(l.a[0]) || hiddenTracks.has(l.b[0])) continue;
+    const a = lref(l.a[0], l.a[1]), b = lref(l.b[0], l.b[1]);
+    if (!a || !b || !pos(a) || !pos(b)) continue;
+    sc.els[`lk|${l.id}`] = { kind: 'link', a, b, conn: !!l.conn, color: l.color, par: !!l.par, hit: l.k };
+    const pa = pos(a), pb = pos(b), dy = l.dist && slot(l.dist, curveMid(pa[0], pa[1], pb[0], pb[1]), [14, 26, 38, 2]);
+    if (dy != null && l.dist) sc.els[`ll|${l.id}`] = { kind: 'llabel', a, b, dy, text: l.dist, par: !!l.par };
   }
-
-  // 付箋：段の割り当ては動いた後の位置で決めて、動いている間も同じ段のまま動かす
-  const spots = cardSpots(cur, G);
-  const rows = assignRows(anim ? cardSpots(cur, cur.pieces.map(p => hiddenTracks.has(p.tr) ? null : pieceGeo(p, { g0: null, g1: A.g1, e: 1 }))) : spots);
-  const q = query.trim().toLowerCase();
+  // 付箋
+  const q = query.trim().toLowerCase(), spots = [];
+  for (const c of cards) for (const pl of cardPlaces(lay, c)) {
+    if (!vis[pl.pi]) continue;
+    const p = lay.pieces[pl.pi], ref = nref(p, pl.ni), at = pos(ref);
+    if (!at) continue;
+    const idx = c.k.startsWith('c|') ? c.k.slice(2) : null;
+    spots.push({ id: `cd|${c.k}|${pl.tag}`, c, ref, base: bref(p, pl.ni), x: at[0], row: p.nodes[pl.ni].y, again: pl.again, title: pl.title, w: textW(pl.title) + 18 + (c.e.branch ? 10 : 0),
+      dk: idx != null && pl.k ? `c|${idx}|${pl.k}` : c.k });
+  }
+  const rows = assignRows(spots);
   for (const s of spots) {
     const r = rows[s.id];
-    if (r == null || r < 0 || s.x < -300 || s.x > Wd + 20) continue;
-    const left = s.x - 8, top = s.y - 18 - r * 25 - 20;
-    const match = q && (s.c.title.toLowerCase().includes(q) || s.c.e.tags.some(t => t.toLowerCase().includes(q)));
-    const cls = `card${s.c.grp ? ' grp' : ''}${s.again ? ' again' : ''}${q ? (match ? ' hl' : ' dim') : ''}${focusTrack && focusTrack !== s.c.e.tr ? ' dim' : ''}`;
-    front += `<line class="stem" x1="${f1(s.x)}" y1="${f1(s.nodeY)}" x2="${f1(s.x)}" y2="${f1(top + 20)}"/>`;
-    front += `<g class="${cls}" data-k="${s.c.k}"><rect class="bg" x="${f1(left)}" y="${f1(top)}" width="${f1(s.w)}" height="20" rx="4"/>` +
-      (s.c.grp ? '' : `<rect class="f-c${T[s.c.e.tr].color}" x="${f1(left)}" y="${f1(top)}" width="3" height="20" rx="1"/>`) +
-      `<text x="${f1(left + 10)}" y="${f1(top + 14)}">${esc(s.c.title)}</text></g>`;
+    if (r == null) continue;
+    if (r < 0) { const g = sc.more[sc.more.length - 1]; if (g && g.row === s.row && s.x - g.x < 60) g.titles.push(s.title); else sc.more.push({ x: s.x, row: s.row, ref: s.ref, base: s.base, titles: [s.title] }); continue; }
+    const match = q && (s.title.toLowerCase().includes(q) || s.c.e.tags.some(t => t.toLowerCase().includes(q)));
+    const cls = `card${s.c.grp ? ' grp' : ''}${s.again ? ' again' : ''}${s.c.e.branch ? ' bp' : ''}${q ? (match ? ' hl' : ' dim') : ''}${focusTrack && focusTrack !== s.c.e.tr ? ' dim' : ''}`;
+    sc.els[s.id] = { kind: 'card', ref: s.ref, base: s.base, row: r, title: s.title, cls, color: s.c.grp ? null : T[s.c.e.tr].color, w: s.w, dk: s.dk, bp: !!s.c.e.branch };
   }
-  // 重なりすぎて出せなかった付箋は「＋N」にまとめる（カーソルで名前、クリックでそこを拡大）
-  moreCards = [];
-  for (const s of spots.filter(s => rows[s.id] < 0 && s.x > -300 && s.x < Wd + 20).sort((a, b) => a.x - b.x)) {
-    const g = moreCards[moreCards.length - 1];
-    if (g && g.row === s.row && s.x - g.x < 60) g.titles.push(s.c.title); else moreCards.push({ x: s.x, y: s.y, row: s.row, titles: [s.c.title] });
-  }
-  moreCards.forEach((g, i) => {
-    const t = `＋${g.titles.length}`, w = textW(t) + 12, top = g.y - 18 - 4 * 25 - 20;
-    front += `<g class="more" data-k="m|${i}"><rect x="${f1(g.x - 8)}" y="${f1(top)}" width="${f1(w)}" height="20" rx="10"/><text x="${f1(g.x - 2)}" y="${f1(top + 14)}">${t}</text></g>`;
+  sc.more.forEach((g, i) => { sc.els[`mo|${i}`] = { kind: 'more', ref: g.ref, base: g.base, text: `＋${g.titles.length}`, i }; });
+  // いまの視点（画面の左上）
+  sc.els[`hd|${lay.sub.id}`] = { kind: 'head', text: lay.sub.id ? `視点：${lay.sub.name}${Wd < 560 ? '' : '（体験した順に並べています）'}` : '視点：本線（客観）' };
+  // 線の当たり判定（止まっているときだけ使う）
+  lay.pieces.forEach((p, pi) => {
+    if (!vis[pi]) return;
+    const pts = [];
+    for (let j = 0; j < p.nodes.length - 1; j++) {
+      const r = p.loops.find(r => r.i0 === j && r.curled);
+      if (r) { const R = sc.rings[r.id]; for (let m = 0; m <= 48; m++) pts.push(arcPoint(R.P0, R.P1, 1, m / 48)); j = r.i1 - 1; continue; }
+      pts.push(sc.segs[p.seg[j]].s, sc.segs[p.seg[j]].e);
+    }
+    sc.hits.push({ k: `p|${pi}`, d: 'M' + pts.map(P).join(' L') });
   });
+  return sc;
+}
+
+// 2つの場面を e（0〜1）の割合で混ぜて描く。s0 がなければ s1 をそのまま描く
+function draw(s0, s1, e, anim) {
+  const Wd = svg.clientWidth, H = svg.clientHeight;
+  const tone = tr => T[tr] ? `t-c${T[tr].color}` : '';
+  const hi = tr => focusTrack ? (focusTrack === tr ? 2 : 0) : 0, fade = tr => focusTrack && focusTrack !== tr ? .22 : 1;
+  const sty = (op, extra = '') => `${extra}${op < .995 ? `opacity:${f1(op * 100) / 100};` : ''}`;
+  // 形を混ぜる
+  const G = { segs: {}, rings: {} };
+  // 片方の場面にしかない区切りは、もう片方の場面の「1回目の同じ区切り」（輪の中なら輪の上の位置）から出てきて、そこへ戻る。
+  // すき間の区切り（^）は、すき間の後ろの区切りの始まりへ縮む
+  const ghost = (id, S, own) => {
+    const f = S?.segs[firstOf(id)];
+    if (f) return { s: f.rs || f.s, e: f.re || f.e };
+    const n = S?.segs[id.replace('^', '')];
+    return n ? { s: n.rs || n.s, e: n.rs || n.s } : own;
+  };
+  const ids = [...new Set([...Object.keys(s1.segs), ...Object.keys(s0?.segs || {})])].sort();
+  for (const id of ids) {
+    const a = s0?.segs[id], b = s1.segs[id];
+    if (a && b) G.segs[id] = { s: mix(a.s, b.s, e), e: mix(a.e, b.e, e), w: lerp(a.w, b.w, e), dash: e < .5 ? a.dash : b.dash, tr: b.tr, ring: a.ring || b.ring, op: 1,
+      rf: a.rf && b.rf ? [lerp(a.rf[0], b.rf[0], e), lerp(a.rf[1], b.rf[1], e)] : a.rf || b.rf, rw: a.rf && b.rf ? 1 : a.rf ? 1 - e : b.rf ? e : 0 };
+    else if (b) { const f = ghost(id, s0, b); G.segs[id] = { s: mix(f.s, b.s, e), e: mix(f.e, b.e, e), w: b.w, dash: b.dash, tr: b.tr, ring: b.ring, rf: b.rf, rw: 1, op: e }; }
+    else { const t = ghost(id, s1, a); G.segs[id] = { s: mix(a.s, t.s, e), e: mix(a.e, t.e, e), w: a.w, dash: a.dash, tr: a.tr, ring: a.ring, rf: a.rf, rw: 1, op: 1 - e }; }
+  }
+  // 輪：両方の場面にあれば形を混ぜる。片方にしかなければ、もう片方の場面のまっすぐな線へほどける（線がなければ薄れる）
+  const rids = [...new Set([...Object.keys(s1.rings), ...Object.keys(s0?.rings || {})])].sort();
+  for (const id of rids) {
+    const a = s0?.rings[id], b = s1.rings[id];
+    if (a && b) { G.rings[id] = { ...b, P0: mix(a.P0, b.P0, e), P1: mix(a.P1, b.P1, e), k: lerp(a.k, b.k, e), w: lerp(a.w, b.w, e), dash: e < .5 ? a.dash : b.dash, op: 1 }; continue; }
+    const r = a || b, O = a ? s1 : s0, p = O?.segs[r.a], q = O?.segs[r.b], f = a ? e : 1 - e; // f：0＝輪のある場面、1＝ない場面
+    G.rings[id] = p && q ? { ...r, P0: mix(r.P0, p.s, f), P1: mix(r.P1, q.e, f), k: r.k * (1 - f), op: 1 } : { ...r, op: 1 - f };
+    if (G.rings[id].k < 1e-6) delete G.rings[id]; // ほどけきった輪は、ただの線（区切りをそのまま描く）
+  }
+  let back = '', mid = '', front = '';
+  // いま焦点を当てている線の高さに、左右を貫く横線
+  const fy = H / 2 + lerp(s0 ? s0.cm.panY : s1.cm.panY, s1.cm.panY, e);
+  back += `<line class="focus" x1="0" y1="${f1(fy)}" x2="${Wd}" y2="${f1(fy)}"/>`;
+  // 動いている間は、動く前と動いた後の位置に薄い跡
+  if (anim) for (const [sc, op] of [[s0, .35 * (1 - e)], [s1, .35 * e]]) for (const id of Object.keys(sc.segs).sort()) {
+    const g = sc.segs[id];
+    if (op > .01) back += `<path class="pc old ${tone(g.tr)}" style="${sty(op)}" d="M${P(g.s)} L${P(g.e)}"/>`;
+  }
+  // 線：区切りごと（輪の中の区切りは輪として）
+  for (const id of ids) {
+    const g = G.segs[id];
+    if (g.ring && G.rings[g.ring] || g.op <= .005) continue;
+    mid += `<path class="pc ${tone(g.tr)}${g.dash ? ' dup' : ''}" style="${sty(g.op * fade(g.tr), `stroke-width:${f1(g.w + hi(g.tr))};`)}" d="M${P(g.s)} L${P(g.e)}"/>`;
+  }
+  for (const id of rids) {
+    const r = G.rings[id];
+    if (!r || r.op <= .005) continue;
+    let d = `M${P(r.P0)}`;
+    for (let q = 1; q <= 64; q++) d += ` L${P(arcPoint(r.P0, r.P1, r.k, q / 64))}`;
+    mid += `<path class="pc ${tone(r.tr)}${r.dash ? ' dup' : ''}" style="${sty(r.op * fade(r.tr), `stroke-width:${f1(r.w + hi(r.tr))};`)}" d="${d}"/>`;
+  }
+  // 部品：名前で突き合わせて、両方にあれば位置を混ぜ、片方にしかなければ薄れる・現れる
+  const keys = [...new Set([...Object.keys(s1.els), ...Object.keys(s0?.els || {})])].sort();
+  for (const k of keys) {
+    const a = s0?.els[k], b = s1.els[k], op = a && b ? 1 : b ? e : 1 - e;
+    if (op <= .005) continue;
+    const el = a && b ? (e < .5 ? a : b) : (a || b);
+    const at = f => { const pa = a && resolve(a[f], G), pb = b && resolve(b[f], G); return pa && pb ? mix(pa, pb, e) : pa || pb; };
+    const num = f => a && b ? lerp(a[f], b[f], e) : el[f];
+    const A0 = el.a !== undefined ? at('a') : null, B0 = el.b !== undefined ? at('b') : null;
+    switch (el.kind) {
+      case 'plabel': { const p = at('ref'); if (p) mid += `<text class="lbl tr" style="${sty(op, `fill:var(--c-c${el.color});`)}" x="${f1(Math.max(p[0], 6))}" y="${f1(p[1] + num('dy'))}">${esc(el.text)}</text>`; break; }
+      case 'glabel': { const p1 = at('r1'), p2 = at('r2'), pb = at('base'); if (p1 && p2 && pb) mid += `<text class="gapl" style="${sty(op)}" x="${f1((p1[0] + p2[0]) / 2)}" y="${f1(pb[1] + num('dy'))}" text-anchor="middle">${esc(el.text)}</text>`; break; }
+      case 'diag': if (A0 && B0) mid += `<path class="pc ${tone(el.tr)}" style="${sty(op * fade(el.tr), `stroke-width:${3 + hi(el.tr)};`)}" d="M${P(A0)} L${P(B0)}"/>`; break;
+      case 'cut': if (A0 && B0) back += `<path class="cut ${tone(el.tr)}" style="${sty(op * fade(el.tr))}" d="${curvePath(A0[0], A0[1], B0[0], B0[1])}"/>`; break;
+      case 'dup': if (A0 && B0) { const h = 40 + Math.min(70, Math.abs(A0[0] - B0[0]) * .15); back += `<path class="cut ${tone(el.tr)}" style="${sty(op * fade(el.tr))}" d="M${P(A0)} C${f1(A0[0])},${f1(A0[1] - h)} ${f1(B0[0])},${f1(Math.min(A0[1], B0[1]) - h)} ${P(B0)}"/>`; } break;
+      case 'link': if (A0 && B0) { const d = curvePath(A0[0], A0[1], B0[0], B0[1]); back += `<path class="lk${el.conn ? ' conn' : ''}${el.par ? ' k-paradox' : ''}" style="${sty(op, el.conn ? `stroke:var(--c-c${el.color});` : '')}" d="${d}"/>` + (!anim ? `<path class="hit" data-k="${el.hit}" d="${d}"/>` : ''); } break;
+      case 'llabel': if (A0 && B0) { const m = curveMid(A0[0], A0[1], B0[0], B0[1]); front += `<text class="jlbl${el.par ? ' k-paradox' : ''}" style="${sty(op)}" x="${f1(m[0])}" y="${f1(m[1] + num('dy'))}" text-anchor="middle">${esc(el.text)}</text>`; } break;
+      case 'joint': if (A0 && B0) {
+        const m = mix(A0, B0, .5);
+        front += el.loop ? `<circle class="jt loopj" style="${sty(op)}" cx="${f1(m[0])}" cy="${f1(m[1])}" r="5"/>` : `<rect class="jt${el.par ? ' k-paradox' : ''}" style="${sty(op)}" x="${f1(m[0] - 6)}" y="${f1(m[1] - 6)}" width="12" height="12" transform="rotate(45 ${P(m)})"/>`;
+        if (!anim) front += `<line class="hit" data-k="${el.hit}" x1="${f1(m[0] - 8)}" y1="${f1(m[1])}" x2="${f1(m[0] + 8)}" y2="${f1(m[1])}"/>`;
+      } break;
+      case 'jlabel': if (A0 && B0) { const m = mix(A0, B0, .5); front += `<text class="jlbl${el.par ? ' k-paradox' : ''}" style="${sty(op)}" x="${f1(m[0])}" y="${f1(m[1] + num('dy'))}" text-anchor="middle">${esc(el.text)}</text>`; } break;
+      case 'card': {
+        const p = at('ref'), pb = at('base');
+        if (!p || !pb || p[0] < -300 || p[0] > Wd + 20) break;
+        const left = p[0] - 8, top = pb[1] - 18 - num('row') * 25 - 20, w = num('w');
+        front += `<g style="${sty(op)}"><line class="stem" x1="${f1(p[0])}" y1="${f1(p[1])}" x2="${f1(p[0])}" y2="${f1(top + 20)}"/>`;
+        front += `<g class="${el.cls}" data-k="${el.dk}"><rect class="bg" x="${f1(left)}" y="${f1(top)}" width="${f1(w)}" height="20" rx="4"/>` +
+          (el.color == null ? '' : `<rect class="f-c${el.color}" x="${f1(left)}" y="${f1(top)}" width="3" height="20" rx="1"/>`) +
+          (el.bp ? `<path class="bpi" d="M${f1(left + 7)},${f1(top + 10)} l6,-5 M${f1(left + 7)},${f1(top + 10)} l6,5"/>` : '') +
+          `<text x="${f1(left + (el.bp ? 18 : 10))}" y="${f1(top + 14)}">${esc(el.title)}</text></g></g>`;
+        break;
+      }
+      case 'more': { const p = at('ref'), pb = at('base'); if (!p || !pb) break; const w = textW(el.text) + 12, top = pb[1] - 18 - 4 * 25 - 20; front += `<g class="more" style="${sty(op)}" data-k="m|${el.i}"><rect x="${f1(p[0] - 8)}" y="${f1(top)}" width="${f1(w)}" height="20" rx="10"/><text x="${f1(p[0] - 2)}" y="${f1(top + 14)}">${el.text}</text></g>`; break; }
+      case 'head': front += `<text class="lbl head" style="${sty(op)}" x="14" y="24">${esc(el.text)}</text>`; break;
+    }
+  }
+  // 止まっているときだけ、線の当たり判定
+  if (!anim) for (const h of s1.hits) mid += `<path class="hit" data-k="${h.k}" d="${h.d}"/>`;
   // つなぐ途中：出発点から、カーソルまで点線を引く
   if (pick?.a) {
     const ax = pick.a.x * cam.zoom + cam.panX, ay = pick.a.y + H / 2 + cam.panY;
     if (pick.mouse) front += `<line class="pick" x1="${f1(ax)}" y1="${f1(ay)}" x2="${f1(pick.mouse[0])}" y2="${f1(pick.mouse[1])}"/>`;
     front += `<circle class="pickdot" cx="${f1(ax)}" cy="${f1(ay)}" r="5"/>`;
   }
-  // いまの視点（画面の左上に固定）
-  const head = cur.sub.id ? `視点：${cur.sub.name}${Wd < 560 ? '' : '（体験した順に並べています）'}` : '視点：本線（客観）';
-  front += `<text class="lbl head" x="14" y="24">${esc(head)}</text>`;
   svg.innerHTML = back + mid + front;
+}
+function render() {
+  if (!cur) return;
+  if (prog < 1 && A) return draw(A.s0, A.s1, ease(prog), true);
+  lastScene = buildScene(cur, cam);
+  moreCards = lastScene.more;
+  draw(null, lastScene, 1, false);
 }
 function curvePath(x1, y1, x2, y2) {
   if (Math.abs(y1 - y2) < 1) { const h = 26 + Math.min(80, Math.abs(x2 - x1) * .25); return `M${f1(x1)},${f1(y1)} C${f1(x1)},${f1(y1 + h)} ${f1(x2)},${f1(y1 + h)} ${f1(x2)},${f1(y2)}`; }
@@ -1102,8 +1225,9 @@ function describe(k, px) {
     const j = cur.joints.find(z => z.i === +parts[1]);
     if (!j) return '';
     if (j.jump) return jumpHTML(j.jump);
-    return `<b>${esc(j.loop.kind)}</b><div class="m">${j.k - 1}周目の終わり → ${j.k}周目の始まり（全${j.loop.n}周）</div>` +
-      `<div class="d">${esc(ptText(j.loop.tr, j.loop.b, j.k - 1))}</div><div class="d">→ ${esc(ptText(j.loop.tr, j.loop.a, j.k))}</div><div class="m">クリック（タップ）でループを編集</div>`;
+    const L = T[j.loop.id];
+    return `<b>${esc(L.name)}</b><div class="m">${j.k - 1}周目の終わり → ${j.k}周目の始まり（全${L.loop}周）</div>` +
+      `<div class="d">${esc(ptText(L.id, L.to, j.k - 1))}</div><div class="d">→ ${esc(ptText(L.id, L.from, j.k))}</div><div class="m">クリック（タップ）でループを編集</div>`;
   }
   if (parts[0] === 'x') { const j = JUMPS.find(z => z.id === parts[1]); return j ? jumpHTML(j) : ''; }
   if (parts[0] === 's') {
@@ -1111,13 +1235,14 @@ function describe(k, px) {
     return c ? `<b>${esc(c.label)}</b><div class="d">${esc(ptText(...c.a))}</div><div class="d">→ ${esc(ptText(...c.b))}</div><div class="m">クリック（タップ）で世界線を編集</div>` : '';
   }
   if (parts[0] === 'c') {
-    const e = events[+parts[1]], prec = e.t % 1 ? 'min' : 'day', vs = versionsOf(e);
-    return `<b>${esc(e.title)}</b><div class="d">${esc(T[e.tr].fmt(e.t, prec))}</div><div class="m">${esc(T[e.tr].name)}・タグ：${e.tags.map(esc).join('、')}` +
+    const e = events[+parts[1]], prec = e.t % 1 ? 'min' : 'day', vs = versionsOf(e), k = +parts[2] || 0, v = (k && evIn(e, k)) || e;
+    const it = k ? `<br>ループ${k}周目${v.over ? '（この周だけ書き換え）' : e.k ? '（この周だけの出来事）' : k > 1 ? '（1周目のコピー）' : ''}` : '';
+    return `<b>${esc(v.title)}</b><div class="d">${esc(T[e.tr].fmt(e.t, prec))}</div><div class="m">${esc(T[e.tr].name)}・タグ：${v.tags.map(esc).join('、')}${e.branch ? '<br>分岐点（ここで世界が分かれうる）' : ''}${it}` +
       vs.map(i => `<br>別バージョン：${esc(events[i].title)}（${esc(T[events[i].tr].name)}）`).join('') + '<br>クリックで編集、引っぱると延ばせます</div>';
   }
   if (parts[0] === 'b') {
-    const sub = subjects.find(x => x.id === parts[1]), { tr, a: t } = sub.path[0];
-    return `<b>${esc(sub.name)} 誕生</b><div class="d">${esc(T[tr].fmt(t, t % 1 ? 'min' : 'day'))}</div><div class="m">主体の誕生。クリック（タップ）で主体を編集</div>`;
+    const sub = subjects.find(x => x.id === parts[1]), { tr, a: t } = sub.path.find(q => !q.inh);
+    return `<b>${esc(sub.name)} ${sub.origin ? '分かれて現れる' : '誕生'}</b><div class="d">${esc(T[tr].fmt(t, t % 1 ? 'min' : 'day'))}</div><div class="m">${sub.origin ? '分岐で現れた分身' : '主体の誕生'}。クリック（タップ）で主体を編集</div>`;
   }
   if (parts[0] === 'm') {
     const g = moreCards[+parts[1]];
@@ -1211,7 +1336,7 @@ function endPointer(e) {
     if (k.startsWith('b|')) return subjectForm(id);
     if (k.startsWith('g|')) { groups[id].open = !groups[id].open; setView(activeSub, false); return; }
     if (k.startsWith('m|')) { const g = moreCards[+id]; if (g) zoomAt(2.5, g.x); return; }
-    if (k.startsWith('c|')) return cardForm(+id);
+    if (k.startsWith('c|')) return cardForm(+id, { k: +parts[2] || 0 });
     if (k.startsWith('x|')) { const j = JUMPS.find(z => z.id === id); return j && subjectForm(j.sub.id, { focus: j.li }); }
     if (k.startsWith('s|')) return trackForm(parts[2]);
     if (k.startsWith('j|')) { const j = cur.joints.find(z => z.i === +id); if (j?.jump) subjectForm(j.jump.sub.id, { focus: j.jump.li }); else if (j) loopForm(j.loop.id); return; }
@@ -1225,7 +1350,7 @@ function dropExtend(a, cx, cy) {
   const el = document.elementFromPoint(cx, cy), b = el && svg.contains(el) ? pointAt(el, cx) : null;
   if (b) { if (b.tr !== a.tr || b.t !== a.t || b.k !== a.k) connectMenu(a, b, cx, cy); return; }
   const r = stage.getBoundingClientRect();
-  trackForm(null, { fork: [a.tr, a.t], up: cy - r.top < a.y + svg.clientHeight / 2 + cam.panY, from: a.ev });
+  trackForm(null, { fork: a.k ? [a.tr, a.t, a.k] : [a.tr, a.t], up: cy - r.top < a.y + svg.clientHeight / 2 + cam.panY, from: a.ev });
 }
 svg.addEventListener('pointerup', endPointer);
 svg.addEventListener('pointercancel', endPointer);
@@ -1258,23 +1383,24 @@ function renderChips() {
     b.setAttribute('aria-pressed', String(!hiddenTracks.has(tr.id)));
     return b;
   }));
-  linkListEl.replaceChildren(...loops.map(l => chip(`${l.kind}（${l.n}周）`, () => loopForm(l.id), 'クリックで編集')),
+  linkListEl.replaceChildren(...tracks.filter(t => t.loop).map(l => chip(`${l.name}（${l.loop}周）`, () => loopForm(l.id), 'クリックで編集')),
     ...JUMPS.map(j => chip(`${j.sub.name}：${j.label}`, () => subjectForm(j.sub.id, { focus: j.li }), 'クリックで編集')));
   updateChips();
 }
 function updateChips() {
   for (const b of viewsEl.children) b.setAttribute('aria-pressed', String((b.dataset.id || null) === activeSub.id));
-  document.getElementById('editSub').hidden = !activeSub.id;
+  document.getElementById('editSub').disabled = !activeSub.id; // 隠さずに無効にする（ボタンの列の折り返しが変わって、地図の高さが動かないように）
 }
 document.getElementById('q').addEventListener('input', e => { query = e.target.value; render(); });
 document.getElementById('onlySub').addEventListener('change', e => { onlySub = e.target.checked; setView(activeSub, false); });
 
 // ===== 編集 =====
 // 編集内容はこのブラウザの中にだけ保存する（試作品のため。本体ではGoogleドライブに保存する）
-const STORE = 'trpg-timemap-proto-v4';
-const snapshot = () => JSON.stringify({ tracks, loops, subjects, events, groups });
-function restore(json) { ({ tracks, loops, subjects, events, groups } = migrate(JSON.parse(json))); }
-// 前の版（第5版まで）で保存したデータを今の形に直す
+// 第7版から保存場所を変えた（前の版で保存した世界は消さずに残し、「見本を開く」から開ける）
+const STORE = 'trpg-timemap-proto-v7', OLD_STORE = 'trpg-timemap-proto-v4';
+const snapshot = () => JSON.stringify({ tracks, subjects, events, groups }, (k, v) => k === 'yearLen' ? undefined : v); // yearLen は表示用
+function restore(d) { ({ tracks, subjects, events, groups } = migrate(typeof d === 'string' ? JSON.parse(d) : structuredClone(d))); }
+// 前の版で保存したデータを今の形に直す
 //   分岐・合流のつながり → 世界線の fork / merge。ループのつながり → loops（回数は、回っていた主体の周回数）
 //   主体の区間 [世界線, 入った, 出た] → { tr, a, b }。ループを回る行は外し、前後の区間を1本にまとめる
 //   時間移動・出入りのつながり → その区間の jump（名前とパラドックス）。主体の区間にないつながりは捨てる（移り方は主体から自動で決まるため）
@@ -1301,7 +1427,32 @@ function migrate(d) {
     }
     delete d.links;
   }
-  d.loops ||= [];
+  // 第6版まで：ループは世界線の上の期間（通る主体は全員ループした）。
+  //   → 始まりで分かれて何周もくり返し、終わりで戻る世界線にする。通っていた主体はそこを通り、その期間の付箋もループへ移る
+  for (const l of d.loops || []) {
+    const P = d.tracks.find(t => t.id === l.tr);
+    if (!P) continue;
+    const L = { id: l.id, name: l.kind || 'ループ', lane: -(Math.max(...d.tracks.map(t => Math.abs(t.lane))) + 1), color: d.tracks.length % 6, cal: P.cal, from: l.a, to: l.b, fork: [l.tr, l.a], merge: [l.tr, l.b], loop: l.n };
+    if (P.cal === 'fict') { L.calName = P.calName; if (P.months) L.months = P.months; }
+    d.tracks.push(L);
+    for (const e of d.events) if (e.tr === l.tr && e.t >= l.a && e.t <= l.b) e.tr = L.id;
+    for (const x of d.subjects) x.legs = x.legs.flatMap(g => {
+      if (g.tr !== l.tr || !(g.a < l.b && g.b > l.a)) return [g];
+      const out = [], { ka, kb, jump, ...base } = g;
+      if (g.a < l.a) out.push({ ...base, b: l.a, ...(jump && { jump }) });
+      const m = { tr: L.id, a: Math.max(g.a, l.a), b: Math.min(g.b, l.b) };
+      if (ka && g.a >= l.a) m.ka = ka;
+      if (kb && g.b <= l.b) m.kb = kb;
+      if (!out.length && jump) m.jump = jump;
+      out.push(m);
+      if (g.b > l.b) out.push({ ...base, a: l.b });
+      return out;
+    });
+  }
+  delete d.loops;
+  const loopT = new Set(d.tracks.filter(t => t.loop).map(t => t.id));
+  for (const x of d.subjects) for (const g of x.legs) if (!loopT.has(g.tr)) { delete g.ka; delete g.kb; }
+  d.groups ||= {};
   // 主体の誕生と重なる、手作りの「誕生」付箋を外す（第4版まで）
   d.events = d.events.filter(e => !d.subjects.some(x => { const g = x.legs[0]; return g && e.title === `${x.name} 誕生` && e.tr === g.tr && e.t === g.a; }));
   return d;
@@ -1411,14 +1562,21 @@ const dateFld = (label, p, spec, t) => `<div class="fld"><span>${label}</span><d
 const redate = (p, spec, t) => { $(`${p}Box`).innerHTML = dateHTML(p, spec, t); };
 
 // 付箋
+// preset.k：ループの世界線の何周目から開いたか。その周だけ書き換える・その周だけの出来事にすることができる
 function cardForm(i, preset = {}) {
   const e = i != null ? events[i] : { tr: preset.tr || 'main', t: preset.t ?? W(2000), title: preset.title || '', tags: preset.tags || [] };
+  const kk = T[e.tr]?.loop && preset.k ? preset.k : 0, v = (kk && evIn(e, kk)) || e, ov = kk && e.per && kk in e.per;
+  const scope = !kk ? '' : e.k ? `<p class="note">ループの${e.k}周目だけの出来事です。</p>` : i == null
+    ? `<label>どの周の出来事か<select id="f_scope"><option value="all">すべての周（周回ごとにくり返す）</option><option value="only">この周（${kk}周目）だけ</option></select></label>`
+    : `<label>書き換える範囲<select id="f_scope"><option value="all">すべての周（1周目と、書き換えていない周）</option><option value="iter"${ov && e.per[kk] ? ' selected' : ''}>この周（${kk}周目）だけ書き換える</option><option value="skip"${ov && !e.per[kk] ? ' selected' : ''}>この周（${kk}周目）では起こらない</option></select></label>`;
   // 別バージョン：分岐した瞬間の出来事は、分岐元と分岐先の同じ瞬間の出来事どうしが対になる
   const vs = i != null ? versionsOf(e) : [];
   const kids = i != null ? tracks.filter(t => samePt(t.fork, e.tr, e.t) && !vs.some(v => events[v].tr === t.id)) : [];
   openDlg(i != null ? '付箋を編集' : '付箋を追加', `
-    <label>名前<input id="f_title" value="${esc(e.title)}" autocomplete="off"></label>
-    <label>タグ（「、」で区切る）<input id="f_tags" value="${esc(e.tags.join('、'))}" autocomplete="off"></label>
+    ${scope}
+    <label>名前<input id="f_title" value="${esc(v.title)}" autocomplete="off"></label>
+    <label>タグ（「、」で区切る）<input id="f_tags" value="${esc(v.tags.join('、'))}" autocomplete="off"></label>
+    <label class="cb"><input type="checkbox" id="f_branch"${e.branch ? ' checked' : ''}>分岐点（ここで世界が分かれうる。パラドックスが起きる世界観なら、ここから世界線を分ける）</label>
     <label>世界線${trackSel('f_tr', e.tr)}</label>
     ${dateFld('日時', 'f_date', T[e.tr], e.t)}
     <label>まとめ<select id="f_group"><option value="">なし</option>${Object.entries(groups).map(([g, v]) => `<option value="${g}"${e.group === g ? ' selected' : ''}>${esc(v.title)}</option>`).join('')}<option value="__new">新しいまとめを作る…</option></select></label>
@@ -1430,12 +1588,22 @@ function cardForm(i, preset = {}) {
     () => {
       const title = val('f_title').trim(); if (!title) throw '名前を入れてください';
       const tr = val('f_tr'), t = readDate('f_date', T[tr]); inRange(tr, t);
-      let group = val('f_group'); const gname = val('f_gnew').trim(), tags = splitList(val('f_tags'));
+      let group = val('f_group'); const gname = val('f_gnew').trim(), tags = splitList(val('f_tags')), sc = $('f_scope')?.value || 'all';
       if (group === '__new' && !gname) throw 'まとめの名前を入れてください';
       commit(() => {
         if (group === '__new') { group = 'g' + uid(); groups[group] = { title: gname, open: true }; }
+        // この周だけの書き換え：1周目（元の付箋）はそのまま
+        if (i != null && (sc === 'iter' || sc === 'skip')) { events[i] = { ...e, per: { ...e.per, [kk]: sc === 'skip' ? null : { title, tags } } }; return; }
         const obj = { tr, t, title, tags };
         if (group) obj.group = group;
+        if ($('f_branch').checked) obj.branch = true;
+        if (T[tr].loop && tr === e.tr) {
+          if (e.k) obj.k = e.k;
+          else if (i == null && sc === 'only') obj.k = kk;
+          const per = { ...e.per };
+          if (kk) delete per[kk]; // 「すべての周」を選んだ周は、1周目のコピーに戻る
+          if (i != null && Object.keys(per).length) obj.per = per;
+        }
         if (i != null) events[i] = obj; else events.push(obj);
         revealNext = [tr, t];
       });
@@ -1455,13 +1623,13 @@ function cardForm(i, preset = {}) {
 }
 
 // 世界線
-// この世界線の上にあって、範囲に入っていなければならない時点（付箋・ループ・ほかの世界線の分岐元や合流先）
+// この世界線の上にあって、範囲に入っていなければならない時点（付箋・ほかの世界線やループの分岐元・合流先）
 function refTimes(id, evs = events) {
-  return [...evs.filter(e => e.tr === id).map(e => e.t), ...loops.filter(l => l.tr === id).flatMap(l => [l.a, l.b]),
-    ...tracks.flatMap(t => [t.fork, t.merge]).filter(q => q && q[0] === id).map(q => q[1])];
+  return [...evs.filter(e => e.tr === id).map(e => e.t), ...tracks.flatMap(t => [t.fork, t.merge]).filter(q => q && q[0] === id).map(q => q[1])];
 }
 // preset：fork / merge（[世界線, 日時]）、up（本線の上に置く）、from（分岐のきっかけの付箋の番号）
 function trackForm(id, preset = {}) {
+  if (id && T[id].loop) return loopForm(id);
   const tr = id ? T[id] : null, isMain = id === 'main';
   const spec = () => tr || (val('k_cal') === 'fict' ? { cal: 'fict', calName: val('k_calName').trim() || '架空の暦' } : { cal: 'west' });
   const fork0 = tr ? tr.fork : preset.fork, merge0 = tr ? tr.merge : preset.merge;
@@ -1485,14 +1653,18 @@ function trackForm(id, preset = {}) {
     <label class="cb"><input type="checkbox" id="k_merge_on"${merge0 ? ' checked' : ''}>終わりで、別の世界線に合流する</label>
     <div id="k_mergeRow" class="sub"${merge0 ? '' : ' hidden'}><label>合流先${trackSel('k_mergeTr', mTr, id)}</label>${dateFld('合流する日時', 'k_merge', T[mTr], merge0 ? merge0[1] : T[mTr].to)}</div>
     <p class="note">分岐点・合流点は、この世界線の始まり・終わりと一緒に動きます。始まり・終わりにいた主体の区間と付箋も一緒に動きます。</p>`}
-    ${tr ? '' : `<label>分かれた瞬間に、この世界線で起きた出来事（別バージョン。空なら作らない）<input id="k_alt" value="${src ? esc(src.title + '（別バージョン）') : ''}" autocomplete="off"></label>`}`,
+    ${tr ? '' : `<label>分かれた瞬間に、この世界線で起きた出来事（別バージョン。空なら作らない）<input id="k_alt" value="${src ? esc(src.title + '（別バージョン）') : ''}" autocomplete="off"></label>
+    <div class="alt" id="k_dbl"${fork0 ? '' : ' hidden'}>${dblHTML(fork0)}</div>`}`,
     () => {
       const name = val('k_name').trim(); if (!name) throw '名前を入れてください';
       const s = spec(), from = readDate('k_from', s), to = readDate('k_to', s);
       if (!(from < to)) throw '終わりは始まりより後にしてください';
       let fork = null, merge = null, months = null;
-      if (!isMain && $('k_fork_on').checked) { const ft = val('k_forkTr'), t = readDate('k_fork', T[ft]); inRange(ft, t); fork = [ft, t]; }
-      if (!isMain && $('k_merge_on').checked) { const mt = val('k_mergeTr'), t = readDate('k_merge', T[mt]); inRange(mt, t); merge = [mt, t]; }
+      // ループの世界線から分かれる・へ戻るときは、何周目かを引き継ぐ
+      const withK = (q, old) => old?.[2] && old[0] === q[0] ? [...q, old[2]] : q;
+      if (!isMain && $('k_fork_on').checked) { const ft = val('k_forkTr'), t = readDate('k_fork', T[ft]); inRange(ft, t); fork = withK([ft, t], fork0); }
+      if (!isMain && $('k_merge_on').checked) { const mt = val('k_mergeTr'), t = readDate('k_merge', T[mt]); inRange(mt, t); merge = withK([mt, t], merge0); }
+      const dbls = !tr && fork ? [...dlgBody.querySelectorAll('[data-dbl]:checked')].map(x => x.dataset.dbl) : [];
       if (!tr && s.cal === 'fict') { months = splitList(val('k_months')); if (months.length && months.length !== 12) throw '月の名前は12個にしてください'; }
       const up = !isMain && val('k_side') === 'up', alt = tr ? '' : val('k_alt').trim();
       if (alt && !fork) throw '別バージョンを書くには「始まりで、別の世界線から分かれる」を選んでください';
@@ -1532,11 +1704,13 @@ function trackForm(id, preset = {}) {
         if (merge) t.merge = merge;
         tracks.push(t);
         if (alt) events.push({ tr: nid, t: from, title: alt, tags: src ? [...src.tags] : [] });
+        // 分岐で2人に分かれる人物：元の人物はそのまま続き、分身がこの世界線に現れる（分かれる前の人生は元の人物と同じ）
+        for (const sid of dbls) { const o = subjects.find(x => x.id === sid); subjects.push({ id: 's' + uid(), name: `${o.name}（${name}）`, origin: o.id, legs: [{ tr: nid, a: from, b: to }] }); }
         revealNext = [nid, from];
       });
     },
     tr && !isMain ? () => {
-      const n = { e: events.filter(e => e.tr === id).length, l: loops.filter(l => l.tr === id).length + tracks.filter(t => t.fork?.[0] === id || t.merge?.[0] === id).length, s: subjects.filter(x => x.legs.some(g => g.tr === id)).length };
+      const n = { e: events.filter(e => e.tr === id).length, l: tracks.filter(t => t.fork?.[0] === id || t.merge?.[0] === id).length, s: subjects.filter(x => x.legs.some(g => g.tr === id)).length };
       if (n.e || n.l || n.s) throw `この世界線を使っているものがあるので削除できません（付箋${n.e}・ループや分岐${n.l}・主体${n.s}）`;
       commit(() => { tracks = tracks.filter(t => t.id !== id); });
     } : null,
@@ -1548,34 +1722,129 @@ function trackForm(id, preset = {}) {
       if (i === 'k_forkTr') redate('k_fork', T[v], T[v].from);
       if (i === 'k_mergeTr') redate('k_merge', T[v], T[v].to);
       if (i === 'k_fork_on') $('k_forkRow').hidden = !ev.target.checked;
+      // 分身の候補：分かれる瞬間に、分かれる元の世界線にいる主体
+      if ($('k_dbl') && i.startsWith('k_fork')) {
+        const on = new Set([...dlgBody.querySelectorAll('[data-dbl]:checked')].map(x => x.dataset.dbl)), ft = val('k_forkTr'), t = readDateSafe('k_fork', T[ft], null);
+        $('k_dbl').hidden = !$('k_fork_on').checked;
+        $('k_dbl').innerHTML = dblHTML(t == null ? null : [ft, t], on);
+      }
       if (i === 'k_merge_on') $('k_mergeRow').hidden = !ev.target.checked;
     });
   $('k_name').focus();
 }
+function dblHTML(fork, on = new Set()) {
+  const who = fork ? aliveAt(fork[0], fork[1]) : [];
+  return `<span>分岐で2人に分かれる人物（元の人物はそのまま続き、分身がこの世界線に現れる）</span>` + (who.length
+    ? who.map(s => `<label class="cb"><input type="checkbox" data-dbl="${s.id}"${on.has(s.id) ? ' checked' : ''}>${esc(s.name)}</label>`).join('')
+    : '<p class="note">分かれる瞬間に、分かれる元の世界線にいる主体はいません</p>');
+}
 function readDateSafe(p, spec, fallback) { try { return readDate(p, spec); } catch { return fallback; } }
 
-// ループ
+// ループ：元の世界線から分かれて、同じ期間を何周もくり返し、終わりで元の世界線に戻る世界線。
+// 影響される人物だけがループに入り、ほかの人物は元の世界線をそのまま進む。ループの中でさらにループを作ることもできる（何周目から分かれるかを持つ）
+// 1周目の出来事は、作ったときの元の世界線（ループの中なら、その周）の出来事のコピー。2周目以降は1周目のコピーで、周ごとに書き換えられる
+const legTouches = (s, tr, a, b, k) => s.path.some(q => !q.inh && q.tr === tr && q.a < b && q.b > a && (!k || q.k === k));
+// 主体の区間のうち、元の世界線でループの期間を通るものを「元の世界線 → ループ → 元の世界線」に分ける
+function routeIn(s, L) {
+  if (s.legs.some(g => g.tr === L.id)) return;
+  const [tr, , K = 0] = L.fork, a = L.from, b = L.to;
+  s.legs = s.legs.flatMap(g => {
+    const es = g.tr === tr ? expandLeg(g, 0) : [], q = es.find(q => q.k === K && q.a < b && q.b > a);
+    if (!q) return [g];
+    const lk = x => K ? x : {}, out = [], { jump, ...base } = g, last = es[es.length - 1];
+    if (q !== es[0] || q.a < a) out.push({ ...base, b: a, ...lk({ kb: K }), ...(jump && { jump }) });
+    out.push({ tr: L.id, a: Math.max(q.a, a), b: Math.min(q.b, b), ...(!out.length && jump && { jump }) });
+    if (q !== last || q.b > b) { const post = { ...base, a: b, ...lk({ ka: K, kb: last.k }) }; if (!K) { delete post.ka; delete post.kb; } out.push(post); }
+    return out;
+  });
+}
+// ループを通る区間を元の世界線に戻し、流れがつながる区間どうしを1本にまとめる
+function routeOut(s, L) {
+  if (!s.legs.some(g => g.tr === L.id)) return;
+  const [tr, , K = 0] = L.fork, out = [];
+  for (const g0 of s.legs) {
+    const g = g0.tr === L.id ? { tr, a: g0.a, b: g0.b, ...(K && { ka: K, kb: K }), ...(g0.jump && { jump: g0.jump }) } : { ...g0 }, p = out[out.length - 1];
+    if (p && p.tr === tr && g.tr === tr && p.b === g.a && !g.jump && (g0.tr === L.id || p.fromL) && (p.kb ?? K) === (g.ka ?? K)) {
+      p.b = g.b; if (g.kb != null) p.kb = g.kb; else delete p.kb; p.fromL = g0.tr === L.id; continue;
+    }
+    if (g0.tr === L.id) g.fromL = true;
+    out.push(g);
+  }
+  for (const g of out) delete g.fromL;
+  s.legs = out;
+}
 function loopForm(id, preset = {}) {
-  const l = id ? loops.find(x => x.id === id) : null;
-  const tr0 = l ? l.tr : preset.tr || 'main', a0 = l ? l.a : preset.a ?? W(2000), b0 = l ? l.b : preset.b ?? Math.min(T[tr0].to, a0 + 14);
-  openDlg(l ? 'ループを編集' : 'ループを追加', `
-    <label>名前<input id="lp_kind" value="${esc(l ? l.kind : '')}" placeholder="ループ" autocomplete="off"></label>
-    <p class="note">世界がこの期間を何周もくり返します。この期間を通る主体は、周回を順に全部体験します。途中の周に跳んで入る・途中の周で出るときは、主体の区間で「何周目」を入れます。同じ時間を2回通るだけ（タイムトラベルで戻るなど）ならループではなく「自分が重なる」時間になります。</p>
-    <label>ループする世界線${trackSel('lp_tr', tr0)}</label>
+  const L = id ? T[id] : null;
+  const tr0 = L ? L.fork[0] : preset.tr || 'main', k0 = L ? L.fork[2] || 0 : T[tr0].loop ? preset.k || 1 : 0;
+  const a0 = L ? L.from : preset.a ?? W(2000), b0 = L ? L.to : preset.b ?? Math.min(T[tr0].to, a0 + 14);
+  // ループに入る人物の候補：その期間に元の世界線にいる主体（と、すでにループに入っている主体）
+  const whoHTML = (tr, a, b, on) => {
+    const who = subjects.filter(s => (L && s.legs.some(g => g.tr === L.id)) || (a != null && b != null && legTouches(s, tr, a, b, tr === tr0 ? k0 : 0)));
+    return '<span>ループに入る人物（チェックしない人物は、元の世界線をそのまま進む）</span>' + (who.length
+      ? who.map(s => `<label class="cb"><input type="checkbox" data-who="${s.id}"${on.has(s.id) ? ' checked' : ''}>${esc(s.name)}</label>`).join('')
+      : '<p class="note">この期間に元の世界線にいる主体はいません</p>');
+  };
+  const on0 = new Set(L ? subjects.filter(s => s.legs.some(g => g.tr === L.id)).map(s => s.id) : []);
+  openDlg(L ? 'ループを編集' : 'ループを追加', `
+    <label>名前<input id="lp_kind" value="${esc(L ? L.name : '')}" placeholder="ループ" autocomplete="off"></label>
+    <p class="note">元の世界線から分かれて、同じ期間を何周もくり返し、終わりで元の世界線に戻る世界線です。ループに入る人物は周回を順に全部体験し、入らない人物は元の世界線をそのまま進みます。途中の周に跳んで入る・途中の周で出るときは、主体の区間で「何周目」を入れます。</p>
+    ${L ? `<p class="note">元の世界線：${esc(T[tr0].name)}${k0 ? `（${k0}周目）` : ''}</p>` : `<label>元の世界線${trackSel('lp_tr', tr0)}</label>`}
+    ${T[tr0].loop && !L ? `<label>元のループの何周目から分かれるか<input type="number" id="lp_k" min="1" max="${T[tr0].loop}" value="${k0}"></label>` : ''}
     ${dateFld('ループの始まり', 'lp_a', T[tr0], a0)}${dateFld('ループの終わり（ここから始まりに戻る）', 'lp_b', T[tr0], b0)}
-    <label>何周くり返すか<input type="number" id="lp_n" min="1" max="99" value="${l ? l.n : 2}"></label>`,
+    <label>何周くり返すか<input type="number" id="lp_n" min="1" max="99" value="${L ? L.loop : 2}"></label>
+    <div class="alt" id="lp_who">${whoHTML(tr0, a0, b0, on0)}</div>`,
     () => {
-      const tr = val('lp_tr'), a = readDate('lp_a', T[tr]), b = readDate('lp_b', T[tr]), n = Math.trunc(+val('lp_n'));
+      const tr = L ? tr0 : val('lp_tr'), a = readDate('lp_a', T[tr]), b = readDate('lp_b', T[tr]), n = Math.trunc(+val('lp_n'));
+      const k = L ? k0 : T[tr].loop ? Math.trunc(+($('lp_k')?.value || 1)) : 0;
       inRange(tr, a); inRange(tr, b);
       if (!(a < b)) throw 'ループの終わりは始まりより後にしてください';
       // ponytail: 99周まで。周回ごとに線を描くので、それ以上は重くなる。多い回数は「残りn周」のようにまとめて描くのが次の手
       if (!(n >= 1 && n <= 99)) throw '回数は1〜99にしてください';
-      if (loops.some(o => o !== l && o.tr === tr && o.a < b && a < o.b)) throw '同じ世界線で、ほかのループと期間が重なっています';
-      const obj = { id: l?.id || 'lp' + uid(), tr, a, b, n, kind: val('lp_kind').trim() || 'ループ' };
-      commit(() => { if (l) loops[loops.indexOf(l)] = obj; else loops.push(obj); revealNext = [tr, a]; });
+      if (T[tr].loop && !(k >= 1 && k <= T[tr].loop)) throw `元のループは1〜${T[tr].loop}周目です`;
+      if (L) {
+        const refs = refTimes(L.id);
+        if (refs.some(t => t < a || t > b)) throw 'ループの中の付箋や、ループから分かれた世界線が範囲からはみ出します';
+      }
+      const name = val('lp_kind').trim() || 'ループ', on = new Set([...dlgBody.querySelectorAll('[data-who]:checked')].map(x => x.dataset.who));
+      commit(() => {
+        let lp = L && tracks.find(t => t.id === L.id);
+        if (lp) {
+          // 端が動いたら、端にいた主体の区間も一緒に動く
+          const [f0, t0] = [lp.from, lp.to];
+          for (const s of subjects) s.legs.forEach((g, i) => {
+            const nx = s.legs[i + 1], pv = s.legs[i - 1];
+            if (g.tr === lp.id) { if (g.a === f0) g.a = a; if (g.b === t0) g.b = b; }
+            else if (g.tr === tr && nx?.tr === lp.id && g.b === f0) g.b = a;
+            else if (g.tr === tr && pv?.tr === lp.id && g.a === t0) g.a = b;
+          });
+          Object.assign(lp, { name, from: a, to: b, loop: n, fork: k ? [tr, a, k] : [tr, a], merge: k ? [tr, b, k] : [tr, b] });
+        } else {
+          const par = T[tr], mag = Math.max(...tracks.map(x => Math.abs(x.lane))) + 1;
+          lp = { id: 't' + uid(), name, lane: -mag, color: tracks.length % 6, cal: par.cal, from: a, to: b, fork: k ? [tr, a, k] : [tr, a], merge: k ? [tr, b, k] : [tr, b], loop: n };
+          if (par.cal === 'fict') { lp.calName = par.calName; if (par.months) lp.months = [...par.months]; }
+          tracks.push(lp);
+          for (const e of events.filter(e => e.tr === tr && e.t >= a && e.t <= b)) {
+            const v = evIn(e, k);
+            if (v) events.push({ tr: lp.id, t: e.t, title: v.title, tags: [...v.tags], ...(e.group && { group: e.group }), ...(e.branch && { branch: true }) });
+          }
+          revealNext = [lp.id, a];
+        }
+        rebuild(); // 区間を分けるのに、新しいループの世界線の周回を使う
+        for (const s of subjects) { if (on.has(s.id)) routeIn(s, lp); else routeOut(s, lp); }
+      });
     },
-    l ? () => commit(() => { loops = loops.filter(x => x !== l); }) : null,
-    ev => { if (ev.target.id === 'lp_tr') { const t = T[ev.target.value]; redate('lp_a', t, t.from); redate('lp_b', t, Math.min(t.to, t.from + 14)); } });
+    L ? () => {
+      if (tracks.some(t => t.fork?.[0] === L.id || t.merge?.[0] === L.id)) throw 'このループから分かれた世界線があるので削除できません。先にそちらを削除してください';
+      commit(() => { for (const s of subjects) routeOut(s, L); events = events.filter(e => e.tr !== L.id); tracks = tracks.filter(t => t.id !== L.id); });
+    } : null,
+    ev => {
+      const i = ev.target.id;
+      if (i === 'lp_tr') { const t = T[ev.target.value]; redate('lp_a', t, t.from); redate('lp_b', t, Math.min(t.to, t.from + 14)); }
+      if (i === 'lp_tr' || i.startsWith('lp_a') || i.startsWith('lp_b') || i === 'lp_k') {
+        const tr = L ? tr0 : val('lp_tr'), on = new Set([...dlgBody.querySelectorAll('[data-who]:checked')].map(x => x.dataset.who));
+        $('lp_who').innerHTML = whoHTML(tr, readDateSafe('lp_a', T[tr], null), readDateSafe('lp_b', T[tr], null), on);
+      }
+    });
   $('lp_kind').focus();
 }
 
@@ -1598,6 +1867,7 @@ function subjectForm(id, opts = {}) {
   };
   openDlg(id ? '主体を編集' : '主体を追加', `
     <label>名前<input id="s_name" value="${esc(s.name)}" autocomplete="off"></label>
+    ${s.origin ? `<p class="note">分岐で現れた分身です（元の人物：${esc(subjects.find(x => x.id === s.origin)?.name || '？')}）。分かれる前の人生は元の人物と同じで、最初の区間の始まりが分かれて現れた時点です。</p>` : ''}
     <p class="note">本人が体験した順に区間を並べます。最初の区間の始まりが誕生です。区間と区間のあいだの移り方（タイムトラベル、または瞬間移動・世界線の出入りなどの移動）は自動で決まり、◆で表示されます。ループの期間を通ると、ループの周回を全部体験します。ループの途中の周に入る・出るときは「何周目」を入れます。世界線の範囲の外まで区間を延ばすと、世界線も延びます（合流点も一緒に動きます）。</p>
     <div id="s_legs">${legs0.map((g, r) => row(r, g)).join('')}</div>
     <button type="button" class="mini" id="s_add">＋ 区間を追加</button>`,
@@ -1611,7 +1881,7 @@ function subjectForm(id, opts = {}) {
           const v = $(fid).closest('label').hidden ? '' : val(fid).trim();
           if (!lp || v === '') return null;
           const k = Math.trunc(+v);
-          if (!(k >= 1 && k <= lp.n)) throw `区間${n + 1}：「${lp.kind}」は1〜${lp.n}周目です`;
+          if (!(k >= 1 && k <= lp.n)) throw `区間${n + 1}：「${T[lp.id].name}」は1〜${lp.n}周目です`;
           return k;
         };
         const ka = kIn(`s_ka_${r}`, inA), kb = kIn(`s_kb_${r}`, inB);
@@ -1632,7 +1902,7 @@ function subjectForm(id, opts = {}) {
       if (!legs.length) throw '区間を1つ以上入れてください';
       commit(() => {
         for (const t of tracks) if (grow[t.id]) Object.assign(t, grow[t.id]);
-        if (id) subjects[subjects.findIndex(x => x.id === id)] = { id, name, legs };
+        if (id) { const i = subjects.findIndex(x => x.id === id); subjects[i] = { ...subjects[i], name, legs }; }
         else { const nid = 's' + uid(); subjects.push({ id: nid, name, legs }); activeSub = { id: nid }; }
       });
     },
@@ -1673,13 +1943,11 @@ function showMenu(head, items, clientX, clientY) {
 function openMenu(pi, clientX, clientY) {
   const r = stage.getBoundingClientRect(), p = cur.pieces[pi], X = (clientX - r.left - cam.panX) / cam.zoom;
   const t = Math.round(pieceTimeAt(p, X).t * 1440) / 1440, pt = { tr: p.tr, t, k: p.k || 0, x: X, y: p.nodes[0].y };
-  const lp = loops.find(l => l.tr === p.tr && l.a <= t && t <= l.b);
   showMenu(`${esc(T[p.tr].name)}<br><span>${esc(ptText(p.tr, t, p.k))}</span>`, [
     ['＋ ここに付箋', () => cardForm(null, pt)],
-    ['＋ ここから分かれる世界線', () => trackForm(null, { fork: [p.tr, t], up: p.nodes[0].y < 0 })],
+    ['＋ ここから分かれる世界線', () => trackForm(null, { fork: p.k ? [p.tr, t, p.k] : [p.tr, t], up: p.nodes[0].y < 0 })],
     ['＋ ここからつなぐ（行き先をクリック）', () => startPick(pt)],
-    ['この世界線を編集', () => trackForm(p.tr)],
-    ...(lp ? [[`「${lp.kind}」を編集`, () => loopForm(lp.id)]] : []),
+    [T[p.tr].loop ? `ループ「${T[p.tr].name}」を編集` : 'この世界線を編集', () => trackForm(p.tr)],
   ], clientX, clientY);
 }
 // 2点をつなぐ：主体がそこから跳ぶ／その期間をループにする／そこで分かれて行き先で合流する世界線
@@ -1690,8 +1958,8 @@ function connectMenu(a, b, clientX, clientY) {
     const q = s.path.find(q => q.tr === a.tr && q.a <= a.t && a.t <= q.b && (!a.k || q.k === a.k));
     if (q) items.push([`${s.name}がここから行き先へ移る`, () => jumpFrom(s, q, a, b)]);
   }
-  if (a.tr === b.tr && a.t !== b.t) items.push(['このあいだをループにする', () => loopForm(null, { tr: a.tr, a: Math.min(a.t, b.t), b: Math.max(a.t, b.t) })]);
-  items.push(['ここで分かれて、行き先で合流する世界線', () => trackForm(null, { fork: [a.tr, a.t], merge: [b.tr, b.t], from: a.ev })]);
+  if (a.tr === b.tr && a.t !== b.t && (a.k || 0) === (b.k || 0)) items.push(['このあいだをループにする', () => loopForm(null, { tr: a.tr, a: Math.min(a.t, b.t), b: Math.max(a.t, b.t), k: a.k })]);
+  items.push(['ここで分かれて、行き先で合流する世界線', () => trackForm(null, { fork: a.k ? [a.tr, a.t, a.k] : [a.tr, a.t], merge: b.k ? [b.tr, b.t, b.k] : [b.tr, b.t], from: a.ev })]);
   showMenu(`${esc(ptText(a.tr, a.t, a.k))}<br>→ ${esc(ptText(b.tr, b.t, b.k))}`, items, clientX, clientY);
 }
 // 主体の区間を a で切り、b から始まる区間を足した案を、主体の編集画面で見せる（保存するまで変わらない）
@@ -1721,12 +1989,14 @@ function pointAt(target, clientX) {
   const k = target.closest?.('[data-k]')?.dataset.k || '', id = k.split('|')[1];
   const r = stage.getBoundingClientRect(), X = (clientX - r.left - cam.panX) / cam.zoom;
   if (k.startsWith('p|')) { const p = cur.pieces[+id]; return { tr: p.tr, t: Math.round(pieceTimeAt(p, X).t * 1440) / 1440, k: p.k || 0, x: X, y: p.nodes[0].y }; }
-  let tr, t, ev;
-  if (k.startsWith('c|')) ({ tr, t } = events[ev = +id]);
-  else if (k.startsWith('b|')) ({ tr, a: t } = subjects.find(x => x.id === id).path[0]);
+  let tr, t, ev, kk = 0;
+  if (k.startsWith('c|')) { ({ tr, t } = events[ev = +id]); kk = +k.split('|')[2] || 0; }
+  else if (k.startsWith('b|')) ({ tr, a: t } = subjects.find(x => x.id === id).path.find(q => !q.inh));
   else return null;
-  const w = cur.where[key(tr, t)], o = cur.owner[key(tr, t)];
-  return { tr, t, k: cur.pieces[o.pi].k || 0, x: w.x, y: w.y, ev };
+  const o = (kk && cur.ownerK[`${key(tr, t)}@${kk}`]) || cur.owner[key(tr, t)];
+  if (!o) return null;
+  const n = cur.pieces[o.pi].nodes[o.ni];
+  return { tr, t, k: cur.pieces[o.pi].k || 0, x: n.x, y: n.y, ev };
 }
 
 // 一覧：すべての出来事を世界線ごとに時系列順で
@@ -1737,16 +2007,16 @@ function renderList() {
   const add = (tr, t, title, kind, imp, open) => (rows[tr] ||= []).push({ t, title, kind, imp, open });
   events.forEach((e, i) => {
     const vs = versionsOf(e).map(v => `別バージョン：${events[v].title}`);
-    add(e.tr, e.t, e.title, [e.group && groups[e.group] ? groups[e.group].title : '', ...vs].filter(Boolean).join('・'), false, () => cardForm(i));
+    const loopNote = e.k ? `${e.k}周目だけ` : e.per && Object.keys(e.per).length ? `周ごとの書き換え：${Object.keys(e.per).map(k => k + '周目').join('・')}` : '';
+    add(e.tr, e.t, e.title, [e.branch ? '分岐点' : '', loopNote, e.group && groups[e.group] ? groups[e.group].title : '', ...vs].filter(Boolean).join('・'), !!e.branch, () => cardForm(i));
   });
-  for (const sub of subjects) if (sub.path.length) add(sub.path[0].tr, sub.path[0].a, `${sub.name} 誕生`, '主体の誕生', true, () => subjectForm(sub.id));
+  for (const sub of subjects) { const q = sub.path.find(q => !q.inh); if (q) add(q.tr, q.a, `${sub.name} ${sub.origin ? '分かれて現れる' : '誕生'}`, sub.origin ? '分身' : '主体の誕生', true, () => subjectForm(sub.id)); }
   for (const c of CONNS) { add(c.a[0], c.a[1], c.label, `→ ${T[c.b[0]].name}`, true, () => trackForm(c.tr)); add(c.b[0], c.b[1], c.label, `${T[c.a[0]].name} →`, true, () => trackForm(c.tr)); }
   for (const j of JUMPS) {
     const open = () => subjectForm(j.sub.id, { focus: j.li }), what = `${JUMP_TYPES[j.type][0]}${jumpDist(j) ? ' ' + jumpDist(j) : ''}`;
     add(j.a.tr, j.a.t, `${j.sub.name}：${j.label}`, `${what}：${T[j.b.tr].name}${j.b.k ? `（${j.b.k}周目）` : ''}へ`, true, open);
     add(j.b.tr, j.b.t, `${j.sub.name}：${j.label}`, `${what}：${T[j.a.tr].name}${j.a.k ? `（${j.a.k}周目）` : ''}から`, true, open);
   }
-  for (const l of loops) { add(l.tr, l.a, `${l.kind}の始まり`, `ループ（${l.n}周）`, true, () => loopForm(l.id)); add(l.tr, l.b, `${l.kind}の終わり`, `ループ（${l.n}周）`, true, () => loopForm(l.id)); }
   listBody.replaceChildren();
   for (const tr of tracks) {
     const h = document.createElement('h3'), ol = document.createElement('ol');
@@ -1773,16 +2043,42 @@ $('addLink').onclick = () => startPick();
 $('addSub').onclick = () => subjectForm(null);
 $('editSub').onclick = () => activeSub.id && subjectForm(activeSub.id);
 undoBtn.onclick = undo;
-// 見本を開く：いまの世界と入れ替わる（「元に戻す」で戻せる）
-$('reset').onclick = ev => {
+// 見本を開く：examples/ のファイル（一覧は examples/index.json）。いまの世界と入れ替わる（「元に戻す」で戻せる）
+const fetchJSON = async path => { const r = await fetch(path, { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status); return r.json(); };
+$('reset').onclick = async ev => {
   const r = ev.currentTarget.getBoundingClientRect();
+  let list = [];
+  try { list = await fetchJSON('examples/index.json'); } catch { say('見本のファイル（examples/index.json）を読み込めませんでした'); }
+  const open = f => fetchJSON('examples/' + f).then(openWorld, () => say(`見本のファイル（examples/${f}）を読み込めませんでした`));
+  let old = null;
+  try { old = localStorage.getItem(OLD_STORE); } catch { /* 保存を読めない環境 */ }
   showMenu('見本を開く<br><span>いまの世界と入れ替わります（元に戻すで戻せます）</span>', [
-    ['基本のサンプル', () => openWorld(SAMPLE)],
-    ['白紙（本線だけ）', () => openWorld(BLANK)],
-    ...EXAMPLES.map(x => [x.name, () => openWorld(JSON.stringify(x.data))]),
+    ...list.map(x => [x.name, () => open(x.file)]),
+    ['白紙（本線だけ）', () => openWorld(blankWorld())],
+    ...(old ? [['前の版（第6版まで）で保存した世界', () => openWorld(old)]] : []),
   ], r.left, r.bottom);
 };
-function openWorld(json) { hiddenTracks.clear(); activeSub = OBJECTIVE; cur = null; commit(() => restore(json)); }
+// 世界を入れ替える。読めないデータなら、いまの世界のまま
+function openWorld(d) {
+  const before = snapshot();
+  try { restore(d); rebuild(); if (!T.main) throw 0; } catch { restore(before); rebuild(); say('読み込めませんでした（書き出したファイルか、見本のファイルを選んでください）'); return; }
+  hiddenTracks.clear(); activeSub = OBJECTIVE; cur = null;
+  undoStack.push(before);
+  afterChange();
+}
+// 書き出す・読み込む：いまの世界をファイルにして持ち出す・ほかの端末で開く
+$('exportBtn').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(JSON.parse(snapshot()), null, 1)], { type: 'application/json' }));
+  a.download = 'world.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try { openWorld(JSON.parse(await f.text())); } catch { say('読み込めませんでした（書き出したファイルを選んでください）'); }
+};
 addEventListener('keydown', e => {
   if (e.key === 'Escape') { hideMenu(); if (pick) endPick(); }
   const typing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName);
@@ -1799,32 +2095,22 @@ function egg(sub) {
     self: 'グレート・スコット！ 同じ時刻に、もう一人の自分がいるぞ！ 鉢合わせだけはするなよ！',
     loop: 'この夏休み、もう何度目だ……？ エル・プサイ・コングルゥ。',
   }[kind];
-  if (!msg) return;
-  toast.textContent = msg; toast.hidden = false;
-  clearTimeout(egg.t); egg.t = setTimeout(() => { toast.hidden = true; }, 6000);
+  if (msg) say(msg);
 }
+function say(msg) { toast.textContent = msg; toast.hidden = false; clearTimeout(say.t); say.t = setTimeout(() => { toast.hidden = true; }, 6000); }
 toast.onclick = () => { toast.hidden = true; };
-
-// ===== 作例の物語（見本を開く） =====
-// { name: メニューに出す名前, data: 保存データと同じ形 }。どれも画面の操作だけで作ったもの（設計メモ §10 第6版の作例）
-const EXAMPLES = [
-  { name: "物語1「電話レンジ（仮）」：Dメールで世界線を移り、タイムリープをくり返す", data: {"tracks":[{"id":"main","name":"α世界線","lane":0,"color":0,"cal":"west","from":2447893,"to":2462867},{"id":"tolm1n6","name":"β世界線","lane":1,"color":1,"cal":"west","from":2455406.8333333335,"to":2462867,"fork":["main",2455406.8333333335]},{"id":"thnivhv","name":"γ世界線","lane":-2,"color":2,"cal":"west","from":2455414.5,"to":2462867,"fork":["tolm1n6",2455414.5]}],"loops":[],"subjects":[{"id":"sj945tg","name":"まゆり（α）","legs":[{"tr":"main","a":2449385,"b":2462867}]},{"id":"sd6l0n7","name":"まゆり（β）","legs":[{"tr":"main","a":2449385,"b":2455406.8333333335},{"tr":"tolm1n6","a":2455406.8333333335,"b":2455422.829861111}]},{"id":"sr2p7yq","name":"岡部","legs":[{"tr":"main","a":2448605,"b":2455419.5},{"tr":"tolm1n6","a":2455419.5,"b":2455422.829861111,"jump":{"label":"Dメールでβへ（リーディングシュタイナー）"}},{"tr":"tolm1n6","a":2455420.8333333335,"b":2455422.829861111,"jump":{"label":"タイムリープ（1回目）"}},{"tr":"tolm1n6","a":2455420.8333333335,"b":2455421.5,"jump":{"label":"タイムリープ（2回目）"}},{"tr":"thnivhv","a":2455421.5,"b":2455423.375,"jump":{"label":"Dメールでγへ"}},{"tr":"main","a":2455423.375,"b":2462867,"jump":{"label":"Dメールを取り消してαへ"}}]}],"events":[{"tr":"main","t":2455406.5,"title":"ラボで電話レンジを発見","tags":["電話レンジ"]},{"tr":"main","t":2455406.8333333335,"title":"ロト6の抽選（外れ）","tags":["Dメール"]},{"tr":"main","t":2455418.4166666665,"title":"SERNのハッキング","tags":["電話レンジ"]},{"tr":"tolm1n6","t":2455406.8333333335,"title":"ロト6の抽選（Dメールの番号で当たり）","tags":["Dメール"]},{"tr":"tolm1n6","t":2455422.8194444445,"title":"ラウンダーの襲撃","tags":["β"]},{"tr":"tolm1n6","t":2455422.829861111,"title":"まゆりが倒れる","tags":["β"]},{"tr":"tolm1n6","t":2455414.5,"title":"フェイリスの父の飛行機事故","tags":["Dメール"]},{"tr":"thnivhv","t":2455414.5,"title":"フェイリスの父が飛行機に乗らない","tags":["Dメール"]}],"groups":{}} },
-  { name: "物語2「七夜祭」：村の七日間が5周。途中の周へ跳ぶ旅人と、未来から戻る巫女", data: {"tracks":[{"id":"main","name":"宵ヶ淵村","lane":0,"color":0,"cal":"west","from":2433283,"to":2488070}],"loops":[{"id":"lpw3h01y","tr":"main","a":2458697,"b":2458703.9993055556,"n":5,"kind":"七夜祭のループ"}],"subjects":[{"id":"sef1alp","name":"巫女ハル","legs":[{"tr":"main","a":2452734,"b":2466155},{"tr":"main","a":2458702.5,"b":2458716,"ka":5,"jump":{"label":"5周目の祭りへ戻る"}}]},{"id":"s4yznd0","name":"村人タロウ","legs":[{"tr":"main","a":2448044,"b":2473460}]},{"id":"swbe6ov","name":"旅人ソラ","legs":[{"tr":"main","a":2473522,"b":2481131},{"tr":"main","a":2458699.4166666665,"b":2458701.9166666665,"ka":2,"kb":4,"jump":{"label":"ループの2周目へ"}},{"tr":"main","a":2481131,"b":2488070,"jump":{"label":"元の時代へ"}}]}],"events":[{"tr":"main","t":2458697.25,"title":"祭りの始まり","tags":["七夜祭"],"group":"g2osm6e"},{"tr":"main","t":2458700.7916666665,"title":"神楽の夜","tags":["七夜祭"],"group":"g2osm6e"},{"tr":"main","t":2458703.9583333335,"title":"神隠し","tags":["七夜祭"],"group":"g2osm6e"},{"tr":"main","t":2458700.8541666665,"title":"花火が上がらない（3周目だけ）","tags":["七夜祭"],"group":"g2osm6e"}],"groups":{"g2osm6e":{"title":"シナリオ：七夜祭","open":true}}} },
-  { name: "物語3「妖精郷の百年」：時の流れが違う世界との往復と、妖精郷のループ", data: {"tracks":[{"id":"main","name":"本線","lane":0,"color":0,"cal":"west","from":2195883,"to":2462503},{"id":"trdikfm","name":"妖精郷","lane":-1,"color":1,"cal":"fict","from":0,"to":107999,"calName":"妖精暦","months":["霜","芽","花","若葉","夏至","蜜","麦","実り","霧","落葉","雪","夜"],"merge":["main",2447893]}],"loops":[{"id":"lpljlfdb","tr":"trdikfm","a":35642,"b":35644,"n":3,"kind":"終わらない舞踏会"}],"subjects":[{"id":"s1843ch","name":"妖精の女王","legs":[{"tr":"trdikfm","a":0,"b":107999}]},{"id":"sdf2fob","name":"騎士アルト","legs":[{"tr":"main","a":2233200,"b":2239834},{"tr":"trdikfm","a":35640,"b":35647,"jump":{"label":"妖精の輪から妖精郷へ"}},{"tr":"main","a":2276359,"b":2276390,"jump":{"label":"人間界へ戻る"}},{"tr":"trdikfm","a":35670,"b":35671,"jump":{"label":"もう一度妖精郷へ"}},{"tr":"main","a":2323711,"b":2325537,"jump":{"label":"人間界へ戻る"}}]},{"id":"s6k2nrq","name":"魔女モルガ","legs":[{"tr":"main","a":2261628,"b":2269237},{"tr":"trdikfm","a":35643,"b":35645,"ka":2,"jump":{"label":"舞踏会の2周目へ入り込む"}},{"tr":"main","a":2269238,"b":2279891,"jump":{"label":"人間界へ戻る"}}]}],"events":[{"tr":"main","t":2239834,"title":"騎士が妖精の輪に踏み込む","tags":["妖精"]},{"tr":"main","t":2276359,"title":"見知らぬ村に戻る騎士（100年後）","tags":["妖精"]},{"tr":"main","t":2323711,"title":"騎士が再び現れる","tags":["妖精"]},{"tr":"trdikfm","t":35640,"title":"妖精の宴に招かれる","tags":["妖精"]},{"tr":"trdikfm","t":35642,"title":"舞踏会の始まり","tags":["妖精"]},{"tr":"trdikfm","t":107999,"title":"妖精郷が人間界に溶ける","tags":["妖精"]},{"tr":"main","t":2447893,"title":"町に妖精の気配が満ちる","tags":["妖精"]}],"groups":{}} },
-  { name: "物語4「時を超える影」：イスの大いなる種族との心の入れ替わり（クトゥルフ神話TRPG）", data: {"tracks":[{"id":"main","name":"本線","lane":0,"color":0,"cal":"west","from":-5040344048455,"to":2488070},{"id":"tau3gj8","name":"ティンダロス","lane":1,"color":1,"cal":"fict","from":0,"to":359640,"calName":"角度の刻"}],"loops":[],"subjects":[{"id":"s24rek9","name":"ピーズリー（体）","legs":[{"tr":"main","a":2404429,"b":2428002}]},{"id":"sl0q2hr","name":"ピーズリー（心）","legs":[{"tr":"main","a":2404429,"b":2418076.4305555555},{"tr":"main","a":-54783923455,"b":-54783921628.7875,"jump":{"label":"イスの種族と心が入れ替わる"}},{"tr":"main","a":2420038.46875,"b":2428002,"jump":{"label":"自分の体に戻る"}}]},{"id":"s5b1n08","name":"イスの精神","legs":[{"tr":"main","a":-54783930759.85,"b":-54783923455},{"tr":"main","a":2418076.4305555555,"b":2420038.46875,"jump":{"label":"ピーズリーの体へ"}},{"tr":"main","a":-54783921628.7875,"b":-54783912497.725,"jump":{"label":"自分の体へ戻る"}}]},{"id":"srqrbt1","name":"チャーマーズ","legs":[{"tr":"main","a":2411430,"b":2425431.0416666665},{"tr":"main","a":-1095725048455,"b":-1095725048089.7576,"jump":{"label":"遼丹で時をさかのぼる"}},{"tr":"main","a":2425431.0833333335,"b":2425431.1298611113,"jump":{"label":"部屋に戻る"}}]},{"id":"sj0gtsb","name":"ティンダロスの猟犬","legs":[{"tr":"tau3gj8","a":0,"b":1440},{"tr":"main","a":2425431.125,"b":2425431.1298611113,"jump":{"label":"部屋の角から現れる"}},{"tr":"tau3gj8","a":1441,"b":359640,"jump":{"label":"角へ帰る"}}]}],"events":[{"tr":"main","t":-54783923455,"title":"イスの大いなる種族の都市","tags":["クトゥルフ"]},{"tr":"main","t":2418076.4305555555,"title":"ピーズリー教授、講義中に倒れる","tags":["クトゥルフ"]},{"tr":"main","t":2420038.46875,"title":"ピーズリー教授、記憶が戻る","tags":["クトゥルフ"]},{"tr":"main","t":2425431.1298611113,"title":"チャーマーズ、角のない部屋で死ぬ","tags":["クトゥルフ"]},{"tr":"main","t":2428001,"title":"オーストラリアの砂漠で遺跡を発見","tags":["クトゥルフ"]},{"tr":"tau3gj8","t":1080,"title":"猟犬が匂いを嗅ぎつける","tags":["クトゥルフ"]}],"groups":{}} },
-];
 
 // ===== 開始 =====
 if (innerWidth < 560) document.getElementById('legend').open = false; // スマホでは凡例をたたんで地図を広く
 uiFont = '12px ' + getComputedStyle(document.body).fontFamily;
-const SAMPLE = snapshot();
-const BLANK = JSON.stringify({ tracks: [{ ...tracks[0] }], loops: [], subjects: [], events: [], groups: {} });
-try {
-  const saved = localStorage.getItem(STORE);
-  if (saved) { restore(saved); if (!tracks.some(t => t.id === 'main')) restore(SAMPLE); }
-} catch { restore(SAMPLE); }
-rebuild();
-renderChips();
-setView(OBJECTIVE);
+// このブラウザに保存した世界があればそれを、なければ基本のサンプル（examples/sample.json）を開く
+function start() { rebuild(); renderChips(); renderList(); cur = null; setView(OBJECTIVE); }
+let saved = null;
+try { saved = localStorage.getItem(STORE); if (saved) { restore(saved); rebuild(); if (!T.main) saved = null; } } catch { saved = null; }
+if (!saved) {
+  restore(blankWorld());
+  fetchJSON('examples/sample.json').then(d => { restore(d); start(); }, () => say('基本のサンプル（examples/sample.json）を読み込めなかったので、白紙で始めます'));
+}
+start();
 document.fonts?.ready.then(() => { uiFont = '12px ' + getComputedStyle(document.body).fontFamily; render(); });
 </script>
