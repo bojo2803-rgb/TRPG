@@ -165,6 +165,7 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 .dlg-actions button, .mini { font: inherit; font-size: 13px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); cursor: pointer; }
 .mini { justify-self: start; padding: 3px 10px; font-size: 12px; }
 #dlgOk { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+#dlgBody textarea { font: 12px/1.5 var(--font-data); min-height: 10em; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); resize: vertical; }
 .danger { color: var(--paradox) !important; border-color: var(--paradox) !important; }
 #pickHint { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 3; padding: 6px 14px; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 13px; white-space: nowrap; }
 .pick { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
@@ -199,9 +200,8 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
     <button class="chip tool" id="editSub" disabled title="主体の視点で使えます">この主体を編集</button>
     <button class="chip tool" id="undo" disabled title="Ctrl+Z でも戻せます">元に戻す</button>
     <button class="chip tool" id="reset" title="基本のサンプル・白紙・作例の物語を開きます">見本を開く</button>
-    <button class="chip tool" id="importBtn" title="書き出したファイル（.json）を開きます">読み込む</button>
-    <button class="chip tool" id="exportBtn" title="いまの世界をファイル（.json）に保存します">書き出す</button>
-    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <button class="chip tool" id="importBtn" title="書き出した世界（.json のファイルか、コピーした文字）を開きます">読み込む</button>
+    <button class="chip tool" id="exportBtn" title="いまの世界を文字にして、コピーできるようにします">書き出す</button>
     <button class="chip tool" id="listBtn" aria-pressed="false">一覧</button>
   </div>
   <span class="hint">付箋・◆・線をクリックで編集。付箋を引っぱると、そこから分岐・移動・ループを延ばせます</span>
@@ -1480,7 +1480,8 @@ function afterChange() {
 const dlg = document.getElementById('dlg'), dlgBody = document.getElementById('dlgBody'), dlgErr = document.getElementById('dlgErr');
 const dlgDel = document.getElementById('dlgDel');
 let dlgSave = null, dlgDelete = null, dlgOnChange = null, dlgOnClick = null;
-function openDlg(title, html, onSave, onDelete, onChange = null, onClick = null) {
+function openDlg(title, html, onSave, onDelete, onChange = null, onClick = null, okLabel = '保存') {
+  document.getElementById('dlgOk').textContent = okLabel;
   hideMenu(); tip.hidden = true;
   if (dlg.open) dlg.close();
   document.getElementById('dlgTitle').textContent = title;
@@ -2058,26 +2059,38 @@ $('reset').onclick = async ev => {
     ...(old ? [['前の版（第6版まで）で保存した世界', () => openWorld(old)]] : []),
   ], r.left, r.bottom);
 };
-// 世界を入れ替える。読めないデータなら、いまの世界のまま
-function openWorld(d) {
+// 世界を入れ替える。読めないデータなら、いまの世界のまま（tell：理由を画面の下に出す）
+function openWorld(d, tell = true) {
   const before = snapshot();
-  try { restore(d); rebuild(); if (!T.main) throw 0; } catch { restore(before); rebuild(); say('読み込めませんでした（書き出したファイルか、見本のファイルを選んでください）'); return; }
+  try { restore(d); rebuild(); if (!T.main) throw 0; } catch { restore(before); rebuild(); if (tell) say('読み込めませんでした（書き出したファイルか、見本のファイルを選んでください）'); return false; }
   hiddenTracks.clear(); activeSub = OBJECTIVE; cur = null;
   undoStack.push(before);
   afterChange();
+  return true;
 }
-// 書き出す・読み込む：いまの世界をファイルにして持ち出す・ほかの端末で開く
+// 書き出す・読み込む：いまの世界を文字（JSON）にしてコピーし、ファイルに保存したり、ほかの端末で開いたりする。
+// ページからのダウンロードは使えない環境があるので、コピーで渡す
 $('exportBtn').onclick = () => {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(JSON.parse(snapshot()), null, 1)], { type: 'application/json' }));
-  a.download = 'world.json'; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  openDlg('書き出す', `<p class="note">いまの世界を文字にしました。コピーして、メモ帳などに貼り付け、名前の最後を「.json」にして保存してください。「読み込む」で開けます。</p>
+    <textarea id="ex_text" readonly aria-label="いまの世界">${esc(JSON.stringify(JSON.parse(snapshot()), null, 1))}</textarea>
+    <button type="button" class="mini" id="ex_copy">コピー</button>`, () => {}, null, null, ev => {
+    if (ev.target.id !== 'ex_copy') return;
+    const t = $('ex_text'), done = () => { ev.target.textContent = 'コピーしました'; };
+    const pick = () => { t.focus(); t.select(); ev.target.textContent = '選んだ文字をコピーしてください（Ctrl+C）'; };
+    try { navigator.clipboard.writeText(t.value).then(done, pick); } catch { pick(); }
+  }, '閉じる');
 };
-$('importBtn').onclick = () => $('importFile').click();
-$('importFile').onchange = async e => {
-  const f = e.target.files[0]; e.target.value = '';
-  if (!f) return;
-  try { openWorld(JSON.parse(await f.text())); } catch { say('読み込めませんでした（書き出したファイルを選んでください）'); }
+$('importBtn').onclick = () => {
+  openDlg('読み込む', `<p class="note">書き出した世界のファイル（.json）を選ぶか、書き出した文字を貼り付けてください。いまの世界と入れ替わります（元に戻すで戻せます）。</p>
+    <input type="file" id="im_file" accept=".json,application/json,text/plain" aria-label="ファイルを選ぶ">
+    <textarea id="im_text" aria-label="書き出した文字" placeholder="ここに貼り付け"></textarea>`, () => {
+    let d;
+    try { d = JSON.parse(val('im_text')); } catch { throw '読めませんでした。書き出した文字をそのまま貼り付けるか、書き出したファイルを選んでください'; }
+    if (!openWorld(d, false)) throw '世界のデータではありません（本線がありません）。書き出した文字かファイルを選んでください';
+  }, null, async ev => {
+    const f = ev.target.id === 'im_file' && ev.target.files[0];
+    if (f) $('im_text').value = await f.text();
+  }, null, '開く');
 };
 addEventListener('keydown', e => {
   if (e.key === 'Escape') { hideMenu(); if (pick) endPick(); }
