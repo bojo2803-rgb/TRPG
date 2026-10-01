@@ -1,0 +1,1015 @@
+{
+ "format": "trpg-world",
+ "version": 1,
+ "id": "w-example-story3",
+ "name": "物語3「妖精郷の百年」",
+ "settings": {
+  "tz": "Asia/Tokyo",
+  "cal": {
+   "western": {
+    "switch": "1582",
+    "era": "historical",
+    "yearStart": "jan1"
+   },
+   "wareki": {
+    "nanboku": "both",
+    "kaigen": "both",
+    "legend": "note"
+   },
+   "kyureki": {
+    "y2033": "undecided"
+   },
+   "hijri": {
+    "method": "uaq",
+    "leap": "16",
+    "epoch": "civil",
+    "dayStart": "midnight"
+   }
+  }
+ },
+ "notes": {
+  "n8o1zlhp5c": {
+   "id": "n8o1zlhp5c",
+   "title": "騎士が妖精の輪に踏み込む",
+   "body": "",
+   "tags": [
+    "妖精"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2239833,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nvwbtcjp5c": {
+   "id": "nvwbtcjp5c",
+   "title": "見知らぬ村に戻る騎士（100年後）",
+   "body": "",
+   "tags": [
+    "妖精"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2276358,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "n61bm23p5c": {
+   "id": "n61bm23p5c",
+   "title": "騎士が再び現れる",
+   "body": "",
+   "tags": [
+    "妖精"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2323710,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "ng95bh1p5c": {
+   "id": "ng95bh1p5c",
+   "title": "妖精の宴に招かれる",
+   "body": "",
+   "tags": [
+    "妖精"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "trdikfm",
+    "t": {
+     "d": 35640,
+     "s": 0
+    },
+    "prec": "minute",
+    "tz": null
+   }
+  },
+  "nz5apg2p5c": {
+   "id": "nz5apg2p5c",
+   "title": "舞踏会の始まり",
+   "body": "",
+   "tags": [
+    "妖精"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "lpljlfdb",
+    "t": {
+     "d": 35642,
+     "s": 0
+    },
+    "prec": "minute",
+    "tz": null
+   }
+  },
+  "np40b24p5c": {
+   "id": "np40b24p5c",
+   "title": "妖精郷が人間界に溶ける",
+   "body": "",
+   "tags": [
+    "妖精"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "trdikfm",
+    "t": {
+     "d": 107999,
+     "s": 0
+    },
+    "prec": "minute",
+    "tz": null
+   }
+  },
+  "ndz26rpp5c": {
+   "id": "ndz26rpp5c",
+   "title": "町に妖精の気配が満ちる",
+   "body": "",
+   "tags": [
+    "妖精"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2447892,
+     "s": 54000
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "n3ez2b8p5c": {
+   "id": "n3ez2b8p5c",
+   "title": "妖精の女王",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "trdikfm",
+     "a": {
+      "d": 0,
+      "s": 0
+     },
+     "b": {
+      "d": 35642,
+      "s": 0
+     }
+    },
+    {
+     "tr": "lpljlfdb",
+     "a": {
+      "d": 35642,
+      "s": 0
+     },
+     "b": {
+      "d": 35644,
+      "s": 0
+     }
+    },
+    {
+     "tr": "trdikfm",
+     "a": {
+      "d": 35644,
+      "s": 0
+     },
+     "b": {
+      "d": 107999,
+      "s": 0
+     }
+    }
+   ]
+  },
+  "nxwmnc3p5c": {
+   "id": "nxwmnc3p5c",
+   "title": "騎士アルト",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "main",
+     "a": {
+      "d": 2233199,
+      "s": 52861
+     },
+     "b": {
+      "d": 2239833,
+      "s": 52861
+     }
+    },
+    {
+     "tr": "trdikfm",
+     "a": {
+      "d": 35640,
+      "s": 0
+     },
+     "b": {
+      "d": 35642,
+      "s": 0
+     },
+     "jump": {
+      "label": "妖精の輪から妖精郷へ"
+     }
+    },
+    {
+     "tr": "lpljlfdb",
+     "a": {
+      "d": 35642,
+      "s": 0
+     },
+     "b": {
+      "d": 35644,
+      "s": 0
+     }
+    },
+    {
+     "tr": "trdikfm",
+     "a": {
+      "d": 35644,
+      "s": 0
+     },
+     "b": {
+      "d": 35647,
+      "s": 0
+     }
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2276358,
+      "s": 52861
+     },
+     "b": {
+      "d": 2276389,
+      "s": 52861
+     },
+     "jump": {
+      "label": "人間界へ戻る"
+     }
+    },
+    {
+     "tr": "trdikfm",
+     "a": {
+      "d": 35670,
+      "s": 0
+     },
+     "b": {
+      "d": 35671,
+      "s": 0
+     },
+     "jump": {
+      "label": "もう一度妖精郷へ"
+     }
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2323710,
+      "s": 52861
+     },
+     "b": {
+      "d": 2325536,
+      "s": 52861
+     },
+     "jump": {
+      "label": "人間界へ戻る"
+     }
+    }
+   ]
+  },
+  "nl08rx4p5c": {
+   "id": "nl08rx4p5c",
+   "title": "魔女モルガ",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "main",
+     "a": {
+      "d": 2261627,
+      "s": 52861
+     },
+     "b": {
+      "d": 2269236,
+      "s": 52861
+     }
+    },
+    {
+     "tr": "lpljlfdb",
+     "a": {
+      "d": 35643,
+      "s": 0
+     },
+     "b": {
+      "d": 35644,
+      "s": 0
+     },
+     "ka": 2,
+     "jump": {
+      "label": "舞踏会の2周目へ入り込む"
+     }
+    },
+    {
+     "tr": "trdikfm",
+     "a": {
+      "d": 35644,
+      "s": 0
+     },
+     "b": {
+      "d": 35645,
+      "s": 0
+     }
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2269237,
+      "s": 52861
+     },
+     "b": {
+      "d": 2279890,
+      "s": 52861
+     },
+     "jump": {
+      "label": "人間界へ戻る"
+     }
+    }
+   ]
+  }
+ },
+ "links": {},
+ "boards": {
+  "b0bldbvp5c": {
+   "id": "b0bldbvp5c",
+   "name": "コルクボード",
+   "kind": "cork",
+   "owner": null,
+   "items": {
+    "n3ez2b8p5c": {
+     "x": 40,
+     "y": 40
+    },
+    "nxwmnc3p5c": {
+     "x": 270,
+     "y": 40
+    },
+    "nl08rx4p5c": {
+     "x": 500,
+     "y": 40
+    }
+   },
+   "collapsed": []
+  }
+ },
+ "templates": {
+  "tpl-coc6": {
+   "id": "tpl-coc6",
+   "name": "クトゥルフ神話TRPG 6版 キャラクター",
+   "tags": [
+    "探索者",
+    "NPC"
+   ],
+   "fields": [
+    {
+     "key": "§基本",
+     "label": "基本",
+     "type": "section"
+    },
+    {
+     "key": "職業",
+     "label": "職業",
+     "type": "text"
+    },
+    {
+     "key": "年齢",
+     "label": "年齢",
+     "type": "number"
+    },
+    {
+     "key": "性別",
+     "label": "性別",
+     "type": "text"
+    },
+    {
+     "key": "出身",
+     "label": "出身",
+     "type": "text"
+    },
+    {
+     "key": "所属",
+     "label": "所属",
+     "type": "text"
+    },
+    {
+     "key": "生年月日",
+     "label": "生年月日",
+     "type": "date"
+    },
+    {
+     "key": "§能力値",
+     "label": "能力値",
+     "type": "section"
+    },
+    {
+     "key": "STR",
+     "label": "STR",
+     "type": "number"
+    },
+    {
+     "key": "CON",
+     "label": "CON",
+     "type": "number"
+    },
+    {
+     "key": "POW",
+     "label": "POW",
+     "type": "number"
+    },
+    {
+     "key": "DEX",
+     "label": "DEX",
+     "type": "number"
+    },
+    {
+     "key": "APP",
+     "label": "APP",
+     "type": "number"
+    },
+    {
+     "key": "SIZ",
+     "label": "SIZ",
+     "type": "number"
+    },
+    {
+     "key": "INT",
+     "label": "INT",
+     "type": "number"
+    },
+    {
+     "key": "EDU",
+     "label": "EDU",
+     "type": "number"
+    },
+    {
+     "key": "§副次的な数値",
+     "label": "副次的な数値",
+     "type": "section"
+    },
+    {
+     "key": "SAN",
+     "label": "SAN",
+     "type": "number"
+    },
+    {
+     "key": "幸運",
+     "label": "幸運",
+     "type": "number"
+    },
+    {
+     "key": "アイデア",
+     "label": "アイデア",
+     "type": "number"
+    },
+    {
+     "key": "知識",
+     "label": "知識",
+     "type": "number"
+    },
+    {
+     "key": "耐久力",
+     "label": "耐久力",
+     "type": "number"
+    },
+    {
+     "key": "マジック・ポイント",
+     "label": "マジック・ポイント",
+     "type": "number"
+    },
+    {
+     "key": "ダメージ・ボーナス",
+     "label": "ダメージ・ボーナス",
+     "type": "text"
+    },
+    {
+     "key": "§戦闘技能",
+     "label": "戦闘技能",
+     "type": "section"
+    },
+    {
+     "key": "回避",
+     "label": "回避",
+     "type": "number"
+    },
+    {
+     "key": "キック",
+     "label": "キック",
+     "type": "number"
+    },
+    {
+     "key": "組み付き",
+     "label": "組み付き",
+     "type": "number"
+    },
+    {
+     "key": "こぶし（パンチ）",
+     "label": "こぶし（パンチ）",
+     "type": "number"
+    },
+    {
+     "key": "頭突き",
+     "label": "頭突き",
+     "type": "number"
+    },
+    {
+     "key": "投擲",
+     "label": "投擲",
+     "type": "number"
+    },
+    {
+     "key": "マーシャルアーツ",
+     "label": "マーシャルアーツ",
+     "type": "number"
+    },
+    {
+     "key": "拳銃",
+     "label": "拳銃",
+     "type": "number"
+    },
+    {
+     "key": "サブマシンガン",
+     "label": "サブマシンガン",
+     "type": "number"
+    },
+    {
+     "key": "ショットガン",
+     "label": "ショットガン",
+     "type": "number"
+    },
+    {
+     "key": "マシンガン",
+     "label": "マシンガン",
+     "type": "number"
+    },
+    {
+     "key": "ライフル",
+     "label": "ライフル",
+     "type": "number"
+    },
+    {
+     "key": "§探索技能",
+     "label": "探索技能",
+     "type": "section"
+    },
+    {
+     "key": "応急手当",
+     "label": "応急手当",
+     "type": "number"
+    },
+    {
+     "key": "鍵開け",
+     "label": "鍵開け",
+     "type": "number"
+    },
+    {
+     "key": "隠す",
+     "label": "隠す",
+     "type": "number"
+    },
+    {
+     "key": "隠れる",
+     "label": "隠れる",
+     "type": "number"
+    },
+    {
+     "key": "聞き耳",
+     "label": "聞き耳",
+     "type": "number"
+    },
+    {
+     "key": "忍び歩き",
+     "label": "忍び歩き",
+     "type": "number"
+    },
+    {
+     "key": "写真術",
+     "label": "写真術",
+     "type": "number"
+    },
+    {
+     "key": "精神分析",
+     "label": "精神分析",
+     "type": "number"
+    },
+    {
+     "key": "追跡",
+     "label": "追跡",
+     "type": "number"
+    },
+    {
+     "key": "登攀",
+     "label": "登攀",
+     "type": "number"
+    },
+    {
+     "key": "図書館",
+     "label": "図書館",
+     "type": "number"
+    },
+    {
+     "key": "目星",
+     "label": "目星",
+     "type": "number"
+    },
+    {
+     "key": "§行動技能",
+     "label": "行動技能",
+     "type": "section"
+    },
+    {
+     "key": "運転",
+     "label": "運転",
+     "type": "number"
+    },
+    {
+     "key": "機械修理",
+     "label": "機械修理",
+     "type": "number"
+    },
+    {
+     "key": "重機械操作",
+     "label": "重機械操作",
+     "type": "number"
+    },
+    {
+     "key": "乗馬",
+     "label": "乗馬",
+     "type": "number"
+    },
+    {
+     "key": "水泳",
+     "label": "水泳",
+     "type": "number"
+    },
+    {
+     "key": "製作",
+     "label": "製作",
+     "type": "number"
+    },
+    {
+     "key": "操縦",
+     "label": "操縦",
+     "type": "number"
+    },
+    {
+     "key": "跳躍",
+     "label": "跳躍",
+     "type": "number"
+    },
+    {
+     "key": "電気修理",
+     "label": "電気修理",
+     "type": "number"
+    },
+    {
+     "key": "ナビゲート",
+     "label": "ナビゲート",
+     "type": "number"
+    },
+    {
+     "key": "変装",
+     "label": "変装",
+     "type": "number"
+    },
+    {
+     "key": "§交渉技能",
+     "label": "交渉技能",
+     "type": "section"
+    },
+    {
+     "key": "言いくるめ",
+     "label": "言いくるめ",
+     "type": "number"
+    },
+    {
+     "key": "信用",
+     "label": "信用",
+     "type": "number"
+    },
+    {
+     "key": "説得",
+     "label": "説得",
+     "type": "number"
+    },
+    {
+     "key": "値切り",
+     "label": "値切り",
+     "type": "number"
+    },
+    {
+     "key": "母国語",
+     "label": "母国語",
+     "type": "number"
+    },
+    {
+     "key": "ほかの言語",
+     "label": "ほかの言語",
+     "type": "text"
+    },
+    {
+     "key": "§知識技能",
+     "label": "知識技能",
+     "type": "section"
+    },
+    {
+     "key": "医学",
+     "label": "医学",
+     "type": "number"
+    },
+    {
+     "key": "オカルト",
+     "label": "オカルト",
+     "type": "number"
+    },
+    {
+     "key": "化学",
+     "label": "化学",
+     "type": "number"
+    },
+    {
+     "key": "クトゥルフ神話",
+     "label": "クトゥルフ神話",
+     "type": "number"
+    },
+    {
+     "key": "芸術",
+     "label": "芸術",
+     "type": "number"
+    },
+    {
+     "key": "経理",
+     "label": "経理",
+     "type": "number"
+    },
+    {
+     "key": "考古学",
+     "label": "考古学",
+     "type": "number"
+    },
+    {
+     "key": "コンピューター",
+     "label": "コンピューター",
+     "type": "number"
+    },
+    {
+     "key": "心理学",
+     "label": "心理学",
+     "type": "number"
+    },
+    {
+     "key": "人類学",
+     "label": "人類学",
+     "type": "number"
+    },
+    {
+     "key": "生物学",
+     "label": "生物学",
+     "type": "number"
+    },
+    {
+     "key": "地質学",
+     "label": "地質学",
+     "type": "number"
+    },
+    {
+     "key": "電子工学",
+     "label": "電子工学",
+     "type": "number"
+    },
+    {
+     "key": "天文学",
+     "label": "天文学",
+     "type": "number"
+    },
+    {
+     "key": "博物学",
+     "label": "博物学",
+     "type": "number"
+    },
+    {
+     "key": "物理学",
+     "label": "物理学",
+     "type": "number"
+    },
+    {
+     "key": "法律",
+     "label": "法律",
+     "type": "number"
+    },
+    {
+     "key": "薬学",
+     "label": "薬学",
+     "type": "number"
+    },
+    {
+     "key": "歴史",
+     "label": "歴史",
+     "type": "number"
+    },
+    {
+     "key": "§そのほか",
+     "label": "そのほか",
+     "type": "section"
+    },
+    {
+     "key": "武器",
+     "label": "武器",
+     "type": "long"
+    },
+    {
+     "key": "所持品",
+     "label": "所持品",
+     "type": "long"
+    },
+    {
+     "key": "経歴",
+     "label": "経歴",
+     "type": "long"
+    }
+   ]
+  }
+ },
+ "maps": {},
+ "calendars": {
+  "cus8xqdp5c": {
+   "id": "cus8xqdp5c",
+   "name": "妖精暦",
+   "months": [
+    {
+     "name": "霜の月",
+     "days": 30
+    },
+    {
+     "name": "芽の月",
+     "days": 30
+    },
+    {
+     "name": "花の月",
+     "days": 30
+    },
+    {
+     "name": "若葉の月",
+     "days": 30
+    },
+    {
+     "name": "夏至の月",
+     "days": 30
+    },
+    {
+     "name": "蜜の月",
+     "days": 30
+    },
+    {
+     "name": "麦の月",
+     "days": 30
+    },
+    {
+     "name": "実りの月",
+     "days": 30
+    },
+    {
+     "name": "霧の月",
+     "days": 30
+    },
+    {
+     "name": "落葉の月",
+     "days": 30
+    },
+    {
+     "name": "雪の月",
+     "days": 30
+    },
+    {
+     "name": "夜の月",
+     "days": 30
+    }
+   ],
+   "weekdays": [],
+   "firstYear": 1,
+   "leap": {
+    "every": 0,
+    "month": 11,
+    "days": 1
+   }
+  }
+ },
+ "images": {},
+ "tracks": [
+  {
+   "id": "main",
+   "name": "本線",
+   "lane": 0,
+   "color": 0,
+   "cal": "west",
+   "from": {
+    "d": 2195882,
+    "s": 52861
+   },
+   "to": {
+    "d": 2462502,
+    "s": 54000
+   }
+  },
+  {
+   "id": "trdikfm",
+   "name": "妖精郷",
+   "lane": -1,
+   "color": 1,
+   "cal": "fict",
+   "from": {
+    "d": 0,
+    "s": 0
+   },
+   "to": {
+    "d": 107999,
+    "s": 0
+   },
+   "merge": [
+    "main",
+    {
+     "d": 2447892,
+     "s": 54000
+    }
+   ],
+   "calId": "cus8xqdp5c"
+  },
+  {
+   "id": "lpljlfdb",
+   "name": "終わらない舞踏会",
+   "lane": -2,
+   "color": 2,
+   "cal": "fict",
+   "from": {
+    "d": 35642,
+    "s": 0
+   },
+   "to": {
+    "d": 35644,
+    "s": 0
+   },
+   "fork": [
+    "trdikfm",
+    {
+     "d": 35642,
+     "s": 0
+    }
+   ],
+   "merge": [
+    "trdikfm",
+    {
+     "d": 35644,
+     "s": 0
+    }
+   ],
+   "loop": 3,
+   "calId": "cus8xqdp5c"
+  }
+ ]
+}

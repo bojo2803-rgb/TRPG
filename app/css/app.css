@@ -245,3 +245,92 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 .map-pin::after { content: ""; position: absolute; left: -1px; bottom: -7px; border-left: 7px solid var(--fg); border-bottom: 7px solid transparent; }
 .map-pin.focus { outline: 2px solid var(--accent); }
 .pick-hint { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--fg); color: var(--bg); }
+
+/* ===== 時系列マップ（試作品と同じ見た目） ===== */
+.tm { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.tm-bar .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tm .chip { font-size: 12px; padding: 3px 11px; }
+.tm .chip.ex { text-decoration: line-through; color: var(--muted); }
+.tm .chip.only { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tm .chip:disabled { opacity: .45; cursor: default; }
+.tm-settings { font-size: 13px; padding: 4px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.tm-settings summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.tm-panel { display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; align-items: center; padding: 8px 0; }
+.tm-panel > span { color: var(--muted); }
+.tm-panel .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tm-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; background: var(--surface); }
+#tm-map { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+#tm-map.drag { cursor: grabbing; }
+.tm .zoom { position: absolute; right: 10px; top: 10px; display: flex; gap: 4px; }
+.tm .zoom button { font-size: 13px; min-width: 34px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); cursor: pointer; }
+#tm-tip { position: absolute; pointer-events: none; max-width: 300px; z-index: 2; background: var(--fg); color: var(--bg); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5; }
+#tm-tip b { font-size: 13px; }
+#tm-tip .d { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+#tm-tip .m { opacity: .75; }
+#tm-pickHint { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 3; padding: 6px 14px; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 13px; white-space: nowrap; }
+#tm-list { position: absolute; top: 0; right: 0; bottom: 0; z-index: 3; width: min(380px, 100%); box-sizing: border-box; overflow: auto; padding: 12px 14px; background: var(--surface); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgb(0 0 0 / .12); }
+#tm-list .list-h { position: sticky; top: -12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-block: 6px; background: var(--surface); }
+#tm-list h3 { display: flex; align-items: center; gap: 6px; margin: 14px 0 6px; font-size: 13px; }
+#tm-list h3 .sw { width: 10px; height: 10px; border-radius: 2px; border: 0; }
+#tm-list ol { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+#tm-list li button { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 10em 1fr; gap: 8px; width: 100%; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+#tm-list li button:hover { background: var(--bg); }
+#tm-list .when { font-family: var(--font-data); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#tm-list .kind { margin-left: 6px; font-size: 11px; color: var(--muted); }
+#tm-list li.imp .ttl { font-weight: 600; }
+.tm .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--muted); align-items: center; padding: 4px 16px 8px; }
+.tm .legend svg { vertical-align: middle; margin-right: 4px; }
+.tm .legend-wrap { border-top: 1px solid var(--line); background: var(--surface); }
+.tm .legend-wrap summary { font-size: 12px; color: var(--muted); cursor: pointer; padding: 4px 16px; }
+.tm .legend-wrap[open] summary { display: none; }
+.tm .t-c0 { stroke: var(--c-c0); } .tm .t-c1 { stroke: var(--c-c1); } .tm .t-c2 { stroke: var(--c-c2); } .tm .t-c3 { stroke: var(--c-c3); } .tm .t-c4 { stroke: var(--c-c4); } .tm .t-c5 { stroke: var(--c-c5); }
+.tm .f-c0 { fill: var(--c-c0); } .tm .f-c1 { fill: var(--c-c1); } .tm .f-c2 { fill: var(--c-c2); } .tm .f-c3 { fill: var(--c-c3); } .tm .f-c4 { fill: var(--c-c4); } .tm .f-c5 { fill: var(--c-c5); }
+.tm .pc { fill: none; stroke-width: 3; stroke-linecap: round; }
+.tm .pc.dup { stroke-dasharray: 7 6; stroke-linecap: butt; }
+.tm .pc.old { stroke-width: 2; stroke-dasharray: 2 5; }
+.tm .cut { fill: none; stroke-width: 1.4; stroke-dasharray: 2 4; }
+.tm .lk { fill: none; stroke-width: 1.6; stroke-dasharray: 6 4; stroke: var(--muted); }
+.tm .lk.k-paradox { stroke: var(--paradox); stroke-width: 2.2; }
+.tm .lk.conn { stroke-dasharray: 3 4; }
+.tm .jlbl { fill: var(--muted); font-size: 10px; font-family: var(--font-data); }
+.tm .jlbl.k-paradox { fill: var(--paradox); }
+.tm .jt { fill: var(--surface); stroke: var(--fg); stroke-width: 2; }
+.tm .jt.k-paradox { stroke: var(--paradox); }
+.tm .jt.loopj { stroke: var(--muted); }
+.tm .hit { fill: none; stroke: transparent; stroke-width: 18; pointer-events: stroke; }
+.tm .card rect.bg { fill: var(--raised); stroke: var(--line); }
+.tm .card text { fill: var(--fg); font-size: 12px; }
+.tm .card.dim { opacity: .22; }
+.tm .card.again { opacity: .55; }
+.tm .card.bp rect.bg { stroke: var(--accent); }
+.tm .bpi { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; }
+.tm .card.hl rect.bg { stroke: var(--accent); stroke-width: 2; }
+.tm .card.grp rect.bg { fill: var(--fg); stroke: var(--fg); }
+.tm .card.grp text { fill: var(--bg); font-weight: 600; }
+.tm .card { cursor: pointer; }
+.tm .more { cursor: zoom-in; } .tm .more rect { fill: var(--muted); } .tm .more text { fill: var(--bg); font-size: 11px; font-weight: 600; }
+.tm .stem { stroke: var(--line); stroke-width: 1; }
+.tm .lbl { fill: var(--muted); font-size: 11px; }
+.tm .lbl.tr { font-weight: 600; font-size: 11px; }
+.tm .lbl.head { fill: var(--fg); font-weight: 600; font-size: 13px; }
+.tm .gapl { fill: var(--muted); font-size: 10px; font-family: var(--font-data); }
+.tm .focus { stroke: var(--accent); stroke-width: 1.5; stroke-opacity: .45; pointer-events: none; }
+.tm .pick { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.tm .pickdot { fill: var(--accent); pointer-events: none; }
+.mini { font-size: 12px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; justify-self: start; }
+/* 時系列マップの入力画面（世界線・ループ・主体） */
+#dlgBody .note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+#dlgBody .fld { display: grid; gap: 4px; }
+#dlgBody .alt { display: grid; gap: 4px; }
+#s_legs { display: grid; gap: 8px; counter-reset: leg; }
+.leg { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; counter-increment: leg; }
+.leg-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.leg-h b::before { content: "区間" counter(leg); }
+.lbl-in::before { content: "入った"; }
+#s_legs > .leg:first-child .lbl-in::before { content: "生まれた（誕生）"; font-weight: 600; }
+.leg .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.kk { display: flex !important; align-items: center; gap: 4px; }
+.kk input { width: 4.5em; }
+.jmp { display: grid; gap: 4px; }
+#s_legs > .leg:first-child .jmp { display: none; }
+@media (max-width: 760px) { .tm-tools { width: 100%; } .tm-panel { grid-template-columns: 1fr; } }

@@ -7,13 +7,13 @@ import { pickNote } from './picker.js';
 import { openDialog, showMenu, toast } from './dialog.js';
 
 const panel = () => document.getElementById('panel');
-let curId = null, self = false, bodyMode = 'view', armedDelete = false;
+let curId = null, self = false, bodyMode = 'view', armedDelete = false, iterK = 0;
 export const current = () => curId;
 
 export function open(ctx, id, opts = {}) {
   if (!ctx.world.notes[id]) return;
   if (curId !== id) { bodyMode = ctx.world.notes[id].body ? 'view' : 'edit'; armedDelete = false; }
-  curId = id;
+  curId = id; iterK = opts.k || 0; // ループの何周目から開いたか（その周だけの書き換えができる）
   panel().hidden = false;
   render(ctx);
   if (opts.focusTitle) panel().querySelector('.ne-title')?.select();
@@ -186,7 +186,7 @@ let whenMod = null;
 function whenSec(ctx, w, n) {
   const box = h('div', {}, h('p', { class: 'note-text' }, '読み込んでいます…'));
   (whenMod ? Promise.resolve(whenMod) : import('../timemap/whenSection.js').then(m => (whenMod = m)))
-    .then(m => box.replaceChildren(m.whenSection(ctx, n, { edit: (fn, label) => edit(ctx, fn, label), rerender: () => render(ctx) })))
+    .then(m => box.replaceChildren(m.whenSection(ctx, n, { edit: (fn, label) => edit(ctx, fn, label), rerender: () => render(ctx), k: iterK })))
     .catch(e => box.replaceChildren(h('p', { class: 'err' }, `読み込めませんでした：${e.message}`)));
   return box;
 }

@@ -1,0 +1,1709 @@
+{
+ "format": "trpg-world",
+ "version": 1,
+ "id": "w-example-sample",
+ "name": "基本のサンプル",
+ "settings": {
+  "tz": "Asia/Tokyo",
+  "cal": {
+   "western": {
+    "switch": "1582",
+    "era": "historical",
+    "yearStart": "jan1"
+   },
+   "wareki": {
+    "nanboku": "both",
+    "kaigen": "both",
+    "legend": "note"
+   },
+   "kyureki": {
+    "y2033": "undecided"
+   },
+   "hijri": {
+    "method": "uaq",
+    "leap": "16",
+    "epoch": "civil",
+    "dayStart": "midnight"
+   }
+  }
+ },
+ "notes": {
+  "nlinb2hp54": {
+   "id": "nlinb2hp54",
+   "title": "シナリオ：夏の終わりのループ",
+   "body": "",
+   "tags": [
+    "シナリオ"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "collapsed": false
+  },
+  "nwnc28wp54": {
+   "id": "nwnc28wp54",
+   "title": "宇宙の始まり",
+   "body": "",
+   "tags": [
+    "宇宙"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": -5040344048456,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nfr2uilp54": {
+   "id": "nfr2uilp54",
+   "title": "地球の誕生",
+   "body": "",
+   "tags": [
+    "宇宙"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": -1658198498456,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "ntr5ge3p54": {
+   "id": "ntr5ge3p54",
+   "title": "恐竜の絶滅",
+   "body": "",
+   "tags": [
+    "宇宙"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": -24103553456,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nqjbvnnp54": {
+   "id": "nqjbvnnp54",
+   "title": "亀を助ける",
+   "body": "",
+   "tags": [
+    "浦島"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 1983823,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nfcpci6p54": {
+   "id": "nfcpci6p54",
+   "title": "竜宮城に着く",
+   "body": "",
+   "tags": [
+    "浦島"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "ryugu",
+    "t": {
+     "d": 1984038,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "n97t44kp54": {
+   "id": "n97t44kp54",
+   "title": "乙姫の宴",
+   "body": "",
+   "tags": [
+    "浦島"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "ryugu",
+    "t": {
+     "d": 1984590,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nyetoe6p54": {
+   "id": "nyetoe6p54",
+   "title": "故郷が恋しくなる",
+   "body": "",
+   "tags": [
+    "浦島"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "ryugu",
+    "t": {
+     "d": 1985102,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nly8djcp54": {
+   "id": "nly8djcp54",
+   "title": "玉手箱を開ける",
+   "body": "",
+   "tags": [
+    "浦島"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2093616,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "n3z4a3bp54": {
+   "id": "n3z4a3bp54",
+   "title": "本能寺の変",
+   "body": "",
+   "tags": [
+    "歴史"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2299054,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo",
+    "branch": true
+   }
+  },
+  "njgdxl0p54": {
+   "id": "njgdxl0p54",
+   "title": "本能寺の変（信長が脱出する）",
+   "body": "",
+   "tags": [
+    "歴史"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "gamma",
+    "t": {
+     "d": 2299054,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "n222s77p54": {
+   "id": "n222s77p54",
+   "title": "信長が天下を統一",
+   "body": "",
+   "tags": [
+    "歴史"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "gamma",
+    "t": {
+     "d": 2302007,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nq41y5gp54": {
+   "id": "nq41y5gp54",
+   "title": "Rが眠りにつく",
+   "body": "",
+   "tags": [
+    "夢"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2422385,
+     "s": 50400
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "ninakw0p54": {
+   "id": "ninakw0p54",
+   "title": "古い夢の伝承",
+   "body": "",
+   "tags": [
+    "夢"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "dream",
+    "t": {
+     "d": 107640,
+     "s": 0
+    },
+    "prec": "minute",
+    "tz": null
+   }
+  },
+  "ngy66k5p54": {
+   "id": "ngy66k5p54",
+   "title": "猫の町を訪れる",
+   "body": "",
+   "tags": [
+    "夢"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "dream",
+    "t": {
+     "d": 433472,
+     "s": 0
+    },
+    "prec": "minute",
+    "tz": null
+   }
+  },
+  "nuvaaffp54": {
+   "id": "nuvaaffp54",
+   "title": "銀の鍵を得る",
+   "body": "",
+   "tags": [
+    "夢"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "dream",
+    "t": {
+     "d": 435488,
+     "s": 0
+    },
+    "prec": "minute",
+    "tz": null
+   }
+  },
+  "n0ptshdp54": {
+   "id": "n0ptshdp54",
+   "title": "Rが目覚める",
+   "body": "",
+   "tags": [
+    "夢"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2422385,
+     "s": 79200
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "ntkgg5np54": {
+   "id": "ntkgg5np54",
+   "title": "時計台に雷",
+   "body": "",
+   "tags": [
+    "時間旅行"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2435424,
+     "s": 47040
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nkzot2ap54": {
+   "id": "nkzot2ap54",
+   "title": "駐車場で実験",
+   "body": "",
+   "tags": [
+    "時間旅行"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2446364,
+     "s": 58800
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nenl2tnp54": {
+   "id": "nenl2tnp54",
+   "title": "Kが過去へ跳ぶ",
+   "body": "",
+   "tags": [
+    "時間旅行"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2460828,
+     "s": 10800
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo",
+    "branch": true
+   }
+  },
+  "n5q9pvlp54": {
+   "id": "n5q9pvlp54",
+   "title": "見知らぬ男が現れる",
+   "body": "",
+   "tags": [
+    "時間旅行"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "beta",
+    "t": {
+     "d": 2396910,
+     "s": 9661
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "ni4itymp54": {
+   "id": "ni4itymp54",
+   "title": "歴史が変わり始める",
+   "body": "",
+   "tags": [
+    "歴史",
+    "時間旅行"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "beta",
+    "t": {
+     "d": 2397123,
+     "s": 52861
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "n3zj0jfp54": {
+   "id": "n3zj0jfp54",
+   "title": "ループの始まり",
+   "body": "",
+   "tags": [
+    "ループ"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [
+    "nlinb2hp54"
+   ],
+   "when": {
+    "tr": "loop1",
+    "t": {
+     "d": 2460904,
+     "s": 54000
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nvmva7pp54": {
+   "id": "nvmva7pp54",
+   "title": "夏祭り",
+   "body": "",
+   "tags": [
+    "ループ"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [
+    "nlinb2hp54"
+   ],
+   "when": {
+    "tr": "loop1",
+    "t": {
+     "d": 2460908,
+     "s": 36000
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo",
+    "per": {
+     "2": {
+      "title": "夏祭り（知らない観測者が紛れ込む）",
+      "tags": [
+       "ループ"
+      ]
+     }
+    }
+   }
+  },
+  "n04r3jlp54": {
+   "id": "n04r3jlp54",
+   "title": "夏休み最後の夜",
+   "body": "",
+   "tags": [
+    "ループ"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [
+    "nlinb2hp54"
+   ],
+   "when": {
+    "tr": "loop1",
+    "t": {
+     "d": 2460919,
+     "s": 53940
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nh8ghv1p54": {
+   "id": "nh8ghv1p54",
+   "title": "少女がループに気づく",
+   "body": "",
+   "tags": [
+    "ループ"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [
+    "nlinb2hp54"
+   ],
+   "when": {
+    "tr": "loop1",
+    "t": {
+     "d": 2460909,
+     "s": 54000
+    },
+    "prec": "day",
+    "tz": "Asia/Tokyo",
+    "k": 3
+   }
+  },
+  "nbvyfsjp54": {
+   "id": "nbvyfsjp54",
+   "title": "同じ一日をくり返す",
+   "body": "",
+   "tags": [
+    "ループ"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "loop2",
+    "t": {
+     "d": 2460912,
+     "s": 10800
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "nycjegdp54": {
+   "id": "nycjegdp54",
+   "title": "夏祭り",
+   "body": "",
+   "tags": [
+    "ループ"
+   ],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "when": {
+    "tr": "main",
+    "t": {
+     "d": 2460908,
+     "s": 36000
+    },
+    "prec": "minute",
+    "tz": "Asia/Tokyo"
+   }
+  },
+  "njg1qihp54": {
+   "id": "njg1qihp54",
+   "title": "浦島太郎",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "main",
+     "a": {
+      "d": 1976732,
+      "s": 52861
+     },
+     "b": {
+      "d": 1984037,
+      "s": 52861
+     }
+    },
+    {
+     "tr": "ryugu",
+     "a": {
+      "d": 1984037,
+      "s": 52861
+     },
+     "b": {
+      "d": 1985133,
+      "s": 52861
+     }
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2093612,
+      "s": 52861
+     },
+     "b": {
+      "d": 2093616,
+      "s": 52861
+     }
+    }
+   ]
+  },
+  "nibt3nop54": {
+   "id": "nibt3nop54",
+   "title": "夢見る者R",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "main",
+     "a": {
+      "d": 2411599,
+      "s": 54000
+     },
+     "b": {
+      "d": 2422385,
+      "s": 50400
+     }
+    },
+    {
+     "tr": "dream",
+     "a": {
+      "d": 432720,
+      "s": 0
+     },
+     "b": {
+      "d": 437040,
+      "s": 0
+     },
+     "jump": {
+      "label": "眠ってドリームランドへ"
+     }
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2422385,
+      "s": 79200
+     },
+     "b": {
+      "d": 2428607,
+      "s": 54000
+     },
+     "jump": {
+      "label": "目覚めて現実へ"
+     }
+    }
+   ]
+  },
+  "ntdyk0pp54": {
+   "id": "ntdyk0pp54",
+   "title": "ループする少女",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "main",
+     "a": {
+      "d": 2455288,
+      "s": 54000
+     },
+     "b": {
+      "d": 2460904,
+      "s": 54000
+     }
+    },
+    {
+     "tr": "loop1",
+     "a": {
+      "d": 2460904,
+      "s": 54000
+     },
+     "b": {
+      "d": 2460911,
+      "s": 54000
+     },
+     "kb": 3
+    },
+    {
+     "tr": "loop2",
+     "a": {
+      "d": 2460911,
+      "s": 54000
+     },
+     "b": {
+      "d": 2460912,
+      "s": 54000
+     }
+    },
+    {
+     "tr": "loop1",
+     "a": {
+      "d": 2460912,
+      "s": 54000
+     },
+     "b": {
+      "d": 2460919,
+      "s": 53940
+     },
+     "ka": 3
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2460919,
+      "s": 53940
+     },
+     "b": {
+      "d": 2484417,
+      "s": 54000
+     }
+    }
+   ]
+  },
+  "nxbkulvp54": {
+   "id": "nxbkulvp54",
+   "title": "時間旅行者M",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "main",
+     "a": {
+      "d": 2440019,
+      "s": 54000
+     },
+     "b": {
+      "d": 2446364,
+      "s": 59700
+     }
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2435416,
+      "s": 75600
+     },
+     "b": {
+      "d": 2435424,
+      "s": 47040
+     }
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2446364,
+      "s": 59040
+     },
+     "b": {
+      "d": 2466154,
+      "s": 54000
+     }
+    }
+   ]
+  },
+  "nelwglip54": {
+   "id": "nelwglip54",
+   "title": "時間旅行者K",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "main",
+     "a": {
+      "d": 2449779,
+      "s": 54000
+     },
+     "b": {
+      "d": 2460828,
+      "s": 10800
+     }
+    },
+    {
+     "tr": "beta",
+     "a": {
+      "d": 2396910,
+      "s": 9661
+     },
+     "b": {
+      "d": 2415020,
+      "s": 54000
+     },
+     "jump": {
+      "label": "過去へ跳ぶ（パラドックス発生）",
+      "paradox": true
+     }
+    }
+   ]
+  },
+  "nah96lgp54": {
+   "id": "nah96lgp54",
+   "title": "観測者O",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "main",
+     "a": {
+      "d": 2473825,
+      "s": 54000
+     },
+     "b": {
+      "d": 2482650,
+      "s": 54000
+     }
+    },
+    {
+     "tr": "loop1",
+     "a": {
+      "d": 2460908,
+      "s": 36000
+     },
+     "b": {
+      "d": 2460919,
+      "s": 53940
+     },
+     "ka": 2,
+     "jump": {
+      "label": "ループの2周目の夏祭りへ"
+     }
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2460919,
+      "s": 53940
+     },
+     "b": {
+      "d": 2460921,
+      "s": 54000
+     }
+    },
+    {
+     "tr": "main",
+     "a": {
+      "d": 2482650,
+      "s": 54000
+     },
+     "b": {
+      "d": 2488069,
+      "s": 54000
+     }
+    }
+   ]
+  },
+  "nb52ciwp54": {
+   "id": "nb52ciwp54",
+   "title": "織田信長",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "main",
+     "a": {
+      "d": 2281524,
+      "s": 52861
+     },
+     "b": {
+      "d": 2299054,
+      "s": 52861
+     }
+    }
+   ]
+  },
+  "nqfw2jup54": {
+   "id": "nqfw2jup54",
+   "title": "織田信長（世界線γ）",
+   "body": "",
+   "tags": [],
+   "color": null,
+   "fields": {},
+   "parents": [],
+   "legs": [
+    {
+     "tr": "gamma",
+     "a": {
+      "d": 2299054,
+      "s": 52861
+     },
+     "b": {
+      "d": 2304956,
+      "s": 52861
+     }
+    }
+   ],
+   "origin": "nb52ciwp54"
+  }
+ },
+ "links": {},
+ "boards": {
+  "bft4tgtp4u": {
+   "id": "bft4tgtp4u",
+   "name": "コルクボード",
+   "kind": "cork",
+   "owner": null,
+   "items": {
+    "njg1qihp54": {
+     "x": 40,
+     "y": 40
+    },
+    "nibt3nop54": {
+     "x": 270,
+     "y": 40
+    },
+    "ntdyk0pp54": {
+     "x": 500,
+     "y": 40
+    },
+    "nxbkulvp54": {
+     "x": 730,
+     "y": 40
+    },
+    "nelwglip54": {
+     "x": 960,
+     "y": 40
+    },
+    "nah96lgp54": {
+     "x": 40,
+     "y": 190
+    },
+    "nb52ciwp54": {
+     "x": 270,
+     "y": 190
+    },
+    "nqfw2jup54": {
+     "x": 500,
+     "y": 190
+    },
+    "nlinb2hp54": {
+     "x": 730,
+     "y": 190
+    }
+   },
+   "collapsed": []
+  }
+ },
+ "templates": {
+  "tpl-coc6": {
+   "id": "tpl-coc6",
+   "name": "クトゥルフ神話TRPG 6版 キャラクター",
+   "tags": [
+    "探索者",
+    "NPC"
+   ],
+   "fields": [
+    {
+     "key": "§基本",
+     "label": "基本",
+     "type": "section"
+    },
+    {
+     "key": "職業",
+     "label": "職業",
+     "type": "text"
+    },
+    {
+     "key": "年齢",
+     "label": "年齢",
+     "type": "number"
+    },
+    {
+     "key": "性別",
+     "label": "性別",
+     "type": "text"
+    },
+    {
+     "key": "出身",
+     "label": "出身",
+     "type": "text"
+    },
+    {
+     "key": "所属",
+     "label": "所属",
+     "type": "text"
+    },
+    {
+     "key": "生年月日",
+     "label": "生年月日",
+     "type": "date"
+    },
+    {
+     "key": "§能力値",
+     "label": "能力値",
+     "type": "section"
+    },
+    {
+     "key": "STR",
+     "label": "STR",
+     "type": "number"
+    },
+    {
+     "key": "CON",
+     "label": "CON",
+     "type": "number"
+    },
+    {
+     "key": "POW",
+     "label": "POW",
+     "type": "number"
+    },
+    {
+     "key": "DEX",
+     "label": "DEX",
+     "type": "number"
+    },
+    {
+     "key": "APP",
+     "label": "APP",
+     "type": "number"
+    },
+    {
+     "key": "SIZ",
+     "label": "SIZ",
+     "type": "number"
+    },
+    {
+     "key": "INT",
+     "label": "INT",
+     "type": "number"
+    },
+    {
+     "key": "EDU",
+     "label": "EDU",
+     "type": "number"
+    },
+    {
+     "key": "§副次的な数値",
+     "label": "副次的な数値",
+     "type": "section"
+    },
+    {
+     "key": "SAN",
+     "label": "SAN",
+     "type": "number"
+    },
+    {
+     "key": "幸運",
+     "label": "幸運",
+     "type": "number"
+    },
+    {
+     "key": "アイデア",
+     "label": "アイデア",
+     "type": "number"
+    },
+    {
+     "key": "知識",
+     "label": "知識",
+     "type": "number"
+    },
+    {
+     "key": "耐久力",
+     "label": "耐久力",
+     "type": "number"
+    },
+    {
+     "key": "マジック・ポイント",
+     "label": "マジック・ポイント",
+     "type": "number"
+    },
+    {
+     "key": "ダメージ・ボーナス",
+     "label": "ダメージ・ボーナス",
+     "type": "text"
+    },
+    {
+     "key": "§戦闘技能",
+     "label": "戦闘技能",
+     "type": "section"
+    },
+    {
+     "key": "回避",
+     "label": "回避",
+     "type": "number"
+    },
+    {
+     "key": "キック",
+     "label": "キック",
+     "type": "number"
+    },
+    {
+     "key": "組み付き",
+     "label": "組み付き",
+     "type": "number"
+    },
+    {
+     "key": "こぶし（パンチ）",
+     "label": "こぶし（パンチ）",
+     "type": "number"
+    },
+    {
+     "key": "頭突き",
+     "label": "頭突き",
+     "type": "number"
+    },
+    {
+     "key": "投擲",
+     "label": "投擲",
+     "type": "number"
+    },
+    {
+     "key": "マーシャルアーツ",
+     "label": "マーシャルアーツ",
+     "type": "number"
+    },
+    {
+     "key": "拳銃",
+     "label": "拳銃",
+     "type": "number"
+    },
+    {
+     "key": "サブマシンガン",
+     "label": "サブマシンガン",
+     "type": "number"
+    },
+    {
+     "key": "ショットガン",
+     "label": "ショットガン",
+     "type": "number"
+    },
+    {
+     "key": "マシンガン",
+     "label": "マシンガン",
+     "type": "number"
+    },
+    {
+     "key": "ライフル",
+     "label": "ライフル",
+     "type": "number"
+    },
+    {
+     "key": "§探索技能",
+     "label": "探索技能",
+     "type": "section"
+    },
+    {
+     "key": "応急手当",
+     "label": "応急手当",
+     "type": "number"
+    },
+    {
+     "key": "鍵開け",
+     "label": "鍵開け",
+     "type": "number"
+    },
+    {
+     "key": "隠す",
+     "label": "隠す",
+     "type": "number"
+    },
+    {
+     "key": "隠れる",
+     "label": "隠れる",
+     "type": "number"
+    },
+    {
+     "key": "聞き耳",
+     "label": "聞き耳",
+     "type": "number"
+    },
+    {
+     "key": "忍び歩き",
+     "label": "忍び歩き",
+     "type": "number"
+    },
+    {
+     "key": "写真術",
+     "label": "写真術",
+     "type": "number"
+    },
+    {
+     "key": "精神分析",
+     "label": "精神分析",
+     "type": "number"
+    },
+    {
+     "key": "追跡",
+     "label": "追跡",
+     "type": "number"
+    },
+    {
+     "key": "登攀",
+     "label": "登攀",
+     "type": "number"
+    },
+    {
+     "key": "図書館",
+     "label": "図書館",
+     "type": "number"
+    },
+    {
+     "key": "目星",
+     "label": "目星",
+     "type": "number"
+    },
+    {
+     "key": "§行動技能",
+     "label": "行動技能",
+     "type": "section"
+    },
+    {
+     "key": "運転",
+     "label": "運転",
+     "type": "number"
+    },
+    {
+     "key": "機械修理",
+     "label": "機械修理",
+     "type": "number"
+    },
+    {
+     "key": "重機械操作",
+     "label": "重機械操作",
+     "type": "number"
+    },
+    {
+     "key": "乗馬",
+     "label": "乗馬",
+     "type": "number"
+    },
+    {
+     "key": "水泳",
+     "label": "水泳",
+     "type": "number"
+    },
+    {
+     "key": "製作",
+     "label": "製作",
+     "type": "number"
+    },
+    {
+     "key": "操縦",
+     "label": "操縦",
+     "type": "number"
+    },
+    {
+     "key": "跳躍",
+     "label": "跳躍",
+     "type": "number"
+    },
+    {
+     "key": "電気修理",
+     "label": "電気修理",
+     "type": "number"
+    },
+    {
+     "key": "ナビゲート",
+     "label": "ナビゲート",
+     "type": "number"
+    },
+    {
+     "key": "変装",
+     "label": "変装",
+     "type": "number"
+    },
+    {
+     "key": "§交渉技能",
+     "label": "交渉技能",
+     "type": "section"
+    },
+    {
+     "key": "言いくるめ",
+     "label": "言いくるめ",
+     "type": "number"
+    },
+    {
+     "key": "信用",
+     "label": "信用",
+     "type": "number"
+    },
+    {
+     "key": "説得",
+     "label": "説得",
+     "type": "number"
+    },
+    {
+     "key": "値切り",
+     "label": "値切り",
+     "type": "number"
+    },
+    {
+     "key": "母国語",
+     "label": "母国語",
+     "type": "number"
+    },
+    {
+     "key": "ほかの言語",
+     "label": "ほかの言語",
+     "type": "text"
+    },
+    {
+     "key": "§知識技能",
+     "label": "知識技能",
+     "type": "section"
+    },
+    {
+     "key": "医学",
+     "label": "医学",
+     "type": "number"
+    },
+    {
+     "key": "オカルト",
+     "label": "オカルト",
+     "type": "number"
+    },
+    {
+     "key": "化学",
+     "label": "化学",
+     "type": "number"
+    },
+    {
+     "key": "クトゥルフ神話",
+     "label": "クトゥルフ神話",
+     "type": "number"
+    },
+    {
+     "key": "芸術",
+     "label": "芸術",
+     "type": "number"
+    },
+    {
+     "key": "経理",
+     "label": "経理",
+     "type": "number"
+    },
+    {
+     "key": "考古学",
+     "label": "考古学",
+     "type": "number"
+    },
+    {
+     "key": "コンピューター",
+     "label": "コンピューター",
+     "type": "number"
+    },
+    {
+     "key": "心理学",
+     "label": "心理学",
+     "type": "number"
+    },
+    {
+     "key": "人類学",
+     "label": "人類学",
+     "type": "number"
+    },
+    {
+     "key": "生物学",
+     "label": "生物学",
+     "type": "number"
+    },
+    {
+     "key": "地質学",
+     "label": "地質学",
+     "type": "number"
+    },
+    {
+     "key": "電子工学",
+     "label": "電子工学",
+     "type": "number"
+    },
+    {
+     "key": "天文学",
+     "label": "天文学",
+     "type": "number"
+    },
+    {
+     "key": "博物学",
+     "label": "博物学",
+     "type": "number"
+    },
+    {
+     "key": "物理学",
+     "label": "物理学",
+     "type": "number"
+    },
+    {
+     "key": "法律",
+     "label": "法律",
+     "type": "number"
+    },
+    {
+     "key": "薬学",
+     "label": "薬学",
+     "type": "number"
+    },
+    {
+     "key": "歴史",
+     "label": "歴史",
+     "type": "number"
+    },
+    {
+     "key": "§そのほか",
+     "label": "そのほか",
+     "type": "section"
+    },
+    {
+     "key": "武器",
+     "label": "武器",
+     "type": "long"
+    },
+    {
+     "key": "所持品",
+     "label": "所持品",
+     "type": "long"
+    },
+    {
+     "key": "経歴",
+     "label": "経歴",
+     "type": "long"
+    }
+   ]
+  }
+ },
+ "maps": {},
+ "calendars": {
+  "cbdofulp53": {
+   "id": "cbdofulp53",
+   "name": "夢暦",
+   "months": [
+    {
+     "name": "霧の月",
+     "days": 30
+    },
+    {
+     "name": "猫の月",
+     "days": 30
+    },
+    {
+     "name": "月獣の月",
+     "days": 30
+    },
+    {
+     "name": "翠玉の月",
+     "days": 30
+    },
+    {
+     "name": "黄昏の月",
+     "days": 30
+    },
+    {
+     "name": "星の月",
+     "days": 30
+    },
+    {
+     "name": "夜鬼の月",
+     "days": 30
+    },
+    {
+     "name": "琥珀の月",
+     "days": 30
+    },
+    {
+     "name": "銀鍵の月",
+     "days": 30
+    },
+    {
+     "name": "深淵の月",
+     "days": 30
+    },
+    {
+     "name": "夢見の月",
+     "days": 30
+    },
+    {
+     "name": "覚醒の月",
+     "days": 30
+    }
+   ],
+   "weekdays": [],
+   "firstYear": 1,
+   "leap": {
+    "every": 0,
+    "month": 11,
+    "days": 1
+   }
+  }
+ },
+ "images": {},
+ "tracks": [
+  {
+   "id": "main",
+   "name": "本線",
+   "lane": 0,
+   "color": 0,
+   "cal": "west",
+   "from": {
+    "d": -5040344048456,
+    "s": 52861
+   },
+   "to": {
+    "d": 2488069,
+    "s": 54000
+   }
+  },
+  {
+   "id": "ryugu",
+   "name": "竜宮",
+   "lane": -1,
+   "color": 1,
+   "cal": "west",
+   "from": {
+    "d": 1984037,
+    "s": 52861
+   },
+   "to": {
+    "d": 1985133,
+    "s": 52861
+   },
+   "fork": [
+    "main",
+    {
+     "d": 1984037,
+     "s": 52861
+    }
+   ],
+   "merge": [
+    "main",
+    {
+     "d": 2093612,
+     "s": 52861
+    }
+   ]
+  },
+  {
+   "id": "beta",
+   "name": "世界線β",
+   "lane": 1,
+   "color": 2,
+   "cal": "west",
+   "from": {
+    "d": 2396910,
+    "s": 9661
+   },
+   "to": {
+    "d": 2488069,
+    "s": 54000
+   },
+   "fork": [
+    "main",
+    {
+     "d": 2396910,
+     "s": 9661
+    }
+   ]
+  },
+  {
+   "id": "gamma",
+   "name": "世界線γ",
+   "lane": -2,
+   "color": 4,
+   "cal": "west",
+   "from": {
+    "d": 2299054,
+    "s": 52861
+   },
+   "to": {
+    "d": 2488069,
+    "s": 54000
+   },
+   "fork": [
+    "main",
+    {
+     "d": 2299054,
+     "s": 52861
+    }
+   ]
+  },
+  {
+   "id": "dream",
+   "name": "ドリームランド",
+   "lane": 2,
+   "color": 3,
+   "cal": "fict",
+   "from": {
+    "d": 0,
+    "s": 0
+   },
+   "to": {
+    "d": 720000,
+    "s": 0
+   },
+   "calId": "cbdofulp53"
+  },
+  {
+   "id": "loop1",
+   "name": "夏休みのループ",
+   "lane": -3,
+   "color": 5,
+   "cal": "west",
+   "from": {
+    "d": 2460904,
+    "s": 54000
+   },
+   "to": {
+    "d": 2460919,
+    "s": 53940
+   },
+   "fork": [
+    "main",
+    {
+     "d": 2460904,
+     "s": 54000
+    }
+   ],
+   "merge": [
+    "main",
+    {
+     "d": 2460919,
+     "s": 53940
+    }
+   ],
+   "loop": 3
+  },
+  {
+   "id": "loop2",
+   "name": "同じ一日のループ",
+   "lane": -4,
+   "color": 3,
+   "cal": "west",
+   "from": {
+    "d": 2460911,
+    "s": 54000
+   },
+   "to": {
+    "d": 2460912,
+    "s": 54000
+   },
+   "fork": [
+    "loop1",
+    {
+     "d": 2460911,
+     "s": 54000
+    },
+    3
+   ],
+   "merge": [
+    "loop1",
+    {
+     "d": 2460912,
+     "s": 54000
+    },
+    3
+   ],
+   "loop": 3
+  }
+ ]
+}
