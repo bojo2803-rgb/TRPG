@@ -178,3 +178,70 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 .dbetween { color: var(--muted); }
 .dpreview.err { color: var(--paradox); }
 .dinput input[type="time"] { width: 7.5em; }
+
+/* テンプレート */
+.tpl-wrap { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(180px, 260px) 1fr; }
+.tpl-side { overflow: auto; border-right: 1px solid var(--line); padding: 8px; display: grid; align-content: start; gap: 4px; background: var(--surface); }
+.tpl-item { all: unset; box-sizing: border-box; cursor: pointer; display: grid; gap: 2px; padding: 8px 10px; border-radius: 6px; }
+.tpl-item:hover { background: var(--bg); }
+.tpl-item[aria-current="true"] { background: var(--fg); color: var(--bg); }
+.tpl-item[aria-current="true"] .note-text { color: var(--bg); opacity: .75; }
+.tpl-main h3 { font-size: 13px; margin: 8px 0 0; }
+.tpl-rows { display: grid; gap: 4px; }
+.tpl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; background: var(--surface); border: 1px solid var(--soft); }
+.tpl-row.sec { background: var(--soft); }
+.tpl-row input:first-child { flex: 1 1 10em; }
+@media (max-width: 760px) { .tpl-wrap { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .tpl-side { border-right: 0; border-bottom: 1px solid var(--line); max-height: 30vh; } }
+
+/* コルクボード */
+.board-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
+  background-color: var(--cork); background-image: radial-gradient(var(--cork-dot) 1.2px, transparent 1.3px); }
+.board-stage:active { cursor: grabbing; }
+.board-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.board-links { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; }
+.board-links text { font-size: 12px; fill: var(--fg); paint-order: stroke; stroke: var(--cork); stroke-width: 4px; }
+.board-links .hit { stroke: transparent; stroke-width: 14; cursor: pointer; }
+.board-links .blink:hover line:not(.hit) { stroke-width: 3; }
+.btemp { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; }
+.bcard { position: absolute; box-sizing: border-box; padding: 9px 12px 10px; border-radius: 4px; background: var(--paper); border: 1px solid rgb(0 0 0 / .08); box-shadow: var(--shadow); cursor: pointer; display: grid; gap: 3px; }
+.bcard::before { content: ""; position: absolute; left: 50%; top: -6px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--c-c5); box-shadow: 0 1px 2px rgb(0 0 0 / .35); }
+.bcard.sel { outline: 2px solid var(--fg); }
+.bcard:focus-visible { outline: 2px solid var(--accent); }
+.bcard-t { font-weight: 600; overflow-wrap: anywhere; }
+.bcard-tags { font-size: 11px; color: var(--muted); }
+.bcard-b { font-size: 12px; color: var(--muted); max-height: 5.2em; overflow: hidden; }
+.bcard-b p, .bcard-b ul, .bcard-b h3, .bcard-b h4, .bcard-b h5 { margin: 0; font-size: 12px; }
+.bcard-fold { justify-self: start; border: 1px solid var(--line); background: var(--raised); border-radius: 999px; font-size: 11px; padding: 0 8px; cursor: pointer; }
+.bcard-handle { position: absolute; right: -7px; top: 50%; width: 13px; height: 13px; margin-top: -7px; border-radius: 50%; background: var(--accent); border: 2px solid var(--raised); cursor: crosshair; opacity: .35; }
+.bcard:hover .bcard-handle, .bcard:focus-within .bcard-handle { opacity: 1; }
+@media (hover: none) { .bcard-handle { opacity: .9; width: 18px; height: 18px; right: -10px; margin-top: -9px; } }
+.empty-hint { cursor: default; color: var(--muted); font-size: 13px; }
+.empty-hint::before { display: none; }
+
+/* 家系図・グラフ・地図（引っぱって動かす画面） */
+.fam-stage, .graph-stage, .map-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; background: var(--bg); }
+.fam-layer, .graph-layer, .map-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.fam-lines { position: absolute; left: 0; top: 0; pointer-events: none; }
+.fam-sp { stroke: var(--fg); stroke-width: 1.5; }
+.fam-pc { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.fam-node { position: absolute; box-sizing: border-box; display: grid; align-content: center; gap: 1px; padding: 6px 10px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow); cursor: pointer; overflow: hidden; }
+.fam-node b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fam-node span { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fam-node.focus { outline: 2px solid var(--accent); }
+.fam-empty { position: absolute; left: 0; top: 0; width: 400px; color: var(--muted); }
+.g-link { stroke: var(--muted); stroke-width: 1.4; }
+.g-fam { stroke: var(--c-c4); stroke-width: 1.6; }
+.g-group { stroke: var(--c-c2); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.g-body { stroke: var(--c-c1); stroke-width: 1; stroke-dasharray: 2 3; }
+.dim { opacity: .18; }
+.g-node { cursor: pointer; }
+.g-node text { font-size: 11px; fill: var(--fg); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+.g-c { stroke: var(--fg); stroke-width: 1.2; }
+.g-c.c0 { fill: var(--p-0); } .g-c.c1 { fill: var(--p-1); } .g-c.c2 { fill: var(--p-2); } .g-c.c3 { fill: var(--p-3); } .g-c.c4 { fill: var(--p-4); } .g-c.c5 { fill: var(--p-5); } .g-c.c6 { fill: var(--p-6); } .g-c.c7 { fill: var(--p-7); }
+.g-node.focus circle { stroke: var(--accent); stroke-width: 3; }
+.map-layer img { display: block; user-select: none; -webkit-user-drag: none; }
+.map-stage.placing { cursor: crosshair; }
+.map-pin { position: absolute; transform: translate(-50%, -100%); padding: 2px 8px 2px 8px; border-radius: 6px 6px 6px 0; background: var(--paper); border: 1px solid var(--fg); font-size: 12px; white-space: nowrap; cursor: pointer; box-shadow: var(--shadow); }
+.map-pin::after { content: ""; position: absolute; left: -1px; bottom: -7px; border-left: 7px solid var(--fg); border-bottom: 7px solid transparent; }
+.map-pin.focus { outline: 2px solid var(--accent); }
+.pick-hint { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--fg); color: var(--bg); }
