@@ -48,7 +48,7 @@ export function mount(el, ctx, arg) {
         ctx.openNote(n.id, { focusTitle: true });
       } }, '＋ 新しい付箋'),
       h('button', { type: 'button', class: 'btn', onclick: () => pickNote(ctx, { title: 'ボードに貼る付箋', exclude: Object.keys(b.items), onPick: id => { const p = center(); ctx.commit(w => { w.boards[boardId].items[id] = { x: p.x - CARD_W / 2, y: p.y - 30 }; }, 'ボードに貼る'); } }) }, '＋ 貼る'),
-      h('button', { type: 'button', class: 'btn icon', title: '全体を見る', 'aria-label': '全体を見る', onclick: () => { fit(); applyView(); } }, '⤢'),
+      h('button', { type: 'button', class: 'btn icon', title: '全体を見る', 'aria-label': '全体を見る', onclick: () => { fit(true); applyView(); } }, '⤢'),
       h('button', { type: 'button', class: 'btn icon', title: 'ボードのメニュー', 'aria-label': 'ボードのメニュー', onclick: e => ctx.menuAt(e.currentTarget, null, [
         ['＋ 新しいボード', () => { const nb = newBoard({ name: `ボード${Object.values(ctx.world.boards).filter(x => !x.owner).length + 1}` }); ctx.commit(w => { w.boards[nb.id] = nb; }, 'ボードを追加'); boardId = nb.id; remember(); render(true); }],
         ['名前を変える', () => ctx.openDialog({ title: 'ボードの名前', body: `<label>名前<input id="bd_name" value="${esc(board().name)}" autocomplete="off"></label>`, onSave: () => { const v = document.getElementById('bd_name').value.trim(); if (!v) throw '名前を入れてください'; ctx.commit(w => { w.boards[boardId].name = v; }, 'ボードの名前を変更'); } })],
@@ -61,13 +61,15 @@ export function mount(el, ctx, arg) {
   const remember = () => { try { localStorage.setItem('trpg-last-board', boardId); } catch { /* なし */ } };
   const center = () => { const r = stage.getBoundingClientRect(); return toWorld(r.left + r.width / 2, r.top + r.height / 2); };
 
-  function fit() {
+  // all：全体を収める。初めて開くときは、小さくなりすぎるなら（スマホ）字が読める大きさで左上から見せる
+  function fit(all) {
     const items = Object.entries(board().items);
     const r = stage.getBoundingClientRect();
     if (!items.length) { view = { x: 40, y: 40, z: 1 }; return; }
     const xs = items.map(([, p]) => p.x), ys = items.map(([, p]) => p.y);
     const x0 = Math.min(...xs) - 40, y0 = Math.min(...ys) - 40, x1 = Math.max(...xs) + CARD_W + 40, y1 = Math.max(...ys) + 160;
     const z = Math.max(0.2, Math.min(1.2, Math.min(r.width / (x1 - x0), r.height / (y1 - y0))));
+    if (!all && z < 0.6) { view = { x: -x0 * 0.6, y: -y0 * 0.6, z: 0.6 }; return; }
     view = { x: (r.width - (x1 - x0) * z) / 2 - x0 * z, y: (r.height - (y1 - y0) * z) / 2 - y0 * z, z };
   }
 

@@ -60,9 +60,9 @@ export function mount(el, ctx, arg) {
   }
   function renderBar() {
     const opt = (k, label) => h('label', { class: 'cb' }, h('input', { type: 'checkbox', checked: show[k], onchange: e => { show[k] = e.target.checked; render(); } }), label);
-    bar.replaceChildren(h('h2', {}, 'グラフ'), opt('links', 'つながり'), opt('family', '家族'), opt('parents', 'まとめ'), opt('body', '本文のリンク'), opt('lonely', 'つながりのない付箋も出す'),
+    bar.replaceChildren(...[h('h2', {}, 'グラフ'), opt('links', 'つながり'), opt('family', '家族'), opt('parents', 'まとめ'), opt('body', '本文のリンク'), opt('lonely', 'つながりのない付箋も出す'),
       h('span', { class: 'sp' }), focusId ? h('button', { type: 'button', class: 'btn small', onclick: () => { focusId = null; draw(); renderBar(); } }, '強調を消す') : null,
-      h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; draw(); } }, '⤢'));
+      h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; draw(); } }, '⤢')].filter(Boolean));
   }
   const render = () => { renderBar(); compute(); draw(); };
   render();

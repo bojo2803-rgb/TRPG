@@ -10,7 +10,7 @@ const API = 'https://www.googleapis.com/drive/v3', UP = 'https://www.googleapis.
 const FOLDER = 'application/vnd.google-apps.folder', ROOT_NAME = 'TRPG 世界設定';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const CONF = 'trpg-drive';
-export const GUIDE_URL = 'https://github.com/bojo2803-rgb/trpg/blob/claude/happy-fermat-d43t9j/docs/google-drive-setup.md';
+export const GUIDE_URL = 'https://github.com/bojo2803-rgb/TRPG/blob/claude/happy-fermat-d43t9j/docs/google-drive-setup.md';
 const conf = {
   get() { try { return JSON.parse(localStorage.getItem(CONF)) || {}; } catch { return {}; } },
   set(p) { try { localStorage.setItem(CONF, JSON.stringify({ ...conf.get(), ...p })); } catch { /* なし */ } },
@@ -137,6 +137,9 @@ backend.ready = connected;
 let appCtx = null;
 export async function init(ctx) {
   appCtx = ctx;
+  // スマホ用のリンク（…#drive=クライアントID）で開いたら、クライアント ID を覚える
+  const m = location.hash.match(/[#&]drive=([\w.-]+\.apps\.googleusercontent\.com)/);
+  if (m) { if (m[1] !== conf.get().clientId) { conf.set({ clientId: m[1] }); tokenClient = null; } history.replaceState(null, '', location.pathname + location.search); }
   registerBackend('drive', backend);
 }
 // つなぐ（ボタンを押したときに呼ぶ。ログインの画面はボタンからでないと開けない）
@@ -174,7 +177,12 @@ export function settingsSection(ctx, el) {
         const w = ctx.world;
         try { const copy = JSON.parse(JSON.stringify(w)); await ctx.createWorld('drive', `${w.name}`, copy); status.textContent = `「${w.name}」をGoogleドライブに写して、開きました。`; }
         catch (e) { status.textContent = `写せませんでした：${e.message}`; }
-      } }, 'いまの世界をドライブに写す') : null),
+      } }, 'いまの世界をドライブに写す') : null,
+      c.clientId ? h('button', { type: 'button', class: 'btn', title: 'このリンクをスマホで開くと、クライアント ID を貼らずに済みます', onclick: async () => {
+        const url = `${location.origin}${location.pathname}#drive=${c.clientId}`;
+        try { await navigator.clipboard.writeText(url); status.textContent = 'スマホ用のリンクをコピーしました。メモやメッセージでスマホに送って開き、「つなぐ」を押してください。'; }
+        catch { status.textContent = `コピーできませんでした。このリンクをスマホで開いてください：${url}`; }
+      } }, 'スマホ用のリンクをコピー') : null),
     status);
   render();
 }
