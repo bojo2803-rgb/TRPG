@@ -86,6 +86,12 @@ label.cb { display: flex; align-items: center; gap: 6px; }
 .bar h2 { font-family: var(--font-title); font-size: 16px; margin: 0; }
 .bar .sp { flex: 1; }
 .scroll { flex: 1; overflow: auto; min-height: 0; padding: 16px; }
+.quick-row { padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
+textarea.quick { display: block; width: 100%; box-sizing: border-box; min-height: 36px; resize: none; font: inherit; line-height: 1.5; padding: 7px 10px; border-radius: 6px; border: 1px dashed var(--muted); background: var(--p-1); color: var(--fg); }
+textarea.quick:focus { border-style: solid; outline: 2px solid var(--accent); outline-offset: 1px; }
+#dlgBody textarea.quick { min-height: 110px; resize: vertical; }
+.ncard-where { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.ne .more { margin: 4px 16px 12px; }
 
 /* メニュー・お知らせ・入力画面 */
 .menu { position: fixed; z-index: 30; display: grid; min-width: 200px; max-width: min(360px, 92vw); max-height: 70vh; overflow: auto; padding: 6px; background: var(--raised); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }

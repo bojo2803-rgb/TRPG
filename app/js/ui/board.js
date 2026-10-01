@@ -7,6 +7,7 @@ import { hiddenOnBoard, hiddenCount, edgePoint } from './boardRules.js';
 import { pickNote } from './picker.js';
 import { editLink, ownBoard, freeSpot } from './noteEditor.js';
 import { renderMarkdown } from './markdown.js';
+import { quickInput } from './quickNote.js';
 
 const views = new Map(); // ボードごとの表示位置 { x, y, z }
 const CARD_W = 190;
@@ -21,7 +22,11 @@ export function mount(el, ctx, arg) {
   svg.classList.add('board-links');
   worldEl.append(svg);
   stage.append(worldEl);
-  el.append(bar, stage);
+  // 書き留める欄：書いて Enter で、見ている所に貼る（続けて書くと少しずつずらす）
+  let qn = 0;
+  const placeNew = (w, id) => { const p = center(), o = (qn++ % 6) * 26; w.boards[boardId].items[id] = { x: Math.round(p.x - CARD_W / 2 + o), y: Math.round(p.y - 30 + o) }; };
+  const quick = quickInput(ctx, { placeholder: 'このボードに書き留める（Enter で貼る。Shift+Enter で改行）', place: placeNew });
+  el.append(bar, h('div', { class: 'quick-row' }, quick), stage);
   let view = null, sizes = new Map(), drag = null, pinch = null;
   const pointers = new Map();
 
@@ -41,12 +46,6 @@ export function mount(el, ctx, arg) {
         boards.some(x => x.owner) ? h('optgroup', { label: '付箋の専用ボード' }, ...boards.filter(x => x.owner).map(x => h('option', { value: x.id, selected: x.id === boardId }, label(x)))) : null),
       b?.owner ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openNote(b.owner) }, '持ち主の付箋を開く') : null,
       h('span', { class: 'sp' }),
-      h('button', { type: 'button', class: 'btn', onclick: () => {
-        const p = center();
-        const n = newNote();
-        ctx.commit(w => { w.notes[n.id] = n; w.boards[boardId].items[n.id] = { x: p.x - CARD_W / 2, y: p.y - 30 }; }, '付箋を追加');
-        ctx.openNote(n.id, { focusTitle: true });
-      } }, '＋ 新しい付箋'),
       h('button', { type: 'button', class: 'btn', onclick: () => pickNote(ctx, { title: 'ボードに貼る付箋', exclude: Object.keys(b.items), onPick: id => { const p = center(); ctx.commit(w => { w.boards[boardId].items[id] = { x: p.x - CARD_W / 2, y: p.y - 30 }; }, 'ボードに貼る'); } }) }, '＋ 貼る'),
       h('button', { type: 'button', class: 'btn icon', title: '全体を見る', 'aria-label': '全体を見る', onclick: () => { fit(true); applyView(); } }, '⤢'),
       h('button', { type: 'button', class: 'btn icon', title: 'ボードのメニュー', 'aria-label': 'ボードのメニュー', onclick: e => ctx.menuAt(e.currentTarget, null, [
@@ -96,7 +95,7 @@ export function mount(el, ctx, arg) {
     const ids = Object.keys(b.items).filter(id => w.notes[id] && !hidden.has(id));
     worldEl.querySelectorAll('.bcard').forEach(x => x.remove());
     for (const id of ids) worldEl.append(card(w.notes[id], b.items[id], hidden, b));
-    if (!ids.length) worldEl.append(h('div', { class: 'bcard empty-hint', style: { left: '40px', top: '40px', width: '320px' } }, 'このボードには、まだ付箋がありません。「＋ 新しい付箋」か「＋ 貼る」で置けます。付箋の右の● を引っぱると、ほかの付箋とつながります。'));
+    if (!ids.length) worldEl.append(h('div', { class: 'bcard empty-hint', style: { left: '40px', top: '40px', width: '320px' } }, 'このボードには、まだ付箋がありません。上の欄に書いて Enter で貼れます（今ある付箋は「＋ 貼る」）。付箋の右の● を引っぱると、ほかの付箋とつながります。'));
     if (!view) { fit(); views.set(boardId, view); }
     applyView();
     requestAnimationFrame(() => { sizes = new Map([...worldEl.querySelectorAll('.bcard[data-id]')].map(c => [c.dataset.id, { w: c.offsetWidth, h: c.offsetHeight }])); drawLinks(); });
@@ -206,6 +205,7 @@ export function mount(el, ctx, arg) {
   return {
     update: e => { if (e?.type !== 'search') render(); },
     destroy: () => removeEventListener('resize', onResize),
+    placeNew,
   };
 }
 export { freeSpot };

@@ -2,8 +2,9 @@
 import { launch, openApp, ok, done } from './lib.mjs';
 const b = await launch();
 const { p, errors } = await openApp(b);
-await p.click('#newNote');
+await p.evaluate(() => __app.newNote());
 await p.fill('.ne-title', '本能寺の変');
+await p.click('.ne .more');
 await p.click('text=＋ 時系列マップに置く');
 await p.waitForTimeout(300);
 await p.selectOption('.dinput select[aria-label="暦"]', 'wareki');

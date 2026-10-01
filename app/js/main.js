@@ -1,7 +1,7 @@
 // アプリの起動：世界を開き、画面を切り替え、付箋の編集画面を出し、自動で保存する
 import { h, esc, uid } from './util.js';
 import { createStore } from './store.js';
-import { newWorld, migrateWorld, newNote, deleteNote } from './model.js';
+import { newWorld, migrateWorld, newNote, deleteNote, KINDS } from './model.js';
 import { createPersistence, backendOf } from './persist/index.js';
 import { localAvailable } from './persist/local.js';
 import { initDialog, openDialog, showMenu, menuAt, toast } from './ui/dialog.js';
@@ -44,6 +44,9 @@ export const ctx = {
     return n.id;
   },
   deleteNote(id) { store.commit(w => deleteNote(w, id), '付箋を削除'); },
+  // 思いついたことを書き留める小さな窓。いまの画面がボードなら、そのボードに貼る
+  async quickNote() { (await import('./ui/quickNote.js')).quickDialog(ctx, view?.placeNew); },
+  setKind(id, kind) { store.commit(w => { w.notes[id].kind = kind; }, `${KINDS[kind].label}にする`); },
   go: (id, arg) => showView(id, arg),
   viewArg: () => viewArg,
   toast, openDialog, showMenu, menuAt,
@@ -223,7 +226,7 @@ async function start() {
   $('worldBtn').onclick = worldMenu;
   $('undo').onclick = () => store.undo();
   $('redo').onclick = () => store.redo();
-  $('newNote').onclick = () => ctx.newNote();
+  $('newNote').onclick = () => ctx.quickNote();
   $('settingsBtn').onclick = async () => (await import('./ui/settings.js')).open(ctx);
   $('search').addEventListener('input', () => view?.update?.({ type: 'search' }));
   $('search').addEventListener('keydown', e => { if (e.key === 'Enter' && viewId !== 'notes') showView('notes'); });
@@ -233,7 +236,7 @@ async function start() {
     const k = e.key.toLowerCase();
     if ((e.ctrlKey || e.metaKey) && k === 'z' && !e.shiftKey) { e.preventDefault(); store.undo(); }
     else if ((e.ctrlKey || e.metaKey) && (k === 'y' || (k === 'z' && e.shiftKey))) { e.preventDefault(); store.redo(); }
-    else if (k === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); ctx.newNote(); }
+    else if (k === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); ctx.quickNote(); }
     else if (k === '/' ) { e.preventDefault(); $('search').focus(); }
   });
   addEventListener('beforeunload', () => persist.flush());

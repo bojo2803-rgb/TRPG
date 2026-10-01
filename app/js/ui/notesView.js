@@ -1,35 +1,47 @@
-// 付箋の一覧：探す・タグで絞る・並べ替える。クリックで開く
+// 付箋（アイデア）の一覧：上の入力欄で書き留める・探す・タグで絞る・どこにも貼っていないものだけ・並べ替え。クリックで開く
 import { h, byTitle, collator } from '../util.js';
-import { allTags } from '../model.js';
+import { kindOf } from '../model.js';
+import { quickInput } from './quickNote.js';
 
-const SORTS = { title: '名前順', tag: 'タグごと', recent: '作った順' };
-let state = { tags: new Set(), sort: 'title' };
+const SORTS = { recent: '作った順', title: '名前順', tag: 'タグごと' };
+let state = { tags: new Set(), sort: 'recent', loose: false };
+
+// その付箋が貼ってあるボードの名前（要素のボードなら要素の名前）
+export function placesOf(w, id) {
+  return Object.values(w.boards).filter(b => b.items[id] && b.owner !== id).map(b => b.owner ? w.notes[b.owner]?.title || '名前なし' : b.name);
+}
 
 export function mount(el, ctx) {
+  const quick = quickInput(ctx);
   const bar = h('div', { class: 'bar' }), list = h('div', { class: 'scroll' });
-  el.append(bar, list);
+  el.append(h('div', { class: 'quick-row' }, quick), bar, list);
   const render = () => {
     const w = ctx.world, q = ctx.query().toLowerCase();
-    const tags = allTags(w);
+    const all = Object.values(w.notes).filter(n => kindOf(n) === 'note');
+    const tags = [...new Set(all.flatMap(n => n.tags))].sort(collator.compare);
     for (const t of [...state.tags]) if (!tags.includes(t)) state.tags.delete(t);
     bar.replaceChildren(
       h('h2', {}, '付箋'),
-      h('span', { class: 'note-text' }, `${Object.keys(w.notes).length}枚`),
+      h('span', { class: 'note-text' }, `${all.length}枚`),
+      h('label', { class: 'cb' }, h('input', { type: 'checkbox', checked: state.loose, onchange: e => { state.loose = e.target.checked; render(); } }), 'どこにも貼っていない'),
       h('span', { class: 'sp' }),
       h('select', { 'aria-label': '並べ方', onchange: e => { state.sort = e.target.value; render(); } }, ...Object.entries(SORTS).map(([k, v]) => h('option', { value: k, selected: k === state.sort }, v))),
-      h('button', { type: 'button', class: 'btn', title: '名前・能力値・メモまで、でたらめなキャラクターを作る（発想のきっかけ）', onclick: async () => (await import('./random.js')).open(ctx) }, '🎲 ランダムなキャラクター'),
-      h('button', { type: 'button', class: 'btn', onclick: () => ctx.newNote() }, '＋ 付箋'),
-      h('div', { class: 'row tagbar', role: 'group', 'aria-label': 'タグで絞る' },
-        ...tags.map(t => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(state.tags.has(t)), onclick: () => { state.tags.has(t) ? state.tags.delete(t) : state.tags.add(t); render(); } }, t))),
+      tags.length ? h('div', { class: 'row tagbar', role: 'group', 'aria-label': 'タグで絞る' },
+        ...tags.map(t => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(state.tags.has(t)), onclick: () => { state.tags.has(t) ? state.tags.delete(t) : state.tags.add(t); render(); } }, t))) : null,
     );
-    let notes = Object.values(w.notes).filter(n =>
+    let notes = all.filter(n =>
       (!state.tags.size || [...state.tags].every(t => n.tags.includes(t))) &&
+      (!state.loose || !placesOf(w, n.id).length) &&
       (!q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q) || n.tags.some(t => t.toLowerCase().includes(q)) || Object.values(n.fields).some(v => String(v).toLowerCase().includes(q))));
-    const card = n => h('button', { type: 'button', class: `ncard p-${n.color ?? 0}`, 'data-id': n.id, 'aria-current': String(ctx.openedNote() === n.id), onclick: () => ctx.openNote(n.id) },
-      h('span', { class: 'ncard-t' }, n.title || '（名前なし）'),
-      n.tags.length ? h('span', { class: 'ncard-tags' }, n.tags.join('・')) : null,
-      n.body ? h('span', { class: 'ncard-b' }, n.body.replace(/!\[[^\]]*\]\([^)]*\)/g, '［画像］').replace(/[#*>\-[\]]/g, '').slice(0, 90)) : null);
-    if (!notes.length) { list.replaceChildren(h('p', { class: 'note-text' }, q || state.tags.size ? '当てはまる付箋がありません' : 'まだ付箋がありません。「＋ 付箋」（キーボードの N）で作れます')); return; }
+    const card = n => {
+      const places = placesOf(w, n.id);
+      return h('button', { type: 'button', class: `ncard p-${n.color ?? 0}`, 'data-id': n.id, 'aria-current': String(ctx.openedNote() === n.id), onclick: () => ctx.openNote(n.id) },
+        h('span', { class: 'ncard-t' }, n.title || '（名前なし）'),
+        n.tags.length ? h('span', { class: 'ncard-tags' }, n.tags.join('・')) : null,
+        n.body ? h('span', { class: 'ncard-b' }, n.body.replace(/!\[[^\]]*\]\([^)]*\)/g, '［画像］').replace(/[#*>\-[\]]/g, '').slice(0, 90)) : null,
+        places.length ? h('span', { class: 'ncard-where' }, '📌 ' + places.join('・')) : null);
+    };
+    if (!notes.length) { list.replaceChildren(h('p', { class: 'note-text' }, q || state.tags.size || state.loose ? '当てはまる付箋がありません' : 'まだ付箋がありません。上の欄に思いついたことを書いて Enter で1枚できます')); return; }
     if (state.sort === 'tag') {
       const groups = new Map();
       for (const n of notes.sort(byTitle)) for (const t of (n.tags.length ? n.tags : ['（タグなし）'])) { if (!groups.has(t)) groups.set(t, []); groups.get(t).push(n); }

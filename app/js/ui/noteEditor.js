@@ -1,18 +1,18 @@
 // 付箋の編集画面（右側。スマホでは画面いっぱい）
 // 名前・色・タグ・テンプレートの入力欄・本文・画像・まとめ（親子）・家族・つながり・時系列・出てくるところ
 import { h, esc, uid, debounce, byTitle } from '../util.js';
-import { templatesFor, allTags, childrenOf, newLink, newBoard, findByTitle } from '../model.js';
+import { templatesFor, allTags, childrenOf, newLink, newBoard, findByTitle, KINDS, kindOf } from '../model.js';
 import { renderMarkdown, imageIds } from './markdown.js';
 import { pickNote } from './picker.js';
 import { openDialog, showMenu, toast } from './dialog.js';
 
 const panel = () => document.getElementById('panel');
-let curId = null, self = false, bodyMode = 'view', armedDelete = false, iterK = 0;
+let curId = null, self = false, bodyMode = 'view', armedDelete = false, iterK = 0, showMore = false;
 export const current = () => curId;
 
 export function open(ctx, id, opts = {}) {
   if (!ctx.world.notes[id]) return;
-  if (curId !== id) { bodyMode = ctx.world.notes[id].body ? 'view' : 'edit'; armedDelete = false; }
+  if (curId !== id) { bodyMode = ctx.world.notes[id].body ? 'view' : 'edit'; armedDelete = false; showMore = false; }
   curId = id; iterK = opts.k || 0; // ループの何周目から開いたか（その周だけの書き換えができる）
   panel().hidden = false;
   render(ctx);
@@ -35,16 +35,21 @@ function render(ctx) {
   const w = ctx.world, n = w.notes[curId];
   const scrollTop = panel().scrollTop;
   const sec = (key, title, ...body) => h('section', { class: 'ne-sec', 'data-sec': key }, h('h3', {}, title), ...body);
+  // 付箋（アイデア）は軽く：使っていない欄は「もっと」を押すまで出さない
+  const L = Object.values(w.links), mine = (l, kinds) => kinds.includes(l.kind) && (l.a === n.id || l.b === n.id);
+  const used = { when: !!(n.when || n.legs), group: n.parents.length > 0 || childrenOf(w, n.id).length > 0, family: L.some(l => mine(l, ['parent', 'spouse'])), links: L.some(l => mine(l, ['link', 'order'])) };
+  const full = kindOf(n) !== 'note' || showMore, show = k => full || used[k];
   panel().replaceChildren(h('div', { class: `ne p-${n.color ?? 0}` },
     head(ctx, w, n),
     tagsSec(ctx, w, n),
     ...templatesFor(w, n).map(t => templateSec(ctx, t, n)),
-    sec('body', '本文', bodySec(ctx, w, n)),
-    sec('when', '時系列', whenSec(ctx, w, n)),
-    sec('group', 'まとめ', groupSec(ctx, w, n)),
-    sec('family', '家族', familySec(ctx, w, n)),
-    sec('links', 'つながり', linksSec(ctx, w, n)),
-    sec('where', '出てくるところ', whereSec(ctx, w, n)),
+    sec('body', kindOf(n) === 'note' ? '本文' : 'メモ', bodySec(ctx, w, n)),
+    show('when') ? sec('when', '時系列', whenSec(ctx, w, n)) : null,
+    show('group') ? sec('group', 'まとめ', groupSec(ctx, w, n)) : null,
+    show('family') ? sec('family', '家族', familySec(ctx, w, n)) : null,
+    show('links') ? sec('links', 'つながり', linksSec(ctx, w, n)) : null,
+    sec('where', kindOf(n) === 'note' ? '貼ってあるところ' : '出てくるところ', whereSec(ctx, w, n)),
+    full ? null : h('button', { type: 'button', class: 'btn small more', onclick: () => { showMore = true; render(ctx); } }, 'もっと（時系列・まとめ・つながり・家族）'),
     h('div', { class: 'ne-foot' },
       h('button', { type: 'button', class: 'btn danger small', onclick: e => {
         if (!armedDelete) { armedDelete = true; e.target.textContent = 'もう一度押すと削除'; return; }
@@ -81,6 +86,8 @@ function head(ctx, w, n) {
           ['グラフで見る', () => ctx.go('graph', { focus: n.id })],
           ...(n.when ? [['時系列マップで見る', () => ctx.go('timemap', { focus: n.id })]] : []),
           ['複製する', () => { const c = JSON.parse(JSON.stringify(ctx.world.notes[n.id])); c.id = uid('n'); c.title += '（コピー）'; delete c.board; ctx.commit(w => { w.notes[c.id] = c; }, '付箋を複製'); ctx.openNote(c.id); }],
+          '-',
+          ...Object.keys(KINDS).filter(k => k !== kindOf(n)).map(k => [k === 'note' ? '付箋に戻す' : `${KINDS[k].label}にする`, () => ctx.setKind(n.id, k)]),
         ], r.left - 120, r.bottom + 4);
       } }, '…'),
       h('button', { type: 'button', class: 'btn icon', title: '閉じる', 'aria-label': '閉じる', onclick: () => ctx.closeNote() }, '×')),

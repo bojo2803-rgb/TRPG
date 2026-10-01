@@ -55,10 +55,10 @@ export function open(ctx) {
     h('p', {}, c.memo || '（メモの材料が足りませんでした）'),
     h('button', { type: 'button', class: 'btn', id: 'rnd_again' }, 'もう一度振る'));
   ctx.openDialog({
-    title: 'ランダムなキャラクター', ok: '付箋にする', body: show(),
+    title: 'ランダムなキャラクター', ok: '人物にする', body: show(),
     onClick: e => { if (e.target.id === 'rnd_again') { c = randomCharacter(ctx.world); document.getElementById('dlgBody').replaceChildren(show()); } },
     onSave: () => {
-      const n = newNote({ title: c.name, tags: ['NPC', 'ランダム'], fields: c.fields, body: c.memo, color: c.color });
+      const n = newNote({ kind: 'person', title: c.name, tags: ['NPC', 'ランダム'], fields: c.fields, body: c.memo, color: c.color });
       ctx.commit(w => { w.notes[n.id] = n; }, 'ランダムなキャラクターを追加');
       setTimeout(() => ctx.openNote(n.id), 0);
     },

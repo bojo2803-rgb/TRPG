@@ -5,10 +5,8 @@ const { p, errors } = await openApp(b);
 await p.click('nav button[data-id="board"]');
 await p.waitForSelector('.board-stage');
 for (const t of ['探索者', 'アーカム']) {
-  await p.click('text=＋ 新しい付箋'); await p.fill('.ne-title', t); await p.locator('.ne-title').press('Tab'); await p.waitForTimeout(700);
+  await p.fill('.quick', t); await p.locator('.quick').press('Enter'); await p.waitForTimeout(300);
 }
-await p.click('.ne button[aria-label="閉じる"]');
-await p.waitForTimeout(300);
 const cards = p.locator('.bcard[data-id]');
 ok(await cards.count() === 2, 'two cards');
 // 2枚目を右へ動かす
