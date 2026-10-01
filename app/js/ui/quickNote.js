@@ -16,8 +16,8 @@ export function createQuick(ctx, text, place) {
 }
 
 // 入力欄。画面を描き直しても消えないよう、作り直さずに使い回す
-export function quickInput(ctx, { placeholder = '思いついたことを書いて Enter（Shift+Enter で改行）', place, onCreate } = {}) {
-  const ta = h('textarea', { class: 'quick', rows: 1, placeholder, 'aria-label': '新しい付箋' });
+export function quickInput(ctx, { placeholder = '思いついたことを書いて Enter', place, onCreate } = {}) {
+  const ta = h('textarea', { class: 'quick', rows: 1, placeholder, title: '1行目が題名、2行目からが本文。Enter で1枚、Shift+Enter で改行', 'aria-label': '新しい付箋' });
   const fit = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 2 + 'px'; };
   ta.addEventListener('input', fit);
   ta.addEventListener('keydown', e => {

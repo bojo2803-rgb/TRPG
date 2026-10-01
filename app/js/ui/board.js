@@ -27,7 +27,7 @@ export function mount(el, ctx, arg) {
   stage.append(worldEl);
   // 書き留める欄：書いて Enter で、見ている所の近くの空いている所に貼る（真ん中から外へ探す）
   const placeNew = (w, id) => { w.boards[boardId].items[id] = spotNear(Object.values(w.boards[boardId].items), center()); };
-  const quick = quickInput(ctx, { placeholder: 'このボードに書き留める（Enter で貼る。Shift+Enter で改行）', place: placeNew });
+  const quick = quickInput(ctx, { placeholder: 'このボードに書き留める（Enter で貼る）', place: placeNew });
   el.append(bar, h('div', { class: 'quick-row' }, quick), stage);
   let view = null, sizes = new Map(), drag = null, pinch = null;
   const pointers = new Map();
@@ -42,7 +42,7 @@ export function mount(el, ctx, arg) {
     const boards = Object.values(w.boards);
     const label = x => boardLabel(w, x);
     if (embedded) {
-      bar.replaceChildren(h('span', { class: 'note-text' }, '付箋を書いて Enter で貼る・● を引っぱってつなぐ・要素のカードを押すとその要素のボードへ'), h('span', { class: 'sp' }), ...tools());
+      bar.replaceChildren(h('span', { class: 'note-text wide-only' }, '● を引っぱってつなぐ・要素のカードを押すと、その要素のボードへ'), h('span', { class: 'sp' }), ...tools());
       return;
     }
     bar.replaceChildren(...[

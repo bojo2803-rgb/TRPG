@@ -113,6 +113,7 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 
 /* スマホ：画面の切り替えは下、付箋は画面いっぱい */
 @media (max-width: 760px) {
+  .wide-only { display: none; }
   #app { grid-template: "top" auto "view" 1fr "nav" auto / 100%; }
   .top { padding: 6px 12px; }
   .brand { display: none; }
