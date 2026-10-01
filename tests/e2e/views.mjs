@@ -32,7 +32,7 @@ await p.setInputFiles('#mp_file', { name: 'arkham.svg', mimeType: 'image/svg+xml
 await p.fill('#mp_name', 'アーカム');
 await p.click('#dlgOk'); await p.waitForTimeout(600);
 ok(await p.locator('.map-layer img').count() === 1, 'map image shown');
-await p.click('text=＋ ピンを留める');
+await p.click('.bar button:has-text("＋ ピン")');
 await p.locator('.pick-list button', { hasText: '私' }).click();
 const ib = await p.locator('.map-layer img').boundingBox();
 await p.mouse.click(ib.x + ib.width / 2, ib.y + ib.height / 2); await p.waitForTimeout(300);

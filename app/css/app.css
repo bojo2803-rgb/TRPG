@@ -271,7 +271,12 @@ input.add-name { min-width: 0; flex: 1 1 220px; max-width: 320px; }
 .g-node.focus circle { stroke: var(--accent); stroke-width: 3; }
 .map-layer img { display: block; user-select: none; -webkit-user-drag: none; }
 .map-stage.placing { cursor: crosshair; }
-.map-pin { position: absolute; transform: translate(-50%, -100%); padding: 2px 8px 2px 8px; border-radius: 6px 6px 6px 0; background: var(--paper); border: 1px solid var(--fg); font-size: 12px; white-space: nowrap; cursor: pointer; box-shadow: var(--shadow); }
+.map-sheet { background-color: var(--raised); background-image: linear-gradient(var(--soft) 1px, transparent 1px), linear-gradient(90deg, var(--soft) 1px, transparent 1px); background-size: 25px 25px; border: 1px solid var(--line); box-sizing: border-box; }
+.map-lines { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.map-line-hit { stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.map-line-l { font-size: 12px; fill: var(--fg); paint-order: stroke; stroke: var(--raised); stroke-width: 3px; stroke-linejoin: round; }
+.map-pin.linking { outline: 3px solid var(--accent); }
+.map-pin { position: absolute; transform: translate(-1px, calc(-100% - 7px)); /* 左下の矢じりの先が、ピンの位置 */ padding: 2px 8px 2px 8px; border-radius: 6px 6px 6px 0; background: var(--paper); border: 1px solid var(--fg); font-size: 12px; white-space: nowrap; cursor: pointer; box-shadow: var(--shadow); }
 .map-pin::after { content: ""; position: absolute; left: -1px; bottom: -7px; border-left: 7px solid var(--fg); border-bottom: 7px solid transparent; }
 .map-pin.focus { outline: 2px solid var(--accent); }
 .pick-hint { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--fg); color: var(--bg); }
