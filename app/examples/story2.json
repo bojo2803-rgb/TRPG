@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 1,
+ "version": 2,
  "id": "w-example-story2",
  "name": "物語2「七夜祭」",
  "settings": {
@@ -28,8 +28,9 @@
   }
  },
  "notes": {
-  "nby2c7tp5a": {
-   "id": "nby2c7tp5a",
+  "n8a5k2h2hh": {
+   "id": "n8a5k2h2hh",
+   "kind": "scenario",
    "title": "シナリオ：七夜祭",
    "body": "",
    "tags": [
@@ -40,8 +41,9 @@
    "parents": [],
    "collapsed": false
   },
-  "nfzh5jnp5a": {
-   "id": "nfzh5jnp5a",
+  "nqp1zg62hh": {
+   "id": "nqp1zg62hh",
+   "kind": "note",
    "title": "祭りの始まり",
    "body": "",
    "tags": [
@@ -50,7 +52,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nby2c7tp5a"
+    "n8a5k2h2hh"
    ],
    "when": {
     "tr": "lpw3h01y",
@@ -62,8 +64,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n0ldshdp5a": {
-   "id": "n0ldshdp5a",
+  "nlbz5sa2hh": {
+   "id": "nlbz5sa2hh",
+   "kind": "note",
    "title": "神楽の夜",
    "body": "",
    "tags": [
@@ -72,7 +75,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nby2c7tp5a"
+    "n8a5k2h2hh"
    ],
    "when": {
     "tr": "lpw3h01y",
@@ -84,8 +87,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nyuuicjp5b": {
-   "id": "nyuuicjp5b",
+  "n2fu2u52hh": {
+   "id": "n2fu2u52hh",
+   "kind": "note",
    "title": "神隠し",
    "body": "",
    "tags": [
@@ -94,7 +98,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nby2c7tp5a"
+    "n8a5k2h2hh"
    ],
    "when": {
     "tr": "lpw3h01y",
@@ -106,8 +110,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nwy6nwfp5b": {
-   "id": "nwy6nwfp5b",
+  "n29ebar2hh": {
+   "id": "n29ebar2hh",
+   "kind": "note",
    "title": "花火が上がらない（3周目だけ）",
    "body": "",
    "tags": [
@@ -116,7 +121,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nby2c7tp5a"
+    "n8a5k2h2hh"
    ],
    "when": {
     "tr": "lpw3h01y",
@@ -129,8 +134,9 @@
     "k": 3
    }
   },
-  "nbuqefcp5b": {
-   "id": "nbuqefcp5b",
+  "nzkrhxd2hh": {
+   "id": "nzkrhxd2hh",
+   "kind": "person",
    "title": "巫女ハル",
    "body": "",
    "tags": [],
@@ -199,8 +205,9 @@
     }
    ]
   },
-  "nddk1a3p5b": {
-   "id": "nddk1a3p5b",
+  "nkp4qvo2hh": {
+   "id": "nkp4qvo2hh",
+   "kind": "person",
    "title": "村人タロウ",
    "body": "",
    "tags": [],
@@ -243,8 +250,9 @@
     }
    ]
   },
-  "nqimljsp5b": {
-   "id": "nqimljsp5b",
+  "n3c939q2hh": {
+   "id": "n3c939q2hh",
+   "kind": "person",
    "title": "旅人ソラ",
    "body": "",
    "tags": [],
@@ -298,25 +306,25 @@
  },
  "links": {},
  "boards": {
-  "bvs9tlzp5a": {
-   "id": "bvs9tlzp5a",
+  "bq6abv62hf": {
+   "id": "bq6abv62hf",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "nbuqefcp5b": {
+    "nzkrhxd2hh": {
      "x": 40,
      "y": 40
     },
-    "nddk1a3p5b": {
+    "nkp4qvo2hh": {
      "x": 270,
      "y": 40
     },
-    "nqimljsp5b": {
+    "n3c939q2hh": {
      "x": 500,
      "y": 40
     },
-    "nby2c7tp5a": {
+    "n8a5k2h2hh": {
      "x": 730,
      "y": 40
     }
@@ -325,6 +333,191 @@
   }
  },
  "templates": {
+  "tpl-person": {
+   "id": "tpl-person",
+   "name": "人物の基本",
+   "tags": [],
+   "kinds": [
+    "person"
+   ],
+   "fields": [
+    {
+     "key": "よみ",
+     "label": "よみ",
+     "type": "text"
+    },
+    {
+     "key": "性別",
+     "label": "性別",
+     "type": "text"
+    },
+    {
+     "key": "年齢",
+     "label": "年齢",
+     "type": "text"
+    },
+    {
+     "key": "職業",
+     "label": "職業",
+     "type": "text"
+    },
+    {
+     "key": "外見",
+     "label": "外見",
+     "type": "long"
+    },
+    {
+     "key": "性格",
+     "label": "性格",
+     "type": "long"
+    },
+    {
+     "key": "口調",
+     "label": "口調",
+     "type": "text"
+    },
+    {
+     "key": "経歴",
+     "label": "経歴",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-scenario": {
+   "id": "tpl-scenario",
+   "name": "シナリオの基本",
+   "tags": [],
+   "kinds": [
+    "scenario"
+   ],
+   "fields": [
+    {
+     "key": "状態",
+     "label": "状態",
+     "type": "select",
+     "options": [
+      "準備中",
+      "完成",
+      "遊んだ"
+     ]
+    },
+    {
+     "key": "人数",
+     "label": "人数",
+     "type": "text"
+    },
+    {
+     "key": "遊ぶ時間",
+     "label": "遊ぶ時間",
+     "type": "text"
+    },
+    {
+     "key": "概要",
+     "label": "概要",
+     "type": "long"
+    },
+    {
+     "key": "導入",
+     "label": "導入",
+     "type": "long"
+    },
+    {
+     "key": "ハンドアウト",
+     "label": "ハンドアウト",
+     "type": "long"
+    },
+    {
+     "key": "真相",
+     "label": "真相",
+     "type": "long"
+    },
+    {
+     "key": "結末",
+     "label": "結末",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-item": {
+   "id": "tpl-item",
+   "name": "アイテムの基本",
+   "tags": [],
+   "kinds": [
+    "item"
+   ],
+   "fields": [
+    {
+     "key": "区分",
+     "label": "区分",
+     "type": "select",
+     "options": [
+      "キーアイテム",
+      "アーティファクト",
+      "そのほか"
+     ]
+    },
+    {
+     "key": "見た目",
+     "label": "見た目",
+     "type": "long"
+    },
+    {
+     "key": "効果",
+     "label": "効果",
+     "type": "long"
+    },
+    {
+     "key": "由来",
+     "label": "由来",
+     "type": "long"
+    },
+    {
+     "key": "代償",
+     "label": "代償",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-group": {
+   "id": "tpl-group",
+   "name": "集団の基本",
+   "tags": [],
+   "kinds": [
+    "group"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
+     "type": "text"
+    },
+    {
+     "key": "目的",
+     "label": "目的",
+     "type": "long"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "資金",
+     "label": "資金",
+     "type": "text"
+    },
+    {
+     "key": "拠点",
+     "label": "拠点",
+     "type": "text"
+    },
+    {
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
   "tpl-coc6": {
    "id": "tpl-coc6",
    "name": "クトゥルフ神話TRPG 6版 キャラクター",
@@ -332,6 +525,7 @@
     "探索者",
     "NPC"
    ],
+   "kinds": [],
    "fields": [
     {
      "key": "§基本",

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createStore } from '../app/js/store.js';
-import { newWorld, newNote, newLink, newBoard, deleteNote, migrateWorld, subjectsOf, timedNotes } from '../app/js/model.js';
+import { newWorld, newNote, newLink, newBoard, deleteNote, migrateWorld, subjectsOf, timedNotes, templatesFor, kindOf, isElement } from '../app/js/model.js';
 import { renderMarkdown, linkTitles } from '../app/js/ui/markdown.js';
 
 test('undo and redo restore the exact world', () => {
@@ -74,4 +74,45 @@ test('markdown renders the supported syntax and escapes the rest', () => {
   assert.match(html, /<img class="md-img" data-img="abc" alt="図" src="blob:abc">/);
   assert.match(html, /href="https:\/\/example.com\/\?a=1&amp;b=2" target="_blank"/);
   assert.deepEqual(linkTitles('[[甲]] と [[乙|おつ]]'), ['甲', '乙']);
+});
+
+// 要素（人物・シナリオ・アイテム・集団）：版1の世界を開くと、種類・テンプレート・ピンの id が入る
+test('a version 1 world gets kinds, kind templates once, pin ids and lines', () => {
+  const v1 = newWorld('古い世界');
+  v1.version = 1;
+  delete v1.templates['tpl-person']; delete v1.templates['tpl-scenario']; delete v1.templates['tpl-item']; delete v1.templates['tpl-group'];
+  for (const t of Object.values(v1.templates)) delete t.kinds;
+  const mk = (id, p) => { v1.notes[id] = { id, title: id, body: '', tags: [], fields: {}, parents: [], ...p }; };
+  mk('npc', { tags: ['NPC'] }); mk('pc', { tags: ['探索者'] }); mk('sub', { legs: [] }); mk('sc', { tags: ['シナリオ'] }); mk('idea', {});
+  v1.maps.m = { id: 'm', name: '地図', image: 'i', w: 10, h: 10, pins: [{ note: 'idea', x: 1, y: 1 }] };
+  const w = migrateWorld(JSON.parse(JSON.stringify(v1)));
+  assert.equal(w.version, 2);
+  assert.deepEqual(['npc', 'pc', 'sub', 'sc', 'idea'].map(id => w.notes[id].kind), ['person', 'person', 'person', 'scenario', 'note']);
+  for (const k of ['person', 'scenario', 'item', 'group']) assert.ok(Object.values(w.templates).some(t => t.kinds.includes(k)), k);
+  assert.ok(w.maps.m.pins[0].id);
+  assert.deepEqual(w.maps.m.lines, []);
+  // もう一度開いても、テンプレートは増えず、種類も変わらない
+  w.notes.npc.kind = 'item';
+  const again = migrateWorld(JSON.parse(JSON.stringify(w)));
+  assert.equal(Object.keys(again.templates).length, Object.keys(w.templates).length);
+  assert.equal(again.notes.npc.kind, 'item');
+});
+
+test('templates show by tag or by kind', () => {
+  const w = newWorld();
+  const names = n => templatesFor(w, n).map(t => t.id).sort();
+  assert.deepEqual(names(newNote({ kind: 'person' })), ['tpl-person']);
+  assert.deepEqual(names(newNote({ kind: 'person', tags: ['NPC'] })), ['tpl-coc6', 'tpl-person']);
+  assert.deepEqual(names(newNote()), []);
+  assert.equal(kindOf({}), 'note');
+  assert.equal(isElement(newNote({ kind: 'group' })), true);
+});
+
+test('removing a note or pin removes the map lines that used it', () => {
+  const w = newWorld();
+  w.notes.a = newNote({ id: 'a' }); w.notes.b = newNote({ id: 'b' }); w.notes.c = newNote({ id: 'c' });
+  w.maps.m = { id: 'm', name: '地図', image: null, w: 2000, h: 1400, pins: [{ id: 'pa', note: 'a', x: 0, y: 0 }, { id: 'pb', note: 'b', x: 1, y: 1 }, { id: 'pc', note: 'c', x: 2, y: 2 }], lines: [{ id: 'l1', a: 'pa', b: 'pb' }, { id: 'l2', a: 'pb', b: 'pc' }] };
+  deleteNote(w, 'a');
+  assert.deepEqual(w.maps.m.lines.map(l => l.id), ['l2']);
+  assert.deepEqual(w.maps.m.pins.map(p => p.id), ['pb', 'pc']);
 });

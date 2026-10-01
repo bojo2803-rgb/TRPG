@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 1,
+ "version": 2,
  "id": "w-example-story3",
  "name": "物語3「妖精郷の百年」",
  "settings": {
@@ -28,8 +28,9 @@
   }
  },
  "notes": {
-  "n8o1zlhp5c": {
-   "id": "n8o1zlhp5c",
+  "nb5mgbo2hj": {
+   "id": "nb5mgbo2hj",
+   "kind": "note",
    "title": "騎士が妖精の輪に踏み込む",
    "body": "",
    "tags": [
@@ -48,8 +49,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nvwbtcjp5c": {
-   "id": "nvwbtcjp5c",
+  "n4zzi9h2hj": {
+   "id": "n4zzi9h2hj",
+   "kind": "note",
    "title": "見知らぬ村に戻る騎士（100年後）",
    "body": "",
    "tags": [
@@ -68,8 +70,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n61bm23p5c": {
-   "id": "n61bm23p5c",
+  "njh7hk02hj": {
+   "id": "njh7hk02hj",
+   "kind": "note",
    "title": "騎士が再び現れる",
    "body": "",
    "tags": [
@@ -88,8 +91,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ng95bh1p5c": {
-   "id": "ng95bh1p5c",
+  "njuhmf12hj": {
+   "id": "njuhmf12hj",
+   "kind": "note",
    "title": "妖精の宴に招かれる",
    "body": "",
    "tags": [
@@ -108,8 +112,9 @@
     "tz": null
    }
   },
-  "nz5apg2p5c": {
-   "id": "nz5apg2p5c",
+  "n23w8qu2hj": {
+   "id": "n23w8qu2hj",
+   "kind": "note",
    "title": "舞踏会の始まり",
    "body": "",
    "tags": [
@@ -128,8 +133,9 @@
     "tz": null
    }
   },
-  "np40b24p5c": {
-   "id": "np40b24p5c",
+  "ntzs3m32hj": {
+   "id": "ntzs3m32hj",
+   "kind": "note",
    "title": "妖精郷が人間界に溶ける",
    "body": "",
    "tags": [
@@ -148,8 +154,9 @@
     "tz": null
    }
   },
-  "ndz26rpp5c": {
-   "id": "ndz26rpp5c",
+  "n5bemkz2hj": {
+   "id": "n5bemkz2hj",
+   "kind": "note",
    "title": "町に妖精の気配が満ちる",
    "body": "",
    "tags": [
@@ -168,8 +175,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n3ez2b8p5c": {
-   "id": "n3ez2b8p5c",
+  "nuec1g92hj": {
+   "id": "nuec1g92hj",
+   "kind": "person",
    "title": "妖精の女王",
    "body": "",
    "tags": [],
@@ -212,8 +220,9 @@
     }
    ]
   },
-  "nxwmnc3p5c": {
-   "id": "nxwmnc3p5c",
+  "nqxb8q12hj": {
+   "id": "nqxb8q12hj",
+   "kind": "person",
    "title": "騎士アルト",
    "body": "",
    "tags": [],
@@ -312,8 +321,9 @@
     }
    ]
   },
-  "nl08rx4p5c": {
-   "id": "nl08rx4p5c",
+  "nn1c0tb2hj": {
+   "id": "nn1c0tb2hj",
+   "kind": "person",
    "title": "魔女モルガ",
    "body": "",
    "tags": [],
@@ -377,21 +387,21 @@
  },
  "links": {},
  "boards": {
-  "b0bldbvp5c": {
-   "id": "b0bldbvp5c",
+  "by48xu92hj": {
+   "id": "by48xu92hj",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "n3ez2b8p5c": {
+    "nuec1g92hj": {
      "x": 40,
      "y": 40
     },
-    "nxwmnc3p5c": {
+    "nqxb8q12hj": {
      "x": 270,
      "y": 40
     },
-    "nl08rx4p5c": {
+    "nn1c0tb2hj": {
      "x": 500,
      "y": 40
     }
@@ -400,6 +410,191 @@
   }
  },
  "templates": {
+  "tpl-person": {
+   "id": "tpl-person",
+   "name": "人物の基本",
+   "tags": [],
+   "kinds": [
+    "person"
+   ],
+   "fields": [
+    {
+     "key": "よみ",
+     "label": "よみ",
+     "type": "text"
+    },
+    {
+     "key": "性別",
+     "label": "性別",
+     "type": "text"
+    },
+    {
+     "key": "年齢",
+     "label": "年齢",
+     "type": "text"
+    },
+    {
+     "key": "職業",
+     "label": "職業",
+     "type": "text"
+    },
+    {
+     "key": "外見",
+     "label": "外見",
+     "type": "long"
+    },
+    {
+     "key": "性格",
+     "label": "性格",
+     "type": "long"
+    },
+    {
+     "key": "口調",
+     "label": "口調",
+     "type": "text"
+    },
+    {
+     "key": "経歴",
+     "label": "経歴",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-scenario": {
+   "id": "tpl-scenario",
+   "name": "シナリオの基本",
+   "tags": [],
+   "kinds": [
+    "scenario"
+   ],
+   "fields": [
+    {
+     "key": "状態",
+     "label": "状態",
+     "type": "select",
+     "options": [
+      "準備中",
+      "完成",
+      "遊んだ"
+     ]
+    },
+    {
+     "key": "人数",
+     "label": "人数",
+     "type": "text"
+    },
+    {
+     "key": "遊ぶ時間",
+     "label": "遊ぶ時間",
+     "type": "text"
+    },
+    {
+     "key": "概要",
+     "label": "概要",
+     "type": "long"
+    },
+    {
+     "key": "導入",
+     "label": "導入",
+     "type": "long"
+    },
+    {
+     "key": "ハンドアウト",
+     "label": "ハンドアウト",
+     "type": "long"
+    },
+    {
+     "key": "真相",
+     "label": "真相",
+     "type": "long"
+    },
+    {
+     "key": "結末",
+     "label": "結末",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-item": {
+   "id": "tpl-item",
+   "name": "アイテムの基本",
+   "tags": [],
+   "kinds": [
+    "item"
+   ],
+   "fields": [
+    {
+     "key": "区分",
+     "label": "区分",
+     "type": "select",
+     "options": [
+      "キーアイテム",
+      "アーティファクト",
+      "そのほか"
+     ]
+    },
+    {
+     "key": "見た目",
+     "label": "見た目",
+     "type": "long"
+    },
+    {
+     "key": "効果",
+     "label": "効果",
+     "type": "long"
+    },
+    {
+     "key": "由来",
+     "label": "由来",
+     "type": "long"
+    },
+    {
+     "key": "代償",
+     "label": "代償",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-group": {
+   "id": "tpl-group",
+   "name": "集団の基本",
+   "tags": [],
+   "kinds": [
+    "group"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
+     "type": "text"
+    },
+    {
+     "key": "目的",
+     "label": "目的",
+     "type": "long"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "資金",
+     "label": "資金",
+     "type": "text"
+    },
+    {
+     "key": "拠点",
+     "label": "拠点",
+     "type": "text"
+    },
+    {
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
   "tpl-coc6": {
    "id": "tpl-coc6",
    "name": "クトゥルフ神話TRPG 6版 キャラクター",
@@ -407,6 +602,7 @@
     "探索者",
     "NPC"
    ],
+   "kinds": [],
    "fields": [
     {
      "key": "§基本",
@@ -878,8 +1074,8 @@
  },
  "maps": {},
  "calendars": {
-  "cus8xqdp5c": {
-   "id": "cus8xqdp5c",
+  "coszdf02hj": {
+   "id": "coszdf02hj",
    "name": "妖精暦",
    "months": [
     {
@@ -978,7 +1174,7 @@
      "s": 54000
     }
    ],
-   "calId": "cus8xqdp5c"
+   "calId": "coszdf02hj"
   },
   {
    "id": "lpljlfdb",
@@ -1009,7 +1205,7 @@
     }
    ],
    "loop": 3,
-   "calId": "cus8xqdp5c"
+   "calId": "coszdf02hj"
   }
  ]
 }

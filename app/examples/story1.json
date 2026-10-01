@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 1,
+ "version": 2,
  "id": "w-example-story1",
  "name": "物語1「電話レンジ（仮）」",
  "settings": {
@@ -28,8 +28,9 @@
   }
  },
  "notes": {
-  "n27kvbop58": {
-   "id": "n27kvbop58",
+  "nu2ffsy2hd": {
+   "id": "nu2ffsy2hd",
+   "kind": "note",
    "title": "ラボで電話レンジを発見",
    "body": "",
    "tags": [
@@ -48,8 +49,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n4n1rsgp58": {
-   "id": "n4n1rsgp58",
+  "n9qe7i42hd": {
+   "id": "n9qe7i42hd",
+   "kind": "note",
    "title": "ロト6の抽選（外れ）",
    "body": "",
    "tags": [
@@ -69,8 +71,9 @@
     "branch": true
    }
   },
-  "nr5shg9p58": {
-   "id": "nr5shg9p58",
+  "np6owrk2hd": {
+   "id": "np6owrk2hd",
+   "kind": "note",
    "title": "SERNのハッキング",
    "body": "",
    "tags": [
@@ -89,8 +92,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nequ2fzp58": {
-   "id": "nequ2fzp58",
+  "n76mcdx2hd": {
+   "id": "n76mcdx2hd",
+   "kind": "note",
    "title": "ロト6の抽選（Dメールの番号で当たり）",
    "body": "",
    "tags": [
@@ -109,8 +113,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nh9fhbrp58": {
-   "id": "nh9fhbrp58",
+  "ngo3n6e2hd": {
+   "id": "ngo3n6e2hd",
+   "kind": "note",
    "title": "ラウンダーの襲撃",
    "body": "",
    "tags": [
@@ -129,8 +134,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ngbddggp58": {
-   "id": "ngbddggp58",
+  "nt2mt7a2hd": {
+   "id": "nt2mt7a2hd",
+   "kind": "note",
    "title": "まゆりが倒れる",
    "body": "",
    "tags": [
@@ -149,8 +155,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "npqo22yp58": {
-   "id": "npqo22yp58",
+  "ndr0bql2hd": {
+   "id": "ndr0bql2hd",
+   "kind": "note",
    "title": "フェイリスの父の飛行機事故",
    "body": "",
    "tags": [
@@ -170,8 +177,9 @@
     "branch": true
    }
   },
-  "nx06nfpp58": {
-   "id": "nx06nfpp58",
+  "ng28hso2hd": {
+   "id": "ng28hso2hd",
+   "kind": "note",
    "title": "フェイリスの父が飛行機に乗らない",
    "body": "",
    "tags": [
@@ -190,8 +198,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nq8oh8up58": {
-   "id": "nq8oh8up58",
+  "nl3uk732hd": {
+   "id": "nl3uk732hd",
+   "kind": "person",
    "title": "まゆり（α）",
    "body": "",
    "tags": [],
@@ -212,8 +221,9 @@
     }
    ]
   },
-  "nk0branp58": {
-   "id": "nk0branp58",
+  "nlfjjol2hd": {
+   "id": "nlfjjol2hd",
+   "kind": "person",
    "title": "まゆり（β）",
    "body": "",
    "tags": [],
@@ -233,10 +243,11 @@
      }
     }
    ],
-   "origin": "nq8oh8up58"
+   "origin": "nl3uk732hd"
   },
-  "na4x2wrp58": {
-   "id": "na4x2wrp58",
+  "nh9dfki2hd": {
+   "id": "nh9dfki2hd",
+   "kind": "person",
    "title": "岡部",
    "body": "",
    "tags": [],
@@ -330,21 +341,21 @@
  },
  "links": {},
  "boards": {
-  "b510ic0p58": {
-   "id": "b510ic0p58",
+  "b1lc3to2hc": {
+   "id": "b1lc3to2hc",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "nq8oh8up58": {
+    "nl3uk732hd": {
      "x": 40,
      "y": 40
     },
-    "nk0branp58": {
+    "nlfjjol2hd": {
      "x": 270,
      "y": 40
     },
-    "na4x2wrp58": {
+    "nh9dfki2hd": {
      "x": 500,
      "y": 40
     }
@@ -353,6 +364,191 @@
   }
  },
  "templates": {
+  "tpl-person": {
+   "id": "tpl-person",
+   "name": "人物の基本",
+   "tags": [],
+   "kinds": [
+    "person"
+   ],
+   "fields": [
+    {
+     "key": "よみ",
+     "label": "よみ",
+     "type": "text"
+    },
+    {
+     "key": "性別",
+     "label": "性別",
+     "type": "text"
+    },
+    {
+     "key": "年齢",
+     "label": "年齢",
+     "type": "text"
+    },
+    {
+     "key": "職業",
+     "label": "職業",
+     "type": "text"
+    },
+    {
+     "key": "外見",
+     "label": "外見",
+     "type": "long"
+    },
+    {
+     "key": "性格",
+     "label": "性格",
+     "type": "long"
+    },
+    {
+     "key": "口調",
+     "label": "口調",
+     "type": "text"
+    },
+    {
+     "key": "経歴",
+     "label": "経歴",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-scenario": {
+   "id": "tpl-scenario",
+   "name": "シナリオの基本",
+   "tags": [],
+   "kinds": [
+    "scenario"
+   ],
+   "fields": [
+    {
+     "key": "状態",
+     "label": "状態",
+     "type": "select",
+     "options": [
+      "準備中",
+      "完成",
+      "遊んだ"
+     ]
+    },
+    {
+     "key": "人数",
+     "label": "人数",
+     "type": "text"
+    },
+    {
+     "key": "遊ぶ時間",
+     "label": "遊ぶ時間",
+     "type": "text"
+    },
+    {
+     "key": "概要",
+     "label": "概要",
+     "type": "long"
+    },
+    {
+     "key": "導入",
+     "label": "導入",
+     "type": "long"
+    },
+    {
+     "key": "ハンドアウト",
+     "label": "ハンドアウト",
+     "type": "long"
+    },
+    {
+     "key": "真相",
+     "label": "真相",
+     "type": "long"
+    },
+    {
+     "key": "結末",
+     "label": "結末",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-item": {
+   "id": "tpl-item",
+   "name": "アイテムの基本",
+   "tags": [],
+   "kinds": [
+    "item"
+   ],
+   "fields": [
+    {
+     "key": "区分",
+     "label": "区分",
+     "type": "select",
+     "options": [
+      "キーアイテム",
+      "アーティファクト",
+      "そのほか"
+     ]
+    },
+    {
+     "key": "見た目",
+     "label": "見た目",
+     "type": "long"
+    },
+    {
+     "key": "効果",
+     "label": "効果",
+     "type": "long"
+    },
+    {
+     "key": "由来",
+     "label": "由来",
+     "type": "long"
+    },
+    {
+     "key": "代償",
+     "label": "代償",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-group": {
+   "id": "tpl-group",
+   "name": "集団の基本",
+   "tags": [],
+   "kinds": [
+    "group"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
+     "type": "text"
+    },
+    {
+     "key": "目的",
+     "label": "目的",
+     "type": "long"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "資金",
+     "label": "資金",
+     "type": "text"
+    },
+    {
+     "key": "拠点",
+     "label": "拠点",
+     "type": "text"
+    },
+    {
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
   "tpl-coc6": {
    "id": "tpl-coc6",
    "name": "クトゥルフ神話TRPG 6版 キャラクター",
@@ -360,6 +556,7 @@
     "探索者",
     "NPC"
    ],
+   "kinds": [],
    "fields": [
     {
      "key": "§基本",

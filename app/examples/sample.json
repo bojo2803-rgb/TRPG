@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 1,
+ "version": 2,
  "id": "w-example-sample",
  "name": "基本のサンプル",
  "settings": {
@@ -28,8 +28,9 @@
   }
  },
  "notes": {
-  "nlinb2hp54": {
-   "id": "nlinb2hp54",
+  "nc5076v2h5": {
+   "id": "nc5076v2h5",
+   "kind": "scenario",
    "title": "シナリオ：夏の終わりのループ",
    "body": "",
    "tags": [
@@ -40,8 +41,9 @@
    "parents": [],
    "collapsed": false
   },
-  "nwnc28wp54": {
-   "id": "nwnc28wp54",
+  "nvqnuso2h5": {
+   "id": "nvqnuso2h5",
+   "kind": "note",
    "title": "宇宙の始まり",
    "body": "",
    "tags": [
@@ -60,8 +62,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nfr2uilp54": {
-   "id": "nfr2uilp54",
+  "ni2wca22h5": {
+   "id": "ni2wca22h5",
+   "kind": "note",
    "title": "地球の誕生",
    "body": "",
    "tags": [
@@ -80,8 +83,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ntr5ge3p54": {
-   "id": "ntr5ge3p54",
+  "n22yb8y2h5": {
+   "id": "n22yb8y2h5",
+   "kind": "note",
    "title": "恐竜の絶滅",
    "body": "",
    "tags": [
@@ -100,8 +104,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nqjbvnnp54": {
-   "id": "nqjbvnnp54",
+  "nj6rsxc2h5": {
+   "id": "nj6rsxc2h5",
+   "kind": "note",
    "title": "亀を助ける",
    "body": "",
    "tags": [
@@ -120,8 +125,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nfcpci6p54": {
-   "id": "nfcpci6p54",
+  "nb7qrpy2h5": {
+   "id": "nb7qrpy2h5",
+   "kind": "note",
    "title": "竜宮城に着く",
    "body": "",
    "tags": [
@@ -140,8 +146,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n97t44kp54": {
-   "id": "n97t44kp54",
+  "ns0gyie2h6": {
+   "id": "ns0gyie2h6",
+   "kind": "note",
    "title": "乙姫の宴",
    "body": "",
    "tags": [
@@ -160,8 +167,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nyetoe6p54": {
-   "id": "nyetoe6p54",
+  "n2cev3v2h6": {
+   "id": "n2cev3v2h6",
+   "kind": "note",
    "title": "故郷が恋しくなる",
    "body": "",
    "tags": [
@@ -180,8 +188,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nly8djcp54": {
-   "id": "nly8djcp54",
+  "nmhehze2h6": {
+   "id": "nmhehze2h6",
+   "kind": "note",
    "title": "玉手箱を開ける",
    "body": "",
    "tags": [
@@ -200,8 +209,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n3z4a3bp54": {
-   "id": "n3z4a3bp54",
+  "n6txvuk2h6": {
+   "id": "n6txvuk2h6",
+   "kind": "note",
    "title": "本能寺の変",
    "body": "",
    "tags": [
@@ -221,8 +231,9 @@
     "branch": true
    }
   },
-  "njgdxl0p54": {
-   "id": "njgdxl0p54",
+  "nkfbf2z2h6": {
+   "id": "nkfbf2z2h6",
+   "kind": "note",
    "title": "本能寺の変（信長が脱出する）",
    "body": "",
    "tags": [
@@ -241,8 +252,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n222s77p54": {
-   "id": "n222s77p54",
+  "nl55x242h6": {
+   "id": "nl55x242h6",
+   "kind": "note",
    "title": "信長が天下を統一",
    "body": "",
    "tags": [
@@ -261,8 +273,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nq41y5gp54": {
-   "id": "nq41y5gp54",
+  "nbq16yo2h6": {
+   "id": "nbq16yo2h6",
+   "kind": "note",
    "title": "Rが眠りにつく",
    "body": "",
    "tags": [
@@ -281,8 +294,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ninakw0p54": {
-   "id": "ninakw0p54",
+  "nvzk7as2h6": {
+   "id": "nvzk7as2h6",
+   "kind": "note",
    "title": "古い夢の伝承",
    "body": "",
    "tags": [
@@ -301,8 +315,9 @@
     "tz": null
    }
   },
-  "ngy66k5p54": {
-   "id": "ngy66k5p54",
+  "n2i4o9s2h6": {
+   "id": "n2i4o9s2h6",
+   "kind": "note",
    "title": "猫の町を訪れる",
    "body": "",
    "tags": [
@@ -321,8 +336,9 @@
     "tz": null
    }
   },
-  "nuvaaffp54": {
-   "id": "nuvaaffp54",
+  "nxtsmac2h6": {
+   "id": "nxtsmac2h6",
+   "kind": "note",
    "title": "銀の鍵を得る",
    "body": "",
    "tags": [
@@ -341,8 +357,9 @@
     "tz": null
    }
   },
-  "n0ptshdp54": {
-   "id": "n0ptshdp54",
+  "nyxb3v22h6": {
+   "id": "nyxb3v22h6",
+   "kind": "note",
    "title": "Rが目覚める",
    "body": "",
    "tags": [
@@ -361,8 +378,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ntkgg5np54": {
-   "id": "ntkgg5np54",
+  "nspnbgs2h6": {
+   "id": "nspnbgs2h6",
+   "kind": "note",
    "title": "時計台に雷",
    "body": "",
    "tags": [
@@ -381,8 +399,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nkzot2ap54": {
-   "id": "nkzot2ap54",
+  "nsvh10s2h6": {
+   "id": "nsvh10s2h6",
+   "kind": "note",
    "title": "駐車場で実験",
    "body": "",
    "tags": [
@@ -401,8 +420,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nenl2tnp54": {
-   "id": "nenl2tnp54",
+  "n52iqmh2h6": {
+   "id": "n52iqmh2h6",
+   "kind": "note",
    "title": "Kが過去へ跳ぶ",
    "body": "",
    "tags": [
@@ -422,8 +442,9 @@
     "branch": true
    }
   },
-  "n5q9pvlp54": {
-   "id": "n5q9pvlp54",
+  "n65ilck2h6": {
+   "id": "n65ilck2h6",
+   "kind": "note",
    "title": "見知らぬ男が現れる",
    "body": "",
    "tags": [
@@ -442,8 +463,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ni4itymp54": {
-   "id": "ni4itymp54",
+  "nkp1jrt2h6": {
+   "id": "nkp1jrt2h6",
+   "kind": "note",
    "title": "歴史が変わり始める",
    "body": "",
    "tags": [
@@ -463,8 +485,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n3zj0jfp54": {
-   "id": "n3zj0jfp54",
+  "nkji2zg2h6": {
+   "id": "nkji2zg2h6",
+   "kind": "note",
    "title": "ループの始まり",
    "body": "",
    "tags": [
@@ -473,7 +496,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nlinb2hp54"
+    "nc5076v2h5"
    ],
    "when": {
     "tr": "loop1",
@@ -485,8 +508,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nvmva7pp54": {
-   "id": "nvmva7pp54",
+  "nxd9uiq2h6": {
+   "id": "nxd9uiq2h6",
+   "kind": "note",
    "title": "夏祭り",
    "body": "",
    "tags": [
@@ -495,7 +519,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nlinb2hp54"
+    "nc5076v2h5"
    ],
    "when": {
     "tr": "loop1",
@@ -515,8 +539,9 @@
     }
    }
   },
-  "n04r3jlp54": {
-   "id": "n04r3jlp54",
+  "nbifzn22h6": {
+   "id": "nbifzn22h6",
+   "kind": "note",
    "title": "夏休み最後の夜",
    "body": "",
    "tags": [
@@ -525,7 +550,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nlinb2hp54"
+    "nc5076v2h5"
    ],
    "when": {
     "tr": "loop1",
@@ -537,8 +562,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nh8ghv1p54": {
-   "id": "nh8ghv1p54",
+  "n4iptrr2h6": {
+   "id": "n4iptrr2h6",
+   "kind": "note",
    "title": "少女がループに気づく",
    "body": "",
    "tags": [
@@ -547,7 +573,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nlinb2hp54"
+    "nc5076v2h5"
    ],
    "when": {
     "tr": "loop1",
@@ -560,8 +586,9 @@
     "k": 3
    }
   },
-  "nbvyfsjp54": {
-   "id": "nbvyfsjp54",
+  "njgvswb2h6": {
+   "id": "njgvswb2h6",
+   "kind": "note",
    "title": "同じ一日をくり返す",
    "body": "",
    "tags": [
@@ -580,8 +607,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nycjegdp54": {
-   "id": "nycjegdp54",
+  "nsjzpbj2h6": {
+   "id": "nsjzpbj2h6",
+   "kind": "note",
    "title": "夏祭り",
    "body": "",
    "tags": [
@@ -600,8 +628,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "njg1qihp54": {
-   "id": "njg1qihp54",
+  "n8b6utw2h6": {
+   "id": "n8b6utw2h6",
+   "kind": "person",
    "title": "浦島太郎",
    "body": "",
    "tags": [],
@@ -644,8 +673,9 @@
     }
    ]
   },
-  "nibt3nop54": {
-   "id": "nibt3nop54",
+  "nbl79yo2h6": {
+   "id": "nbl79yo2h6",
+   "kind": "person",
    "title": "夢見る者R",
    "body": "",
    "tags": [],
@@ -694,8 +724,9 @@
     }
    ]
   },
-  "ntdyk0pp54": {
-   "id": "ntdyk0pp54",
+  "nzuiv432h7": {
+   "id": "nzuiv432h7",
+   "kind": "person",
    "title": "ループする少女",
    "body": "",
    "tags": [],
@@ -762,8 +793,9 @@
     }
    ]
   },
-  "nxbkulvp54": {
-   "id": "nxbkulvp54",
+  "nuzt3p32h7": {
+   "id": "nuzt3p32h7",
+   "kind": "person",
    "title": "時間旅行者M",
    "body": "",
    "tags": [],
@@ -806,8 +838,9 @@
     }
    ]
   },
-  "nelwglip54": {
-   "id": "nelwglip54",
+  "nhltnyb2h7": {
+   "id": "nhltnyb2h7",
+   "kind": "person",
    "title": "時間旅行者K",
    "body": "",
    "tags": [],
@@ -843,8 +876,9 @@
     }
    ]
   },
-  "nah96lgp54": {
-   "id": "nah96lgp54",
+  "naqa8mm2h7": {
+   "id": "naqa8mm2h7",
+   "kind": "person",
    "title": "観測者O",
    "body": "",
    "tags": [],
@@ -902,8 +936,9 @@
     }
    ]
   },
-  "nb52ciwp54": {
-   "id": "nb52ciwp54",
+  "n2haxrh2h7": {
+   "id": "n2haxrh2h7",
+   "kind": "person",
    "title": "織田信長",
    "body": "",
    "tags": [],
@@ -924,8 +959,9 @@
     }
    ]
   },
-  "nqfw2jup54": {
-   "id": "nqfw2jup54",
+  "n5mtqyw2h7": {
+   "id": "n5mtqyw2h7",
+   "kind": "person",
    "title": "織田信長（世界線γ）",
    "body": "",
    "tags": [],
@@ -945,50 +981,50 @@
      }
     }
    ],
-   "origin": "nb52ciwp54"
+   "origin": "n2haxrh2h7"
   }
  },
  "links": {},
  "boards": {
-  "bft4tgtp4u": {
-   "id": "bft4tgtp4u",
+  "b9m2qlv2gs": {
+   "id": "b9m2qlv2gs",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "njg1qihp54": {
+    "n8b6utw2h6": {
      "x": 40,
      "y": 40
     },
-    "nibt3nop54": {
+    "nbl79yo2h6": {
      "x": 270,
      "y": 40
     },
-    "ntdyk0pp54": {
+    "nzuiv432h7": {
      "x": 500,
      "y": 40
     },
-    "nxbkulvp54": {
+    "nuzt3p32h7": {
      "x": 730,
      "y": 40
     },
-    "nelwglip54": {
+    "nhltnyb2h7": {
      "x": 960,
      "y": 40
     },
-    "nah96lgp54": {
+    "naqa8mm2h7": {
      "x": 40,
      "y": 190
     },
-    "nb52ciwp54": {
+    "n2haxrh2h7": {
      "x": 270,
      "y": 190
     },
-    "nqfw2jup54": {
+    "n5mtqyw2h7": {
      "x": 500,
      "y": 190
     },
-    "nlinb2hp54": {
+    "nc5076v2h5": {
      "x": 730,
      "y": 190
     }
@@ -997,6 +1033,191 @@
   }
  },
  "templates": {
+  "tpl-person": {
+   "id": "tpl-person",
+   "name": "人物の基本",
+   "tags": [],
+   "kinds": [
+    "person"
+   ],
+   "fields": [
+    {
+     "key": "よみ",
+     "label": "よみ",
+     "type": "text"
+    },
+    {
+     "key": "性別",
+     "label": "性別",
+     "type": "text"
+    },
+    {
+     "key": "年齢",
+     "label": "年齢",
+     "type": "text"
+    },
+    {
+     "key": "職業",
+     "label": "職業",
+     "type": "text"
+    },
+    {
+     "key": "外見",
+     "label": "外見",
+     "type": "long"
+    },
+    {
+     "key": "性格",
+     "label": "性格",
+     "type": "long"
+    },
+    {
+     "key": "口調",
+     "label": "口調",
+     "type": "text"
+    },
+    {
+     "key": "経歴",
+     "label": "経歴",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-scenario": {
+   "id": "tpl-scenario",
+   "name": "シナリオの基本",
+   "tags": [],
+   "kinds": [
+    "scenario"
+   ],
+   "fields": [
+    {
+     "key": "状態",
+     "label": "状態",
+     "type": "select",
+     "options": [
+      "準備中",
+      "完成",
+      "遊んだ"
+     ]
+    },
+    {
+     "key": "人数",
+     "label": "人数",
+     "type": "text"
+    },
+    {
+     "key": "遊ぶ時間",
+     "label": "遊ぶ時間",
+     "type": "text"
+    },
+    {
+     "key": "概要",
+     "label": "概要",
+     "type": "long"
+    },
+    {
+     "key": "導入",
+     "label": "導入",
+     "type": "long"
+    },
+    {
+     "key": "ハンドアウト",
+     "label": "ハンドアウト",
+     "type": "long"
+    },
+    {
+     "key": "真相",
+     "label": "真相",
+     "type": "long"
+    },
+    {
+     "key": "結末",
+     "label": "結末",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-item": {
+   "id": "tpl-item",
+   "name": "アイテムの基本",
+   "tags": [],
+   "kinds": [
+    "item"
+   ],
+   "fields": [
+    {
+     "key": "区分",
+     "label": "区分",
+     "type": "select",
+     "options": [
+      "キーアイテム",
+      "アーティファクト",
+      "そのほか"
+     ]
+    },
+    {
+     "key": "見た目",
+     "label": "見た目",
+     "type": "long"
+    },
+    {
+     "key": "効果",
+     "label": "効果",
+     "type": "long"
+    },
+    {
+     "key": "由来",
+     "label": "由来",
+     "type": "long"
+    },
+    {
+     "key": "代償",
+     "label": "代償",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-group": {
+   "id": "tpl-group",
+   "name": "集団の基本",
+   "tags": [],
+   "kinds": [
+    "group"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
+     "type": "text"
+    },
+    {
+     "key": "目的",
+     "label": "目的",
+     "type": "long"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "資金",
+     "label": "資金",
+     "type": "text"
+    },
+    {
+     "key": "拠点",
+     "label": "拠点",
+     "type": "text"
+    },
+    {
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
   "tpl-coc6": {
    "id": "tpl-coc6",
    "name": "クトゥルフ神話TRPG 6版 キャラクター",
@@ -1004,6 +1225,7 @@
     "探索者",
     "NPC"
    ],
+   "kinds": [],
    "fields": [
     {
      "key": "§基本",
@@ -1475,8 +1697,8 @@
  },
  "maps": {},
  "calendars": {
-  "cbdofulp53": {
-   "id": "cbdofulp53",
+  "c3wsbpa2h5": {
+   "id": "c3wsbpa2h5",
    "name": "夢暦",
    "months": [
     {
@@ -1641,7 +1863,7 @@
     "d": 720000,
     "s": 0
    },
-   "calId": "cbdofulp53"
+   "calId": "c3wsbpa2h5"
   },
   {
    "id": "loop1",

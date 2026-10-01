@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 1,
+ "version": 2,
  "id": "w-example-story4",
  "name": "物語4「時を超える影」",
  "settings": {
@@ -28,8 +28,9 @@
   }
  },
  "notes": {
-  "nrpzm6pp5d": {
-   "id": "nrpzm6pp5d",
+  "nmqsalu2hl": {
+   "id": "nmqsalu2hl",
+   "kind": "note",
    "title": "イスの大いなる種族の都市",
    "body": "",
    "tags": [
@@ -48,8 +49,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "npo9m7kp5d": {
-   "id": "npo9m7kp5d",
+  "nb8gh5g2hl": {
+   "id": "nb8gh5g2hl",
+   "kind": "note",
    "title": "ピーズリー教授、講義中に倒れる",
    "body": "",
    "tags": [
@@ -68,8 +70,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ntrjktxp5d": {
-   "id": "ntrjktxp5d",
+  "njh4pxw2hl": {
+   "id": "njh4pxw2hl",
+   "kind": "note",
    "title": "ピーズリー教授、記憶が戻る",
    "body": "",
    "tags": [
@@ -88,8 +91,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n5sgrdnp5d": {
-   "id": "n5sgrdnp5d",
+  "nqjyjuj2hl": {
+   "id": "nqjyjuj2hl",
+   "kind": "note",
    "title": "チャーマーズ、角のない部屋で死ぬ",
    "body": "",
    "tags": [
@@ -108,8 +112,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n22iyj0p5d": {
-   "id": "n22iyj0p5d",
+  "nrc6bl62hl": {
+   "id": "nrc6bl62hl",
+   "kind": "note",
    "title": "オーストラリアの砂漠で遺跡を発見",
    "body": "",
    "tags": [
@@ -128,8 +133,9 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nrsoybgp5d": {
-   "id": "nrsoybgp5d",
+  "nlp2wwn2hl": {
+   "id": "nlp2wwn2hl",
+   "kind": "note",
    "title": "猟犬が匂いを嗅ぎつける",
    "body": "",
    "tags": [
@@ -148,8 +154,9 @@
     "tz": null
    }
   },
-  "noxz9app5d": {
-   "id": "noxz9app5d",
+  "n3quorp2hl": {
+   "id": "n3quorp2hl",
+   "kind": "person",
    "title": "ピーズリー（体）",
    "body": "",
    "tags": [],
@@ -170,8 +177,9 @@
     }
    ]
   },
-  "n2raxu3p5d": {
-   "id": "n2raxu3p5d",
+  "n5gwd542hl": {
+   "id": "n5gwd542hl",
+   "kind": "person",
    "title": "ピーズリー（心）",
    "body": "",
    "tags": [],
@@ -220,8 +228,9 @@
     }
    ]
   },
-  "n0ejw73p5d": {
-   "id": "n0ejw73p5d",
+  "nijgy0d2hl": {
+   "id": "nijgy0d2hl",
+   "kind": "person",
    "title": "イスの精神",
    "body": "",
    "tags": [],
@@ -270,8 +279,9 @@
     }
    ]
   },
-  "nw9btqjp5d": {
-   "id": "nw9btqjp5d",
+  "ncivr2a2hl": {
+   "id": "ncivr2a2hl",
+   "kind": "person",
    "title": "チャーマーズ",
    "body": "",
    "tags": [],
@@ -320,8 +330,9 @@
     }
    ]
   },
-  "noufqaip5d": {
-   "id": "noufqaip5d",
+  "n0da7sb2hl": {
+   "id": "n0da7sb2hl",
+   "kind": "person",
    "title": "ティンダロスの猟犬",
    "body": "",
    "tags": [],
@@ -373,29 +384,29 @@
  },
  "links": {},
  "boards": {
-  "bnidwlhp5d": {
-   "id": "bnidwlhp5d",
+  "b5bntmv2hl": {
+   "id": "b5bntmv2hl",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "noxz9app5d": {
+    "n3quorp2hl": {
      "x": 40,
      "y": 40
     },
-    "n2raxu3p5d": {
+    "n5gwd542hl": {
      "x": 270,
      "y": 40
     },
-    "n0ejw73p5d": {
+    "nijgy0d2hl": {
      "x": 500,
      "y": 40
     },
-    "nw9btqjp5d": {
+    "ncivr2a2hl": {
      "x": 730,
      "y": 40
     },
-    "noufqaip5d": {
+    "n0da7sb2hl": {
      "x": 960,
      "y": 40
     }
@@ -404,6 +415,191 @@
   }
  },
  "templates": {
+  "tpl-person": {
+   "id": "tpl-person",
+   "name": "人物の基本",
+   "tags": [],
+   "kinds": [
+    "person"
+   ],
+   "fields": [
+    {
+     "key": "よみ",
+     "label": "よみ",
+     "type": "text"
+    },
+    {
+     "key": "性別",
+     "label": "性別",
+     "type": "text"
+    },
+    {
+     "key": "年齢",
+     "label": "年齢",
+     "type": "text"
+    },
+    {
+     "key": "職業",
+     "label": "職業",
+     "type": "text"
+    },
+    {
+     "key": "外見",
+     "label": "外見",
+     "type": "long"
+    },
+    {
+     "key": "性格",
+     "label": "性格",
+     "type": "long"
+    },
+    {
+     "key": "口調",
+     "label": "口調",
+     "type": "text"
+    },
+    {
+     "key": "経歴",
+     "label": "経歴",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-scenario": {
+   "id": "tpl-scenario",
+   "name": "シナリオの基本",
+   "tags": [],
+   "kinds": [
+    "scenario"
+   ],
+   "fields": [
+    {
+     "key": "状態",
+     "label": "状態",
+     "type": "select",
+     "options": [
+      "準備中",
+      "完成",
+      "遊んだ"
+     ]
+    },
+    {
+     "key": "人数",
+     "label": "人数",
+     "type": "text"
+    },
+    {
+     "key": "遊ぶ時間",
+     "label": "遊ぶ時間",
+     "type": "text"
+    },
+    {
+     "key": "概要",
+     "label": "概要",
+     "type": "long"
+    },
+    {
+     "key": "導入",
+     "label": "導入",
+     "type": "long"
+    },
+    {
+     "key": "ハンドアウト",
+     "label": "ハンドアウト",
+     "type": "long"
+    },
+    {
+     "key": "真相",
+     "label": "真相",
+     "type": "long"
+    },
+    {
+     "key": "結末",
+     "label": "結末",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-item": {
+   "id": "tpl-item",
+   "name": "アイテムの基本",
+   "tags": [],
+   "kinds": [
+    "item"
+   ],
+   "fields": [
+    {
+     "key": "区分",
+     "label": "区分",
+     "type": "select",
+     "options": [
+      "キーアイテム",
+      "アーティファクト",
+      "そのほか"
+     ]
+    },
+    {
+     "key": "見た目",
+     "label": "見た目",
+     "type": "long"
+    },
+    {
+     "key": "効果",
+     "label": "効果",
+     "type": "long"
+    },
+    {
+     "key": "由来",
+     "label": "由来",
+     "type": "long"
+    },
+    {
+     "key": "代償",
+     "label": "代償",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-group": {
+   "id": "tpl-group",
+   "name": "集団の基本",
+   "tags": [],
+   "kinds": [
+    "group"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
+     "type": "text"
+    },
+    {
+     "key": "目的",
+     "label": "目的",
+     "type": "long"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "資金",
+     "label": "資金",
+     "type": "text"
+    },
+    {
+     "key": "拠点",
+     "label": "拠点",
+     "type": "text"
+    },
+    {
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
   "tpl-coc6": {
    "id": "tpl-coc6",
    "name": "クトゥルフ神話TRPG 6版 キャラクター",
@@ -411,6 +607,7 @@
     "探索者",
     "NPC"
    ],
+   "kinds": [],
    "fields": [
     {
      "key": "§基本",
@@ -882,8 +1079,8 @@
  },
  "maps": {},
  "calendars": {
-  "clm426tp5d": {
-   "id": "clm426tp5d",
+  "cc4iis72hl": {
+   "id": "cc4iis72hl",
    "name": "角度の刻",
    "months": [
     {
@@ -975,7 +1172,7 @@
     "d": 359640,
     "s": 0
    },
-   "calId": "clm426tp5d"
+   "calId": "cc4iis72hl"
   }
  ]
 }

@@ -5,6 +5,7 @@
 //   片方が消し、もう片方が直した → 直した方を残す
 //   ボード：貼ってある付箋の位置は1枚ずつ取り込む。そのほか（つながり・テンプレートなど）は、両方が直していればこの端末の版
 import { uid } from './util.js';
+import { dropLines } from './model.js';
 
 const J = v => JSON.stringify(v);
 const COLLECTIONS = ['notes', 'links', 'boards', 'templates', 'maps', 'calendars', 'images'];
@@ -75,7 +76,7 @@ function cleanup(w) {
     for (const id of Object.keys(b.items)) if (!has(id)) delete b.items[id];
     b.collapsed = (b.collapsed || []).filter(has);
   }
-  for (const m of Object.values(w.maps)) m.pins = (m.pins || []).filter(p => has(p.note));
+  for (const m of Object.values(w.maps)) { m.pins = (m.pins || []).filter(p => has(p.note)); dropLines(m); }
   const tids = new Set(w.tracks.map(t => t.id));
   for (const n of Object.values(w.notes)) {
     n.parents = (n.parents || []).filter(has);

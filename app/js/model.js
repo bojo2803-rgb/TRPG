@@ -3,7 +3,7 @@
 import { uid, clone } from './util.js';
 import { T, isT, fromDays, wallToUtc } from './cal/time.js';
 
-export const FORMAT = 'trpg-world', VERSION = 1;
+export const FORMAT = 'trpg-world', VERSION = 2;
 
 export const DEFAULT_SETTINGS = () => ({
   tz: 'Asia/Tokyo',
@@ -15,10 +15,22 @@ export const DEFAULT_SETTINGS = () => ({
   },
 });
 
-// 付箋 { id, title, body, tags, color, fields, parents（まとめの親）, board（専用ボード）, collapsed（まとめをたたむ）,
-//        when（時系列マップ上の位置）, legs（主体の区間）, origin（分身の元） }
-export const newNote = (p = {}) => ({ id: uid('n'), title: '', body: '', tags: [], color: null, fields: {}, parents: [], ...p });
-// つながり { id, a, b, label, color, style: solid|dashed|dotted, arrow: none|end|both, kind: link|parent（家族の親→子）|spouse（夫婦）|order（前後） }
+// カード { id, kind, title, body, tags, color, fields, parents（まとめの親）, collapsed（まとめをたたむ）,
+//          when（時系列マップ上の位置）, legs（主体の区間）, origin（分身の元）, sessions（シナリオの遊んだ記録） }
+// 種類：付箋（アイデア）と、要素（人物・シナリオ・アイテム・集団。自分のボードを持ち、付箋をそこに貼る）
+export const KINDS = {
+  note: { label: '付箋', tab: 'notes' },
+  person: { label: '人物', tab: 'people' },
+  scenario: { label: 'シナリオ', tab: 'scenarios' },
+  item: { label: 'アイテム', tab: 'items' },
+  group: { label: '集団', tab: 'groups' },
+};
+export const kindOf = n => (n?.kind in KINDS ? n.kind : 'note');
+export const isElement = n => kindOf(n) !== 'note';
+export const newNote = (p = {}) => ({ id: uid('n'), kind: 'note', title: '', body: '', tags: [], color: null, fields: {}, parents: [], ...p });
+// つながり { id, a, b, label, color, style: solid|dashed|dotted, arrow: none|end|both,
+//   kind: link|parent（家族の親→子）|spouse（夫婦）|order（前後）|member（a 人物が b 集団に所属。label＝役職）|holds（a が b アイテムを持つ。label＝どうやって）,
+//   from・to（member・holds の期間。出来事の日時と同じ形 { tr, t, prec, tz, … }。わからなければ null） }
 export const newLink = (a, b, p = {}) => ({ id: uid('l'), a, b, label: '', color: null, style: 'solid', arrow: 'none', kind: 'link', ...p });
 // ボード { id, name, kind: cork|family, owner（専用ボードなら持ち主の付箋）, items: { 付箋id: {x, y} }, collapsed: [付箋id] }
 export const newBoard = (p = {}) => ({ id: uid('b'), name: '新しいボード', kind: 'cork', owner: null, items: {}, collapsed: [], ...p });
@@ -36,14 +48,21 @@ export function newWorld(name = '新しい世界') {
   return w;
 }
 
-// テンプレート { id, name, tags（このタグの付箋に入力欄が出る）, fields: [{ key, label, type: text|long|number|date|select|section, options }] }
+// テンプレート { id, name, tags（このタグのカードに入力欄が出る）, kinds（この種類のカードに出る）, fields: [{ key, label, type: text|long|number|date|select|section, options }] }
 // CoC 6版：項目名と入力の枠だけ（ルールブックの本文は入れない）
 export function builtinTemplates() {
   const f = (label, type = 'text', p = {}) => ({ key: label, label, type, ...p });
   const sec = label => ({ key: '§' + label, label, type: 'section' });
   const nums = names => names.map(n => f(n, 'number'));
-  return [{
-    id: 'tpl-coc6', name: 'クトゥルフ神話TRPG 6版 キャラクター', tags: ['探索者', 'NPC'],
+  const sel = (label, options) => f(label, 'select', { options });
+  const kind = (k, name, fields) => ({ id: 'tpl-' + k, name, tags: [], kinds: [k], fields });
+  return [
+    kind('person', '人物の基本', [f('よみ'), f('性別'), f('年齢'), f('職業'), f('外見', 'long'), f('性格', 'long'), f('口調'), f('経歴', 'long')]),
+    kind('scenario', 'シナリオの基本', [sel('状態', ['準備中', '完成', '遊んだ']), f('人数'), f('遊ぶ時間'), f('概要', 'long'), f('導入', 'long'), f('ハンドアウト', 'long'), f('真相', 'long'), f('結末', 'long')]),
+    kind('item', 'アイテムの基本', [sel('区分', ['キーアイテム', 'アーティファクト', 'そのほか']), f('見た目', 'long'), f('効果', 'long'), f('由来', 'long'), f('代償', 'long')]),
+    kind('group', '集団の基本', [f('種類'), f('目的', 'long'), f('規模'), f('資金'), f('拠点'), f('雰囲気', 'long')]),
+    {
+    id: 'tpl-coc6', name: 'クトゥルフ神話TRPG 6版 キャラクター', tags: ['探索者', 'NPC'], kinds: [],
     fields: [
       sec('基本'), f('職業'), f('年齢', 'number'), f('性別'), f('出身'), f('所属'), f('生年月日', 'date'),
       sec('能力値'), ...nums(['STR', 'CON', 'POW', 'DEX', 'APP', 'SIZ', 'INT', 'EDU']),
@@ -59,7 +78,7 @@ export function builtinTemplates() {
 }
 
 export const notesWithTag = (w, tag) => Object.values(w.notes).filter(n => n.tags.includes(tag));
-export const templatesFor = (w, note) => Object.values(w.templates).filter(t => t.tags.some(tag => note.tags.includes(tag)));
+export const templatesFor = (w, note) => Object.values(w.templates).filter(t => t.tags.some(tag => note.tags.includes(tag)) || (t.kinds || []).includes(kindOf(note)));
 export const allTags = w => [...new Set(Object.values(w.notes).flatMap(n => n.tags))].sort((a, b) => a.localeCompare(b, 'ja'));
 export const childrenOf = (w, id) => Object.values(w.notes).filter(n => n.parents.includes(id));
 export const linksOf = (w, id) => Object.values(w.links).filter(l => l.a === id || l.b === id);
@@ -76,11 +95,20 @@ export function deleteNote(w, id) {
     b.collapsed = b.collapsed.filter(x => x !== id);
     if (b.owner === id) delete w.boards[b.id];
   }
-  for (const m of Object.values(w.maps)) m.pins = m.pins.filter(p => p.note !== id);
+  for (const m of Object.values(w.maps)) {
+    m.pins = m.pins.filter(p => p.note !== id);
+    dropLines(m);
+  }
   for (const o of Object.values(w.notes)) {
     o.parents = o.parents.filter(p => p !== id);
     if (o.origin === id) delete o.origin;
   }
+}
+
+// 地図の線：なくなったピンを結んでいた線を消す
+export function dropLines(m) {
+  const ids = new Set(m.pins.map(p => p.id));
+  m.lines = (m.lines || []).filter(l => ids.has(l.a) && ids.has(l.b));
 }
 
 // 主体（時系列マップ上の道筋を持つ付箋）と、時系列マップ上の出来事
@@ -100,10 +128,21 @@ function fill(d) {
   for (const k of ['notes', 'links', 'boards', 'templates', 'maps', 'calendars', 'images']) w[k] ||= {};
   for (const n of Object.values(w.notes)) { n.tags ||= []; n.parents ||= []; n.fields ||= {}; n.body ??= ''; n.title ??= ''; }
   for (const b of Object.values(w.boards)) { b.items ||= {}; b.collapsed ||= []; }
-  for (const m of Object.values(w.maps)) m.pins ||= [];
+  for (const m of Object.values(w.maps)) { m.pins ||= []; for (const p of m.pins) p.id ||= uid('p'); m.lines ||= []; }
   if (!w.tracks?.some(t => t.id === 'main')) throw new Error('本線がありません');
+  // 版1 → 2：カードに種類を付け、種類ごとのテンプレートを足す
+  if ((d.version || 1) < 2) {
+    for (const n of Object.values(w.notes)) n.kind = guessKind(n);
+    for (const t of builtinTemplates()) if (!w.templates[t.id]) w.templates[t.id] = t;
+    w.version = 2;
+  }
+  for (const n of Object.values(w.notes)) n.kind = kindOf(n);
+  for (const t of Object.values(w.templates)) t.kinds ||= [];
   return w;
 }
+
+const PERSON_TAGS = ['探索者', 'NPC', '人物'];
+const guessKind = n => n.legs || n.tags.some(t => PERSON_TAGS.includes(t)) ? 'person' : n.tags.includes('シナリオ') ? 'scenario' : 'note';
 
 // 試作品のデータ：日時は「日の小数」（その土地の時計）。本体では世界時の {d,s} にする（架空の暦はそのまま）
 function fromPrototype(p) {
@@ -129,7 +168,7 @@ function fromPrototype(p) {
   });
   const gid = {};
   for (const [g, v] of Object.entries(p.groups || {})) {
-    const n = newNote({ title: v.title, tags: ['シナリオ'], collapsed: !v.open });
+    const n = newNote({ kind: 'scenario', title: v.title, tags: ['シナリオ'], collapsed: !v.open });
     w.notes[n.id] = gid[g] = n;
   }
   for (const e of p.events) {
@@ -142,7 +181,7 @@ function fromPrototype(p) {
     w.notes[n.id] = n;
   }
   const sid = {};
-  for (const s of p.subjects) { const n = newNote({ title: s.name }); sid[s.id] = n; w.notes[n.id] = n; }
+  for (const s of p.subjects) { const n = newNote({ kind: 'person', title: s.name }); sid[s.id] = n; w.notes[n.id] = n; }
   for (const s of p.subjects) {
     const n = sid[s.id];
     n.legs = s.legs.map(g => {
