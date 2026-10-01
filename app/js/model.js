@@ -125,6 +125,14 @@ export function hereCounts(w) {
   return c;
 }
 export const isWithin = (w, at, id) => !!at && placePath(w, at).includes(id);
+// ロケーションを移す：上のロケーションを to だけにする（null なら一番上）。中のロケーションや、そこにあるものは一緒に動く。
+// 自分の中へは移せない（その理由を返す。移せたら null）
+export function movePlace(w, id, to) {
+  if (to && placePath(w, to).includes(id)) return '自分の中へは移せません';
+  const n = w.notes[id];
+  n.parents = [...(to ? [to] : []), ...n.parents.filter(p => kindOf(w.notes[p]) !== 'place')];
+  return null;
+}
 export const mapOf = (w, placeId) => Object.values(w.maps).find(m => m.owner === placeId) || null;
 
 // 地図の線：なくなったピンを結んでいた線を消す

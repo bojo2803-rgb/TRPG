@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createStore } from '../app/js/store.js';
-import { newWorld, newNote, newLink, newBoard, deleteNote, migrateWorld, subjectsOf, timedNotes, templatesFor, kindOf, isElement, placePath, hereCounts, isWithin, mapOf, VERSION } from '../app/js/model.js';
+import { newWorld, newNote, newLink, newBoard, deleteNote, migrateWorld, subjectsOf, timedNotes, templatesFor, kindOf, isElement, placePath, hereCounts, isWithin, mapOf, movePlace, VERSION } from '../app/js/model.js';
 import { renderMarkdown, linkTitles } from '../app/js/ui/markdown.js';
 
 test('undo and redo restore the exact world', () => {
@@ -135,4 +135,21 @@ test('place paths, descendants, and cleanup when a place is deleted', () => {
   w.notes.人.at = 'ビル';
   deleteNote(w, 'ビル');
   assert.equal(w.notes.人.at, undefined);
+});
+
+// ロケーションを移す：下は一緒に動く。自分の中へは移せない
+test('moving a place carries everything below and refuses moving into itself', () => {
+  const w = newWorld();
+  const p = (id, parents = []) => { w.notes[id] = newNote({ id, kind: 'place', title: id, parents }); };
+  p('日本'); p('東京都', ['日本']); p('新宿', ['東京都']); p('大阪', ['日本']); p('ビル', ['新宿']);
+  w.notes.シナリオ = newNote({ id: 'シナリオ', kind: 'scenario' }); w.notes.新宿.parents.push('シナリオ');
+  w.notes.人 = newNote({ id: '人', kind: 'person', at: 'ビル' });
+  assert.equal(movePlace(w, '新宿', '大阪'), null);
+  assert.deepEqual(w.notes.新宿.parents, ['大阪', 'シナリオ']); // ロケーションでない親（シナリオ）は残る
+  assert.deepEqual(placePath(w, w.notes.人.at), ['日本', '大阪', '新宿', 'ビル']);
+  assert.match(movePlace(w, '日本', 'ビル'), /自分の中/);
+  assert.match(movePlace(w, '日本', '日本'), /自分の中/);
+  assert.deepEqual(placePath(w, 'ビル'), ['日本', '大阪', '新宿', 'ビル']);
+  assert.equal(movePlace(w, '新宿', null), null);
+  assert.deepEqual(placePath(w, 'ビル'), ['新宿', 'ビル']);
 });

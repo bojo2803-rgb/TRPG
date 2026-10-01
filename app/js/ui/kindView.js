@@ -1,8 +1,9 @@
 // 要素のタブ（人物・シナリオ・アイテム・集団・ロケーション）：一覧と、開いた要素のボード。
 // 人物は「一覧／家系図」、集団は「一覧／組織図／相関図」、ロケーションは「木／地図」を切り替える
 import { h, byTitle, collator } from '../util.js';
-import { KINDS, kindOf, newNote, placePath, placeParent, hereCounts, mapOf } from '../model.js';
+import { KINDS, kindOf, newNote, placePath, placeParent, hereCounts, mapOf, movePlace } from '../model.js';
 import { ensureOwnBoard, summaryOf, linksOfKind, newPlaceDialog } from './elements.js';
+import { closeDialog } from './dialog.js';
 
 const SUBS = {
   person: [['list', '一覧'], ['family', '家系図']],
@@ -109,9 +110,15 @@ function listMode(kind, el, ctx, s, arg) {
   return { update: render, destroy: () => sub?.destroy?.(), get placeNew() { return sub?.placeNew; } };
 }
 
-// ロケーションの木：最初の上のロケーションの下に並べる（輪になったものは一番上に）。探すと、当てはまるものとその上を出す
+// ロケーションの木：ファイルの画面のように、左に木、右に選んだロケーションの中身（中のロケーションと、そこを場所にしているカード）。
+// 引っぱって別のロケーションの上で離すと移る（ロケーションは中にあるものごと。カードは場所が変わる）。スマホは「移す」ボタン
+let sel = null; // 選んでいるロケーション（null は一番上）
+const DRAG = 'application/x-trpg-card';
+const LOOSE = ['person', 'item', 'group', 'scenario']; // 一番上に「場所が決まっていないもの」として出す種類
+
 function renderTree(main, ctx, rerender) {
   const w = ctx.world, q = ctx.query().toLowerCase();
+  if (sel && kindOf(w.notes[sel]) !== 'place') sel = null;
   const places = Object.values(w.notes).filter(n => kindOf(n) === 'place').sort(byTitle);
   const kids = new Map(places.map(n => [n.id, []])), roots = [];
   for (const n of places) { const p = placeParent(w, n.id); if (p && kids.has(p)) kids.get(p).push(n); else roots.push(n); }
@@ -120,25 +127,97 @@ function renderTree(main, ctx, rerender) {
   roots.forEach(mark);
   for (const n of places) if (!reach.has(n.id)) { roots.push(n); mark(n); }
   const shown = q ? new Set(places.filter(n => n.title.toLowerCase().includes(q) || Object.values(n.fields).some(v => String(v).toLowerCase().includes(q))).flatMap(n => placePath(w, n.id))) : null;
-  const count = hereCounts(w), seen = new Set(), rows = [];
+  const count = hereCounts(w);
+
+  // 引っぱる・離す
+  const drag = (el, id) => { el.draggable = true; el.addEventListener('dragstart', e => { e.dataTransfer.setData(DRAG, id); e.dataTransfer.setData('text/plain', w.notes[id]?.title || ''); e.dataTransfer.effectAllowed = 'move'; }); return el; };
+  const drop = (el, to) => {
+    el.addEventListener('dragover', e => { if (e.dataTransfer.types.includes(DRAG)) { e.preventDefault(); el.classList.add('drop'); } });
+    el.addEventListener('dragleave', () => el.classList.remove('drop'));
+    el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('drop'); const id = e.dataTransfer.getData(DRAG); if (id) moveTo(ctx, id, to); });
+    return el;
+  };
+  const moveBtn = id => h('button', { type: 'button', class: 'btn small', title: '別のロケーションへ移す', onclick: e => { e.stopPropagation(); moveDialog(ctx, id); } }, '移す');
+
+  // 左：木
+  const seen = new Set(), rows = [drop(h('div', { class: 'tree-row root', 'aria-current': String(sel === null) }, h('span', { class: 'tree-fold' }),
+    h('button', { type: 'button', class: 'tree-name', onclick: () => { sel = null; rerender(); } }, '一番上')), null)];
   const walk = (n, depth) => {
     if (seen.has(n.id) || (shown && !shown.has(n.id))) return;
     seen.add(n.id);
     const ks = kids.get(n.id).filter(k => !seen.has(k.id)), fold = closed.has(n.id) && !shown;
-    rows.push(h('div', { class: 'tree-row', style: { paddingLeft: 8 + depth * 20 + 'px' }, 'data-id': n.id },
+    rows.push(drop(drag(h('div', { class: 'tree-row', style: { paddingLeft: 8 + (depth + 1) * 18 + 'px' }, 'data-id': n.id, 'aria-current': String(sel === n.id) },
       ks.length ? h('button', { type: 'button', class: 'tree-fold', 'aria-label': fold ? 'ひらく' : 'たたむ', 'aria-expanded': String(!fold), onclick: () => { fold ? closed.delete(n.id) : closed.add(n.id); rerender(); } }, fold ? '▸' : '▾') : h('span', { class: 'tree-fold' }),
-      h('button', { type: 'button', class: 'tree-name', onclick: () => ctx.openElement(n.id) }, n.title || '（名前なし）'),
-      n.fields?.['種類'] ? h('span', { class: 'note-text' }, n.fields['種類']) : null,
+      h('button', { type: 'button', class: 'tree-name', title: '押すと中身を出す。ダブルクリックで開く', onclick: () => { sel = n.id; rerender(); }, ondblclick: () => ctx.openElement(n.id) }, n.title || '（名前なし）'),
       mapOf(w, n.id) ? h('span', { class: 'note-text', title: '地図あり' }, '🗺') : null,
-      count[n.id] ? h('span', { class: 'note-text', title: 'ここ（中も含む）を場所にしているカード' }, `${count[n.id]}件`) : null,
-      fold && ks.length ? h('span', { class: 'note-text' }, `中に${ks.length}`) : null,
+      count[n.id] ? h('span', { class: 'note-text', title: 'ここ（中も含む）を場所にしているカード' }, `${count[n.id]}`) : null,
       h('span', { class: 'sp' }),
-      h('button', { type: 'button', class: 'btn small', title: 'この中にロケーションを作る', 'aria-label': `「${n.title}」の中に作る`, onclick: () => newPlaceDialog(ctx, n.id) }, '＋')));
+      h('button', { type: 'button', class: 'btn small', title: 'この中にロケーションを作る', 'aria-label': `「${n.title}」の中に作る`, onclick: () => newPlaceDialog(ctx, n.id) }, '＋')), n.id), n.id));
     if (!fold) for (const k of ks) walk(k, depth + 1);
   };
   for (const r of roots) walk(r, 0);
-  main.replaceChildren(h('div', { class: 'scroll' }, rows.length ? h('div', { class: 'tree' }, ...rows)
-    : h('p', { class: 'note-text' }, places.length ? '当てはまるロケーションがありません' : 'まだロケーションがありません。上の欄に名前（例：日本）を入れて Enter で作り、各行の「＋」で中に作れます（県・街・建物・部屋…）。')));
+
+  // 右：選んだロケーションの中身
+  const here = sel ? w.notes[sel] : null;
+  const subs = sel ? kids.get(sel) || [] : roots;
+  const things = Object.values(w.notes).filter(o => o.id !== sel && (sel ? o.at === sel : !o.at && LOOSE.includes(kindOf(o)))).sort(byTitle);
+  const crumbs = [null, ...(sel ? placePath(w, sel) : [])];
+  const right = h('div', { class: 'explorer-main scroll' },
+    h('nav', { class: 'crumbs', 'aria-label': 'いまの場所' }, ...crumbs.flatMap((p, i) => [i ? h('span', { 'aria-hidden': 'true' }, '›') : null,
+      drop(h('button', { type: 'button', class: 'linkish', 'aria-current': String(p === sel), onclick: () => { sel = p; rerender(); } }, p ? w.notes[p].title || '名前なし' : '一番上'), p)]).filter(Boolean)),
+    h('div', { class: 'row explorer-head' },
+      h('h3', {}, here ? here.title || '（名前なし）' : 'ロケーション'),
+      here?.fields?.['種類'] ? h('span', { class: 'note-text' }, here.fields['種類']) : null,
+      h('span', { class: 'sp' }),
+      here ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(sel) }, mapOf(w, sel) ? '開く（地図）' : '開く') : null,
+      here ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openNote(sel) }, '詳しく') : null,
+      here ? moveBtn(sel) : null,
+      h('button', { type: 'button', class: 'btn small', onclick: () => newPlaceDialog(ctx, sel) }, '＋ ロケーション')),
+    h('h4', {}, `中のロケーション（${subs.length}）`),
+    subs.length ? h('div', { class: 'tiles' }, ...subs.map(k => drop(drag(h('div', { class: 'tile place', 'data-id': k.id },
+      h('button', { type: 'button', class: 'tile-name', title: '押すと中へ。ダブルクリックで開く', onclick: () => { sel = k.id; closed.delete(placeParent(w, k.id)); rerender(); }, ondblclick: () => ctx.openElement(k.id) }, `📁 ${k.title || '（名前なし）'}`),
+      h('span', { class: 'note-text' }, [k.fields?.['種類'], (kids.get(k.id) || []).length ? `中に${kids.get(k.id).length}` : '', count[k.id] ? `${count[k.id]}件` : ''].filter(Boolean).join('・')),
+      moveBtn(k.id)), k.id), k.id)))
+      : h('p', { class: 'note-text' }, sel ? 'まだありません。「＋ ロケーション」でこの中に作れます。' : 'まだロケーションがありません。上の欄に名前（例：日本）を入れて Enter で作れます。'),
+    h('h4', {}, sel ? `ここにあるもの（${things.length}）` : `場所が決まっていないもの（${things.length}）`),
+    things.length ? h('div', { class: 'tiles' }, ...things.map(o => drag(h('div', { class: 'tile', 'data-id': o.id },
+      h('button', { type: 'button', class: 'tile-name', onclick: () => ctx.openNote(o.id) }, o.title || '（名前なし）'),
+      h('span', { class: `kind-badge k-${kindOf(o)}` }, KINDS[kindOf(o)].label),
+      moveBtn(o.id)), o.id)))
+      : h('p', { class: 'note-text' }, sel ? '人物・アイテム・集団・シナリオ・出来事の「場所」をここにすると出ます。ここへ引っぱってきても移せます。' : 'ありません'));
+  main.replaceChildren(h('div', { class: 'explorer' }, h('div', { class: 'explorer-tree scroll' }, h('div', { class: 'tree' }, ...rows)), right));
+}
+
+// 移す：ロケーションなら上のロケーションを変える（中にあるものごと）。カードなら場所を変える。to が null なら一番上・場所なし
+function moveTo(ctx, id, to) {
+  const n = ctx.world.notes[id];
+  if (!n || id === to) return;
+  if (kindOf(n) === 'place') {
+    let err = null;
+    ctx.commit(w => { err = movePlace(w, id, to); }, 'ロケーションを移す');
+    if (err) ctx.toast(`「${n.title}」を移せません：${err}`);
+    else ctx.toast(`「${n.title}」を${to ? `「${ctx.world.notes[to].title}」の中` : '一番上'}へ移しました（中にあるものも一緒に）`);
+  } else {
+    ctx.commit(w => { if (to) w.notes[id].at = to; else delete w.notes[id].at; }, '場所を変える');
+    ctx.toast(`「${n.title}」の場所を${to ? `「${ctx.world.notes[to].title}」` : 'なし'}にしました`);
+  }
+}
+// 移す先を選ぶ（スマホ用。木の形で並べ、自分とその中は選べない）
+function moveDialog(ctx, id) {
+  const w = ctx.world, n = w.notes[id], isPlace = kindOf(n) === 'place';
+  const opts = [];
+  const add = (p, d) => {
+    if (isPlace && placePath(w, p.id).includes(id)) return;
+    opts.push(h('button', { type: 'button', class: 'move-opt', style: { paddingLeft: 10 + d * 18 + 'px' }, 'aria-current': String((isPlace ? placeParent(w, id) : n.at) === p.id), onclick: () => { closeDialog(); moveTo(ctx, id, p.id); } }, p.title || '（名前なし）'));
+    for (const k of Object.values(w.notes).filter(x => kindOf(x) === 'place' && placeParent(w, x.id) === p.id).sort(byTitle)) add(k, d + 1);
+  };
+  for (const r of Object.values(w.notes).filter(x => kindOf(x) === 'place' && !placeParent(w, x.id)).sort(byTitle)) add(r, 0);
+  ctx.openDialog({
+    title: `「${n.title || '名前なし'}」をどこへ移すか`,
+    body: h('div', { class: 'pick-list move-list' },
+      h('button', { type: 'button', class: 'move-opt', onclick: () => { closeDialog(); moveTo(ctx, id, null); } }, isPlace ? '一番上' : '場所なし（どこにも置かない）'), ...opts,
+      isPlace ? h('p', { class: 'note-text' }, '中のロケーションや、そこにいる人・ある物も一緒に移ります。') : null),
+  });
 }
 
 function renderList(kind, main, ctx, s, rerender) {

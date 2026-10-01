@@ -10,14 +10,14 @@ await p.fill('input.add-name', '日本'); await p.locator('input.add-name').pres
 ok((await byTitle('日本'))?.kind === 'place', 'place created');
 const addIn = async (parent, name) => { await p.click(`.tree-row:has(.tree-name:text-is("${parent}")) button[aria-label$="の中に作る"]`); await wait(200); await p.fill('#dlgBody input', name); await p.click('#dlgOk'); await wait(300); };
 await addIn('日本', '東京都'); await addIn('東京都', '新宿');
-ok((await p.locator('.tree-row').count()) === 3, 'tree shows three places');
+ok((await p.locator('.tree-row:not(.root)').count()) === 3, 'tree shows three places');
 ok((await byTitle('新宿')).parents[0] === (await byTitle('東京都')).id, 'nested under 東京都');
 await p.click('.tree-row:has(.tree-name:text-is("日本")) .tree-fold'); await wait(200);
-ok((await p.locator('.tree-row').count()) === 1, 'folding hides the inside');
+ok((await p.locator('.tree-row:not(.root)').count()) === 1, 'folding hides the inside');
 await p.click('.tree-row:has(.tree-name:text-is("日本")) .tree-fold'); await wait(200);
 
 // 東京都に画像なしの地図を作る
-await p.click('.tree-name:text-is("東京都")'); await wait(600);
+await p.dblclick('.tree-name:text-is("東京都")'); await wait(600);
 ok(await p.locator('.el-head .crumbs').textContent() === '日本›', 'breadcrumb shows 日本');
 await p.click('.el-head .seg button:has-text("地図")'); await wait(400);
 await p.click('button:has-text("画像なし（方眼の紙）で作る")'); await wait(200);
@@ -54,6 +54,27 @@ await p.evaluate(() => __app.go('map')); await wait(600);
 await p.selectOption('select[aria-label="地図を選ぶ"]', { label: '日本（ロケーション）' }); await wait(400);
 await p.click('.map-pin:has-text("東京都")'); await wait(500);
 ok((await p.locator('.bar .crumbs').textContent()).replace(/\s/g, '') === '日本›東京都', 'map screen drills into 東京都 with breadcrumb');
+// ディレクトリのように移す：大阪を作って新宿を引っぱって入れる → 中のビル・人も一緒。自分の中へは移せない
+await p.click('nav button[data-id="places"]'); await wait(500);
+await p.click('.bar .seg button:has-text("木")'); await wait(300);
+await p.evaluate(() => { const j = Object.values(__app.world.notes).find(n => n.title === '日本').id; __app.commit(w => { w.notes.osaka = { id: 'osaka', kind: 'place', title: '大阪', body: '', tags: [], fields: {}, parents: [j] }; }); }); await wait(300);
+await p.click('.tree-name:text-is("東京都")'); await wait(300);
+ok(await p.locator('.explorer-main .tile.place:has-text("新宿")').count() === 1, 'selecting 東京都 lists 新宿 on the right');
+await p.locator('.explorer-main .tile.place:has-text("新宿")').dragTo(p.locator('.tree-row:has(.tree-name:text-is("大阪"))')); await wait(400);
+ok(JSON.stringify(await p.evaluate(() => { const w = __app.world, n = Object.values(w.notes).find(x => x.title === 'アーミテッジ'); const path = []; for (let x = n.at; x; x = w.notes[x].parents.find(p => w.notes[p]?.kind === 'place')) path.unshift(w.notes[x].title); return path; })) === JSON.stringify(['日本', '大阪', '新宿']), 'dragging 新宿 into 大阪 carries the person along');
+await p.locator('.tree-row:has(.tree-name:text-is("日本"))').dragTo(p.locator('.tree-row:has(.tree-name:text-is("新宿"))')); await wait(300);
+ok((await p.locator('#toast').textContent()).includes('自分の中へは移せません') && !(await byTitle('日本')).parents.length, 'moving into itself is refused');
+// 「移す」ボタン（スマホ用）：新宿を一番上へ
+await p.click('.tree-name:text-is("大阪")'); await wait(300);
+await p.click('.explorer-main .tile.place:has-text("新宿") button:has-text("移す")'); await wait(300);
+await p.click('#dlgBody .move-opt:has-text("一番上")'); await wait(400);
+ok(!(await byTitle('新宿')).parents.some(x => x), 'move dialog sends 新宿 to the top');
+// カードを引っぱってロケーションへ：人物の場所が変わる
+await p.click('.tree-name:text-is("新宿")'); await wait(300);
+await p.locator('.explorer-main .tile:has-text("アーミテッジ")').dragTo(p.locator('.tree-row:has(.tree-name:text-is("大阪"))')); await wait(400);
+ok((await byTitle('アーミテッジ')).at === 'osaka', 'dragging a person onto 大阪 changes where they are');
+await p.click('.tree-row.root .tree-name'); await wait(300);
+await p.screenshot({ path: SHOT + 'places-explorer.png' });
 // 付箋をロケーションにする
 await p.evaluate(() => { const id = __app.newNote({ title: '禁書庫' }, { open: false }); __app.setKind(id, 'place'); });
 ok((await byTitle('禁書庫')).kind === 'place', 'note turned into a place');
