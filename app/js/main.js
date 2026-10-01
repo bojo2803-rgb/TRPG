@@ -1,7 +1,7 @@
 // アプリの起動：世界を開き、画面を切り替え、付箋の編集画面を出し、自動で保存する
 import { h, esc, uid } from './util.js';
 import { createStore } from './store.js';
-import { newWorld, migrateWorld, newNote, deleteNote, KINDS } from './model.js';
+import { newWorld, migrateWorld, newNote, deleteNote, KINDS, kindOf } from './model.js';
 import { createPersistence, backendOf } from './persist/index.js';
 import { localAvailable } from './persist/local.js';
 import { initDialog, openDialog, showMenu, menuAt, toast } from './ui/dialog.js';
@@ -11,19 +11,26 @@ const PREF = 'trpg-app-last';
 const pref = { get() { try { return JSON.parse(localStorage.getItem(PREF)) || {}; } catch { return {}; } }, set(p) { try { localStorage.setItem(PREF, JSON.stringify({ ...pref.get(), ...p })); } catch { /* 保存できない環境 */ } } };
 
 // 画面の一覧（左の切り替え）。load は初めて開くときに読み込む
+const kindTab = k => () => import('./ui/kindView.js').then(m => m.tabs[k]);
 const VIEWS = [
   { id: 'notes', label: '付箋', load: () => import('./ui/notesView.js') },
+  { id: 'people', label: '人物', load: kindTab('person') },
+  { id: 'scenarios', label: 'シナリオ', load: kindTab('scenario') },
+  { id: 'items', label: 'アイテム', load: kindTab('item') },
+  { id: 'groups', label: '集団', load: kindTab('group') },
   { id: 'board', label: 'ボード', load: () => import('./ui/board.js') },
   { id: 'timemap', label: '時系列', load: () => import('./timemap/view.js') },
-  { id: 'family', label: '家系図', load: () => import('./ui/familyView.js') },
-  { id: 'graph', label: 'グラフ', load: () => import('./ui/graph.js') },
   { id: 'map', label: '地図', load: () => import('./ui/mapView.js') },
+  { id: 'graph', label: 'グラフ', load: () => import('./ui/graph.js') },
   { id: 'templates', label: 'テンプレート', load: () => import('./ui/templates.js') },
 ];
+// 前の版の画面の名前（家系図は人物の中へ移った）
+const OLD_VIEWS = { family: ['people', { sub: 'family' }] };
 
 const store = createStore(newWorld());
 const persist = createPersistence(store);
 let view = null, viewId = null, viewArg = null, editor = null;
+const trail = []; // 要素のボードへ移る前にいた所（「← 戻る」で帰る）
 
 export const ctx = {
   store, persist,
@@ -48,6 +55,16 @@ export const ctx = {
   async quickNote() { (await import('./ui/quickNote.js')).quickDialog(ctx, view?.placeNew); },
   setKind(id, kind) { store.commit(w => { w.notes[id].kind = kind; }, `${KINDS[kind].label}にする`); },
   go: (id, arg) => showView(id, arg),
+  // 要素を開く：その種類のタブで、要素のボードを出す（付箋なら編集画面を開くだけ）
+  openElement(id) {
+    const n = store.get().notes[id];
+    if (!n) return;
+    if (kindOf(n) === 'note') { ctx.openNote(id); return; }
+    trail.push({ id: viewId, arg: view?.state?.() ?? viewArg });
+    showView(KINDS[kindOf(n)].tab, { open: id });
+  },
+  canBack: () => trail.length > 0,
+  back() { const t = trail.pop(); if (t) showView(t.id, t.arg); },
   viewArg: () => viewArg,
   toast, openDialog, showMenu, menuAt,
   imageUrl: id => persist.imageUrl(id),
@@ -56,8 +73,9 @@ export const ctx = {
 window.__app = ctx; // 自動確認用
 
 async function showView(id, arg = null) {
+  if (OLD_VIEWS[id]) [id, arg] = OLD_VIEWS[id];
   const def = VIEWS.find(v => v.id === id) || VIEWS[0];
-  view?.destroy?.();
+  view?.destroy?.(); view = null;
   viewId = def.id; viewArg = arg;
   for (const b of $('views').children) b.setAttribute('aria-current', b.dataset.id === viewId ? 'page' : 'false');
   const el = $('view');
@@ -222,7 +240,7 @@ ctx.exampleMenu = exampleMenu;
 async function start() {
   (await import('./ui/settings.js')).applyTheme();
   initDialog();
-  $('views').replaceChildren(...VIEWS.map(v => h('button', { type: 'button', 'data-id': v.id, onclick: () => showView(v.id) }, v.label)));
+  $('views').replaceChildren(...VIEWS.map(v => h('button', { type: 'button', 'data-id': v.id, onclick: () => { trail.length = 0; showView(v.id); } }, v.label)));
   $('worldBtn').onclick = worldMenu;
   $('undo').onclick = () => store.undo();
   $('redo').onclick = () => store.redo();

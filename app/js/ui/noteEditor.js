@@ -1,7 +1,8 @@
 // 付箋の編集画面（右側。スマホでは画面いっぱい）
 // 名前・色・タグ・テンプレートの入力欄・本文・画像・まとめ（親子）・家族・つながり・時系列・出てくるところ
 import { h, esc, uid, debounce, byTitle } from '../util.js';
-import { templatesFor, allTags, childrenOf, newLink, newBoard, findByTitle, KINDS, kindOf } from '../model.js';
+import { templatesFor, allTags, childrenOf, newLink, findByTitle, KINDS, kindOf, isElement } from '../model.js';
+import { membersSec, holdersSec, holdingsSec, scenariosSec, contentsSec, sessionsSec, orgSec, boardLabel } from './elements.js';
 import { renderMarkdown, imageIds } from './markdown.js';
 import { pickNote } from './picker.js';
 import { openDialog, showMenu, toast } from './dialog.js';
@@ -36,20 +37,31 @@ function render(ctx) {
   const scrollTop = panel().scrollTop;
   const sec = (key, title, ...body) => h('section', { class: 'ne-sec', 'data-sec': key }, h('h3', {}, title), ...body);
   // 付箋（アイデア）は軽く：使っていない欄は「もっと」を押すまで出さない
+  // 要素は種類ごとの欄（所属・持ち主・シナリオの中身など）。まとめの欄は、シナリオや組織の上下で表せないものがあるときだけ
+  const k = kindOf(n), el = k !== 'note', isSc = id => kindOf(w.notes[id]) === 'scenario', isGr = id => kindOf(w.notes[id]) === 'group';
   const L = Object.values(w.links), mine = (l, kinds) => kinds.includes(l.kind) && (l.a === n.id || l.b === n.id);
-  const used = { when: !!(n.when || n.legs), group: n.parents.length > 0 || childrenOf(w, n.id).length > 0, family: L.some(l => mine(l, ['parent', 'spouse'])), links: L.some(l => mine(l, ['link', 'order'])) };
-  const full = kindOf(n) !== 'note' || showMore, show = k => full || used[k];
+  const otherParents = n.parents.filter(p => !isSc(p) && !(k === 'group' && isGr(p))), otherKids = k === 'scenario' ? [] : childrenOf(w, n.id).filter(c => !(k === 'group' && kindOf(c) === 'group'));
+  const used = { when: !!(n.when || n.legs), group: otherParents.length > 0 || otherKids.length > 0, family: L.some(l => mine(l, ['parent', 'spouse'])), links: L.some(l => mine(l, ['link', 'order'])), scen: n.parents.some(isSc) };
+  const full = showMore, show = key => full || used[key] || (el && key === 'links') || (k === 'person' && (key === 'family' || key === 'when'));
+  const edit2 = (fn, label) => edit(ctx, fn, label);
   panel().replaceChildren(h('div', { class: `ne p-${n.color ?? 0}` },
     head(ctx, w, n),
     tagsSec(ctx, w, n),
     ...templatesFor(w, n).map(t => templateSec(ctx, t, n)),
-    sec('body', kindOf(n) === 'note' ? '本文' : 'メモ', bodySec(ctx, w, n)),
-    show('when') ? sec('when', '時系列', whenSec(ctx, w, n)) : null,
-    show('group') ? sec('group', 'まとめ', groupSec(ctx, w, n)) : null,
+    sec('body', el ? 'メモ' : '本文', bodySec(ctx, w, n)),
+    k === 'person' || k === 'group' ? sec('member', k === 'person' ? '所属' : 'メンバー', membersSec(ctx, w, n)) : null,
+    k === 'group' ? sec('org', '上部組織・下部組織', orgSec(ctx, w, n)) : null,
+    k === 'item' ? sec('holders', '持ち主の移り変わり', holdersSec(ctx, w, n)) : null,
+    k === 'person' || k === 'group' ? sec('holdings', '持ち物', holdingsSec(ctx, w, n)) : null,
+    k === 'scenario' ? sec('contents', '中身', contentsSec(ctx, w, n)) : null,
+    k === 'scenario' ? sec('sessions', '遊んだ記録', sessionsSec(ctx, w, n, edit2)) : null,
+    k !== 'scenario' && (el || used.scen || n.when) ? sec('scen', el ? '登場するシナリオ' : 'シナリオ', scenariosSec(ctx, w, n)) : null,
     show('family') ? sec('family', '家族', familySec(ctx, w, n)) : null,
+    show('when') ? sec('when', '時系列', whenSec(ctx, w, n)) : null,
     show('links') ? sec('links', 'つながり', linksSec(ctx, w, n)) : null,
-    sec('where', kindOf(n) === 'note' ? '貼ってあるところ' : '出てくるところ', whereSec(ctx, w, n)),
-    full ? null : h('button', { type: 'button', class: 'btn small more', onclick: () => { showMore = true; render(ctx); } }, 'もっと（時系列・まとめ・つながり・家族）'),
+    show('group') ? sec('group', 'まとめ', groupSec(ctx, w, n)) : null,
+    sec('where', el ? '出てくるところ' : '貼ってあるところ', whereSec(ctx, w, n)),
+    full || ['when', 'family', 'links', 'group'].every(show) ? null : h('button', { type: 'button', class: 'btn small more', onclick: () => { showMore = true; render(ctx); } }, el ? 'もっと（時系列・まとめ・家族）' : 'もっと（時系列・まとめ・つながり・家族）'),
     h('div', { class: 'ne-foot' },
       h('button', { type: 'button', class: 'btn danger small', onclick: e => {
         if (!armedDelete) { armedDelete = true; e.target.textContent = 'もう一度押すと削除'; return; }
@@ -82,7 +94,7 @@ function head(ctx, w, n) {
       h('button', { type: 'button', class: 'btn icon', title: 'そのほか', 'aria-label': 'そのほか', onclick: e => {
         const r = e.currentTarget.getBoundingClientRect();
         showMenu(null, [
-          ['専用のボードを開く', () => ownBoard(ctx, n.id)],
+          ...(isElement(n) ? [['ボードを開く', () => ctx.openElement(n.id)]] : []),
           ['グラフで見る', () => ctx.go('graph', { focus: n.id })],
           ...(n.when ? [['時系列マップで見る', () => ctx.go('timemap', { focus: n.id })]] : []),
           ['複製する', () => { const c = JSON.parse(JSON.stringify(ctx.world.notes[n.id])); c.id = uid('n'); c.title += '（コピー）'; delete c.board; ctx.commit(w => { w.notes[c.id] = c; }, '付箋を複製'); ctx.openNote(c.id); }],
@@ -91,20 +103,12 @@ function head(ctx, w, n) {
         ], r.left - 120, r.bottom + 4);
       } }, '…'),
       h('button', { type: 'button', class: 'btn icon', title: '閉じる', 'aria-label': '閉じる', onclick: () => ctx.closeNote() }, '×')),
+    isElement(n) ? h('div', { class: 'row' }, h('span', { class: `kind-badge k-${kindOf(n)}` }, KINDS[kindOf(n)].label), h('span', { class: 'sp' }),
+      h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(n.id) }, 'ボードを開く')) : null,
     h('div', { class: 'row swatches', role: 'radiogroup', 'aria-label': '色' },
       ...COLORS.map((c, i) => h('button', { type: 'button', class: `sw p-${i}`, role: 'radio', 'aria-checked': String((n.color ?? 0) === i), title: c, 'aria-label': c,
         onclick: () => edit(ctx, (w, n) => { n.color = i; }, '色を変更') || render(ctx) }))),
   );
-}
-
-export function ownBoard(ctx, id) {
-  const n = ctx.world.notes[id];
-  let b = Object.values(ctx.world.boards).find(b => b.owner === id);
-  if (!b) {
-    b = newBoard({ name: n.title || '名前なし', owner: id, items: { [id]: { x: 40, y: 40 } } });
-    ctx.commit(w => { w.boards[b.id] = b; }, '専用のボードを作成');
-  }
-  ctx.go('board', { board: b.id });
 }
 
 function tagsSec(ctx, w, n) {
@@ -277,10 +281,23 @@ function whereSec(ctx, w, n) {
   const maps = Object.values(w.maps).filter(m => m.pins.some(p => p.note === n.id));
   const back = n.title ? Object.values(w.notes).filter(o => o.id !== n.id && o.body.includes(`[[${n.title}`)).sort(byTitle) : [];
   return h('div', { class: 'fields' },
-    h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'ボード'), ...(boards.length ? boards.map(b => h('button', { type: 'button', class: 'chip', onclick: () => ctx.go('board', { board: b.id, focus: n.id }) }, b.name)) : [h('span', { class: 'note-text' }, 'なし')]),
-      h('button', { type: 'button', class: 'btn small', onclick: () => showMenu('どのボードに貼るか', Object.values(ctx.world.boards).filter(b => !b.items[n.id]).map(b => [b.name, () => { ctx.commit(w => { w.boards[b.id].items[n.id] = freeSpot(w.boards[b.id]); }, 'ボードに貼る'); }]), innerWidth / 2 - 100, innerHeight / 3) }, '＋ 貼る')),
+    h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'ボード'), ...(boards.length ? boards.map(b => h('button', { type: 'button', class: 'chip', onclick: () => b.owner && b.owner !== n.id ? ctx.openElement(b.owner) : ctx.go('board', { board: b.id, focus: n.id }) }, boardLabel(w, b))) : [h('span', { class: 'note-text' }, 'なし')]),
+      h('button', { type: 'button', class: 'btn small', onclick: () => pinTo(ctx, n.id) }, '＋ 貼る')),
     maps.length ? h('div', { class: 'row' }, h('span', { class: 'lbl' }, '地図'), ...maps.map(m => h('button', { type: 'button', class: 'chip', onclick: () => ctx.go('map', { map: m.id, focus: n.id }) }, m.name))) : null,
     h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'この付箋へのリンク'), ...(back.length ? back.map(o => noteChip(ctx, o.id)) : [h('span', { class: 'note-text' }, 'なし')])));
+}
+// 貼る：自由なボードか、要素のボード（要素のボードはなければ作る）を選ぶ
+function pinTo(ctx, id) {
+  const w = ctx.world, on = new Set(Object.values(w.boards).filter(b => b.items[id]).map(b => b.owner || b.id));
+  const free = Object.values(w.boards).filter(b => !b.owner && !on.has(b.id)).map(b => [b.name, () => ctx.commit(w => { w.boards[b.id].items[id] = freeSpot(w.boards[b.id]); }, 'ボードに貼る')]);
+  const els = Object.values(w.notes).filter(o => isElement(o) && o.id !== id && !on.has(o.id)).sort(byTitle)
+    .map(o => [`${KINDS[kindOf(o)].label}：${o.title || '名前なし'}`, () => pickBoard(ctx, o.id, id)]);
+  showMenu('どのボードに貼るか', [...free, ...(free.length && els.length ? ['-'] : []), ...els], innerWidth / 2 - 100, innerHeight / 4);
+}
+async function pickBoard(ctx, owner, id) {
+  const { ensureOwnBoard } = await import('./elements.js');
+  const bid = ensureOwnBoard(ctx, owner);
+  ctx.commit(w => { w.boards[bid].items[id] = freeSpot(w.boards[bid]); }, 'ボードに貼る');
 }
 // ボードの空いている所（右下へずらしていく）
 export function freeSpot(b) {

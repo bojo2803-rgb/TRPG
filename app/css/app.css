@@ -142,6 +142,30 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 .ngroup + .ngroup { margin-top: 18px; }
 .ngroup h3 { font-size: 13px; margin: 0 0 8px; }
 
+/* 要素（人物・シナリオ・アイテム・集団） */
+.kind-badge { display: inline-block; font-size: 11px; line-height: 1; padding: 3px 6px; border-radius: 3px; background: var(--fg); color: var(--bg); font-weight: 600; letter-spacing: .04em; }
+.kind-badge.k-person { background: var(--c-c4); } .kind-badge.k-scenario { background: var(--c-c5); } .kind-badge.k-item { background: var(--c-c6); } .kind-badge.k-group { background: var(--c-c3); }
+.ncard.el { border-left: 4px solid var(--fg); }
+.el-head h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.el-board, .el-main { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+.el-tools { padding: 8px 16px 0; flex-wrap: wrap; gap: 6px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { all: unset; cursor: pointer; padding: 4px 10px; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.seg button:focus-visible { outline: 2px solid var(--accent); }
+input.add-name { min-width: 0; flex: 1 1 220px; max-width: 320px; }
+.bcard.el { border-width: 2px; border-color: var(--fg); }
+.bcard.el .kind-badge { position: absolute; top: -9px; left: 8px; }
+.bcard.owner { box-shadow: 0 0 0 3px var(--accent), var(--shadow); }
+.session { border-left: 3px solid var(--line); padding-left: 8px; display: grid; gap: 4px; }
+.session input[type="date"] { width: auto; }
+.org-node { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; background: var(--paper); border: 2px solid var(--fg); border-radius: 6px; box-shadow: var(--shadow); cursor: pointer; font-size: 12px; overflow: hidden; }
+.org-node b { font-size: 13px; margin-bottom: 2px; }
+.org-node span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.org-l { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+.org-l.extra { stroke-dasharray: 4 4; }
+.g-elabel { font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+
 /* 付箋の編集画面 */
 .ne { min-height: 100%; box-sizing: border-box; padding: 0 0 24px; border-top: 6px solid var(--paper); }
 .ne-head { position: sticky; top: 0; z-index: 2; display: grid; gap: 6px; padding: 10px 16px 8px; background: var(--surface); border-bottom: 1px solid var(--line); }

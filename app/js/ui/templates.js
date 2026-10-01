@@ -1,20 +1,20 @@
-// テンプレート：タグごとに決まった入力欄を持たせる。画面上で作り、直せる
+// テンプレート：種類（人物・シナリオなど）やタグごとに、決まった入力欄を持たせる。画面上で作り、直せる
 import { h, uid } from '../util.js';
-import { allTags } from '../model.js';
+import { allTags, KINDS, kindOf } from '../model.js';
 
 const TYPES = [['text', '1行の文字'], ['long', '複数行の文字'], ['number', '数'], ['date', '日付（文字）'], ['select', '選ぶ（選択肢）'], ['section', '見出し（区切り）']];
 let selected = null;
 
 export function mount(el, ctx) {
   const side = h('div', { class: 'tpl-side' }), main = h('div', { class: 'tpl-main scroll' });
-  el.append(h('div', { class: 'bar' }, h('h2', {}, 'テンプレート'), h('span', { class: 'note-text' }, 'タグを付けた付箋に、決まった入力欄が出ます'), h('span', { class: 'sp' }),
-    h('button', { type: 'button', class: 'btn', onclick: () => { const t = { id: uid('tpl'), name: '新しいテンプレート', tags: [], fields: [] }; ctx.commit(w => { w.templates[t.id] = t; }, 'テンプレートを追加'); selected = t.id; render(); } }, '＋ テンプレート')),
+  el.append(h('div', { class: 'bar' }, h('h2', {}, 'テンプレート'), h('span', { class: 'note-text' }, '選んだ種類のカードと、タグを付けたカードに、決まった入力欄が出ます'), h('span', { class: 'sp' }),
+    h('button', { type: 'button', class: 'btn', onclick: () => { const t = { id: uid('tpl'), name: '新しいテンプレート', tags: [], kinds: [], fields: [] }; ctx.commit(w => { w.templates[t.id] = t; }, 'テンプレートを追加'); selected = t.id; render(); } }, '＋ テンプレート')),
     h('div', { class: 'tpl-wrap' }, side, main));
   const render = () => {
     const w = ctx.world, list = Object.values(w.templates);
     if (!w.templates[selected]) selected = list[0]?.id || null;
     side.replaceChildren(...list.map(t => h('button', { type: 'button', class: 'tpl-item', 'aria-current': String(t.id === selected), onclick: () => { selected = t.id; render(); } },
-      h('b', {}, t.name), h('span', { class: 'note-text' }, t.tags.length ? t.tags.map(x => '#' + x).join(' ') : 'タグなし（どの付箋にも出ない）'))));
+      h('b', {}, t.name), h('span', { class: 'note-text' }, [...(t.kinds || []).map(k => KINDS[k].label), ...t.tags.map(x => '#' + x)].join(' ') || 'どのカードにも出ない'))));
     const t = w.templates[selected];
     if (!t) { main.replaceChildren(h('p', { class: 'note-text' }, 'テンプレートがありません')); return; }
     const set = (fn, label) => ctx.commit(w => fn(w.templates[t.id]), label);
@@ -22,7 +22,9 @@ export function mount(el, ctx) {
     tagIn.addEventListener('change', () => set(x => { x.tags = tagIn.value.split(/[、,，\s]+/).map(s => s.trim().replace(/^#/, '')).filter(Boolean); }, 'テンプレートのタグを変更'));
     const nameIn = h('input', { value: t.name, 'aria-label': 'テンプレートの名前' });
     nameIn.addEventListener('change', () => set(x => { x.name = nameIn.value.trim() || '名前なし'; }, 'テンプレートの名前を変更'));
-    const used = Object.values(w.notes).filter(n => t.tags.some(tag => n.tags.includes(tag))).length;
+    const used = Object.values(w.notes).filter(n => t.tags.some(tag => n.tags.includes(tag)) || (t.kinds || []).includes(kindOf(n))).length;
+    const kinds = h('div', { class: 'row', role: 'group', 'aria-label': 'この種類に出す' }, ...Object.entries(KINDS).map(([k, v]) => h('label', { class: 'cb' },
+      h('input', { type: 'checkbox', checked: (t.kinds || []).includes(k), onchange: e => set(x => { x.kinds = Object.keys(KINDS).filter(y => y === k ? e.target.checked : (x.kinds || []).includes(y)); }, 'テンプレートの種類を変更') }), v.label)));
     const rows = t.fields.map((f, i) => {
       const label = h('input', { value: f.label, 'aria-label': '項目名' });
       label.addEventListener('change', () => set(x => { x.fields[i].label = label.value.trim() || '項目'; }, '項目名を変更'));
@@ -38,8 +40,9 @@ export function mount(el, ctx) {
     let armed = false;
     main.replaceChildren(h('div', { class: 'fields' },
       h('label', {}, '名前', nameIn),
-      h('label', {}, 'このタグの付箋に入力欄を出す（「、」で区切る）', tagIn, h('datalist', { id: 'tpl-tags' }, ...allTags(w).map(x => h('option', { value: x })))),
-      h('p', { class: 'note-text' }, `いま当てはまる付箋：${used}枚。項目を消しても、付箋に入れた値は消えません（項目を戻すとまた出ます）。`),
+      h('div', { class: 'fields' }, h('span', {}, 'この種類のカードに出す'), kinds),
+      h('label', {}, 'このタグのカードにも出す（「、」で区切る）', tagIn, h('datalist', { id: 'tpl-tags' }, ...allTags(w).map(x => h('option', { value: x })))),
+      h('p', { class: 'note-text' }, `いま当てはまるカード：${used}枚。項目を消しても、入れた値は消えません（項目を戻すとまた出ます）。`),
       h('h3', {}, '項目'),
       h('div', { class: 'tpl-rows' }, ...rows),
       h('div', { class: 'row' },

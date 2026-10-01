@@ -12,7 +12,7 @@ await p.evaluate(() => {
     w.notes[me].body = '[[妹]]と[[父]]の話'; w.notes[sis].parents = [f];
   });
 });
-await p.click('nav button[data-id="family"]'); await p.waitForTimeout(500);
+await p.evaluate(() => __app.go('people', { sub: 'family' })); await p.waitForTimeout(700);
 ok(await p.locator('.fam-node').count() === 6, 'family nodes');
 const y = await p.evaluate(() => [...document.querySelectorAll('.fam-node')].map(n => [n.textContent, parseFloat(n.style.top)]));
 const top = Object.fromEntries(y.map(([t, v]) => [t.replace(/[^一-龠ぁ-んァ-ン]/g, ''), v]));
@@ -42,6 +42,7 @@ ok(Math.abs(pin.x - 400) < 5 && Math.abs(pin.y - 300) < 5, 'pin at clicked spot:
 await p.screenshot({ path: '/tmp/claude-0/-home-user-TRPG/d9632758-4ca0-5713-8fd6-526324b6f925/scratchpad/app-map.png' });
 // テンプレート：項目を足す → 付箋に出る
 await p.click('nav button[data-id="templates"]'); await p.waitForTimeout(300);
+await p.click('.tpl-item:has-text("クトゥルフ")'); await p.waitForTimeout(200);
 await p.click('text=＋ 項目'); await p.waitForTimeout(200);
 await p.fill('.tpl-row:last-child input', '好きな神話生物'); await p.locator('.tpl-row:last-child input').press('Tab'); await p.waitForTimeout(200);
 await p.evaluate(() => __app.openNote(Object.values(__app.world.notes).find(n => n.title === '私').id)); await p.waitForTimeout(300);

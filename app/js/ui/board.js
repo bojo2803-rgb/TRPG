@@ -2,18 +2,21 @@
 // 付箋を引っぱって動かす／右の● を引っぱってほかの付箋で離すとつながる（何もない所で離すと新しい付箋を作ってつなぐ）／
 // 背景を引っぱって動かす・ホイールやピンチで拡大縮小／まとめの ▾ でたたむ
 import { h, esc, debounce } from '../util.js';
-import { newBoard, newLink, newNote, childrenOf } from '../model.js';
+import { newBoard, newLink, newNote, childrenOf, KINDS, kindOf, isElement } from '../model.js';
 import { hiddenOnBoard, hiddenCount, edgePoint } from './boardRules.js';
 import { pickNote } from './picker.js';
-import { editLink, ownBoard, freeSpot } from './noteEditor.js';
+import { editLink, freeSpot } from './noteEditor.js';
+import { boardLabel } from './elements.js';
 import { renderMarkdown } from './markdown.js';
 import { quickInput } from './quickNote.js';
 
 const views = new Map(); // ボードごとの表示位置 { x, y, z }
 const CARD_W = 190;
-const KIND_STYLE = { parent: { dash: '', label: '親子' }, spouse: { dash: '', label: '夫婦' }, order: { dash: '6 4', label: '' } };
+const KIND_STYLE = { parent: { dash: '', label: '親子' }, spouse: { dash: '', label: '夫婦' }, order: { dash: '6 4', label: '' }, member: { dash: '8 5', label: '所属' }, holds: { dash: '2 4', label: '持ち物' } };
 
+// arg.embedded：要素のタブの中に出す（ボードの切り替えやメニューは出さない）
 export function mount(el, ctx, arg) {
+  const embedded = !!arg?.embedded;
   let boardId = arg?.board || ctx.viewArg()?.board || lastBoard(ctx);
   const bar = h('div', { class: 'bar' });
   const stage = h('div', { class: 'board-stage', tabindex: '0', 'aria-label': 'ボード' });
@@ -22,9 +25,8 @@ export function mount(el, ctx, arg) {
   svg.classList.add('board-links');
   worldEl.append(svg);
   stage.append(worldEl);
-  // 書き留める欄：書いて Enter で、見ている所に貼る（続けて書くと少しずつずらす）
-  let qn = 0;
-  const placeNew = (w, id) => { const p = center(), o = (qn++ % 6) * 26; w.boards[boardId].items[id] = { x: Math.round(p.x - CARD_W / 2 + o), y: Math.round(p.y - 30 + o) }; };
+  // 書き留める欄：書いて Enter で、見ている所の近くの空いている所に貼る（真ん中から外へ探す）
+  const placeNew = (w, id) => { w.boards[boardId].items[id] = spotNear(Object.values(w.boards[boardId].items), center()); };
   const quick = quickInput(ctx, { placeholder: 'このボードに書き留める（Enter で貼る。Shift+Enter で改行）', place: placeNew });
   el.append(bar, h('div', { class: 'quick-row' }, quick), stage);
   let view = null, sizes = new Map(), drag = null, pinch = null;
@@ -38,16 +40,19 @@ export function mount(el, ctx, arg) {
   function renderBar() {
     const w = ctx.world, b = board();
     const boards = Object.values(w.boards);
-    const label = x => x.owner ? `${w.notes[x.owner]?.title || '名前なし'}の専用ボード` : x.name;
+    const label = x => boardLabel(w, x);
+    if (embedded) {
+      bar.replaceChildren(h('span', { class: 'note-text' }, '付箋を書いて Enter で貼る・● を引っぱってつなぐ・要素のカードを押すとその要素のボードへ'), h('span', { class: 'sp' }), ...tools());
+      return;
+    }
     bar.replaceChildren(...[
       h('h2', {}, 'ボード'),
       h('select', { 'aria-label': 'ボードを選ぶ', onchange: e => { boardId = e.target.value; remember(); render(true); } },
         ...boards.filter(x => !x.owner).map(x => h('option', { value: x.id, selected: x.id === boardId }, label(x))),
-        boards.some(x => x.owner) ? h('optgroup', { label: '付箋の専用ボード' }, ...boards.filter(x => x.owner).map(x => h('option', { value: x.id, selected: x.id === boardId }, label(x)))) : null),
-      b?.owner ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openNote(b.owner) }, '持ち主の付箋を開く') : null,
+        boards.some(x => x.owner) ? h('optgroup', { label: '要素のボード' }, ...boards.filter(x => x.owner).map(x => h('option', { value: x.id, selected: x.id === boardId }, label(x)))) : null),
+      b?.owner ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(b.owner) }, `${KINDS[kindOf(w.notes[b.owner])].label}のタブで開く`) : null,
       h('span', { class: 'sp' }),
-      h('button', { type: 'button', class: 'btn', onclick: () => pickNote(ctx, { title: 'ボードに貼る付箋', exclude: Object.keys(b.items), onPick: id => { const p = center(); ctx.commit(w => { w.boards[boardId].items[id] = { x: p.x - CARD_W / 2, y: p.y - 30 }; }, 'ボードに貼る'); } }) }, '＋ 貼る'),
-      h('button', { type: 'button', class: 'btn icon', title: '全体を見る', 'aria-label': '全体を見る', onclick: () => { fit(true); applyView(); } }, '⤢'),
+      ...tools(),
       h('button', { type: 'button', class: 'btn icon', title: 'ボードのメニュー', 'aria-label': 'ボードのメニュー', onclick: e => ctx.menuAt(e.currentTarget, null, [
         ['＋ 新しいボード', () => { const nb = newBoard({ name: `ボード${Object.values(ctx.world.boards).filter(x => !x.owner).length + 1}` }); ctx.commit(w => { w.boards[nb.id] = nb; }, 'ボードを追加'); boardId = nb.id; remember(); render(true); }],
         ['名前を変える', () => ctx.openDialog({ title: 'ボードの名前', body: `<label>名前<input id="bd_name" value="${esc(board().name)}" autocomplete="off"></label>`, onSave: () => { const v = document.getElementById('bd_name').value.trim(); if (!v) throw '名前を入れてください'; ctx.commit(w => { w.boards[boardId].name = v; }, 'ボードの名前を変更'); } })],
@@ -57,7 +62,11 @@ export function mount(el, ctx, arg) {
         } }), { danger: true }],
       ]) }, '…')].filter(Boolean));
   }
-  const remember = () => { try { localStorage.setItem('trpg-last-board', boardId); } catch { /* なし */ } };
+  const tools = () => [
+    h('button', { type: 'button', class: 'btn', onclick: () => pickNote(ctx, { title: 'ボードに貼るカード', exclude: Object.keys(board().items), onPick: id => { const p = center(); ctx.commit(w => { w.boards[boardId].items[id] = { x: p.x - CARD_W / 2, y: p.y - 30 }; }, 'ボードに貼る'); } }) }, '＋ 貼る'),
+    h('button', { type: 'button', class: 'btn icon', title: '全体を見る', 'aria-label': '全体を見る', onclick: () => { fit(true); applyView(); } }, '⤢'),
+  ];
+  const remember = () => { if (embedded) return; try { localStorage.setItem('trpg-last-board', boardId); } catch { /* なし */ } };
   const center = () => { const r = stage.getBoundingClientRect(); return toWorld(r.left + r.width / 2, r.top + r.height / 2); };
 
   // all：全体を収める。初めて開くときは、小さくなりすぎるなら（スマホ）字が読める大きさで左上から見せる
@@ -76,7 +85,9 @@ export function mount(el, ctx, arg) {
     const kids = childrenOf(ctx.world, n.id).filter(k => b.items[k.id]);
     const collapsed = b.collapsed.includes(n.id), nh = collapsed ? hiddenCount(ctx.world, b, hidden, n.id) : 0;
     const body = n.body ? n.body.split('\n').filter(l => l.trim()).slice(0, 3).join('\n') : '';
-    return h('div', { class: `bcard p-${n.color ?? 0}${ctx.openedNote() === n.id ? ' sel' : ''}`, 'data-id': n.id, style: { left: pos.x + 'px', top: pos.y + 'px', width: CARD_W + 'px' }, tabindex: '0', role: 'button', 'aria-label': n.title || '名前なし' },
+    const k = kindOf(n);
+    return h('div', { class: `bcard p-${n.color ?? 0}${ctx.openedNote() === n.id ? ' sel' : ''}${k === 'note' ? '' : ` el k-${k}`}${b.owner === n.id ? ' owner' : ''}`, 'data-id': n.id, style: { left: pos.x + 'px', top: pos.y + 'px', width: CARD_W + 'px' }, tabindex: '0', role: 'button', 'aria-label': n.title || '名前なし' },
+      k === 'note' ? null : h('span', { class: `kind-badge k-${k}` }, KINDS[k].label),
       h('div', { class: 'bcard-t' }, n.title || '（名前なし）'),
       n.tags.length ? h('div', { class: 'bcard-tags' }, n.tags.map(t => '#' + t).join(' ')) : null,
       body ? h('div', { class: 'bcard-b md', html: renderMarkdown(body, { resolveLink: () => null }) }) : null,
@@ -157,7 +168,7 @@ export function mount(el, ctx, arg) {
     if (d.kind === 'fold') ctx.commit(w => { const b = w.boards[boardId]; b.collapsed = b.collapsed.includes(d.id) ? b.collapsed.filter(x => x !== d.id) : [...b.collapsed, d.id]; }, 'まとめをたたむ・ひらく');
     else if (d.kind === 'card') {
       if (d.moved > 3) { const p = board().items[d.id]; board().items[d.id] = { x: d.x, y: d.y }; ctx.commit(w => { w.boards[boardId].items[d.id] = { x: Math.round(p.x), y: Math.round(p.y) }; }, '付箋を動かす'); }
-      else ctx.openNote(d.id);
+      else openCard(d.id);
     } else if (d.kind === 'link') {
       const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.bcard[data-id]');
       if (target && target.dataset.id !== d.id) { const l = newLink(d.id, target.dataset.id); ctx.commit(w => { w.links[l.id] = l; }, 'つなぐ'); }
@@ -170,6 +181,8 @@ export function mount(el, ctx, arg) {
     } else if (d.kind === 'linkclick') editLink(ctx, d.id);
     views.set(boardId, view);
   };
+  // 要素のカード：その要素のボードへ（このボードの持ち主なら詳しい画面）
+  const openCard = id => isElement(ctx.world.notes[id]) && board().owner !== id ? ctx.openElement(id) : ctx.openNote(id);
   stage.addEventListener('pointerup', end);
   stage.addEventListener('pointercancel', end);
   function zoomAt(f, cx, cy) {
@@ -185,15 +198,15 @@ export function mount(el, ctx, arg) {
     e.preventDefault();
     const id = c.dataset.id;
     ctx.showMenu(esc(ctx.world.notes[id].title || '名前なし'), [
-      ['開く', () => ctx.openNote(id)],
-      ['専用のボードを開く', () => ownBoard(ctx, id)],
+      ['詳しく見る', () => ctx.openNote(id)],
+      ...(isElement(ctx.world.notes[id]) && board().owner !== id ? [['この要素のボードへ', () => ctx.openElement(id)]] : []),
       ['このボードから外す（付箋は残る）', () => ctx.commit(w => { delete w.boards[boardId].items[id]; }, 'ボードから外す')],
       ['付箋を削除', () => ctx.deleteNote(id), { danger: true }],
     ], e.clientX, e.clientY);
   });
   stage.addEventListener('keydown', e => {
     const c = document.activeElement?.closest?.('.bcard[data-id]');
-    if (c && e.key === 'Enter') ctx.openNote(c.dataset.id);
+    if (c && e.key === 'Enter') openCard(c.dataset.id);
   });
   const onResize = debounce(() => applyView(), 100);
   addEventListener('resize', onResize);
@@ -206,6 +219,17 @@ export function mount(el, ctx, arg) {
     update: e => { if (e?.type !== 'search') render(); },
     destroy: () => removeEventListener('resize', onResize),
     placeNew,
+    state: () => ({ board: boardId }),
   };
+}
+// 空いている所：c のまわりを、カード1枚ぶんずつ外へ広げて探す
+export function spotNear(items, c) {
+  const x0 = Math.round(c.x - CARD_W / 2), y0 = Math.round(c.y - 30), free = (x, y) => !items.some(p => Math.abs(p.x - x) < CARD_W + 12 && Math.abs(p.y - y) < 84);
+  for (let r = 0; r < 8; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    const x = x0 + dx * (CARD_W + 24), y = y0 + dy * 96;
+    if (free(x, y)) return { x, y };
+  }
+  return { x: x0, y: y0 };
 }
 export { freeSpot };
