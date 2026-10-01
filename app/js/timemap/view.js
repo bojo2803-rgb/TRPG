@@ -2,7 +2,7 @@
 //   世界線 world.tracks、出来事 = 「時系列」のある付箋、主体 = 道筋（legs）のある付箋、まとめ = 出来事の親の付箋
 //   時系列マップの中では日時を「日の小数」で扱う。書き戻すときは、元の {d,s} に正確に戻す（丸めで日時がずれないように）
 import { h } from '../util.js';
-import { newNote } from '../model.js';
+import { newNote, kindOf } from '../model.js';
 import { toDays, fromDays, utcToWall, wallToUtc } from '../cal/time.js';
 import { formatTime, yearLengthOf } from '../cal/index.js';
 import { formatFict } from '../cal/fict.js';
@@ -23,6 +23,7 @@ export function mount(el, ctx, arg) {
         <button class="chip tool" id="tm-addTrack">＋ 世界線</button>
         <button class="chip tool" id="tm-addLink" title="出発点と行き先を順にクリックして、主体の移動やループを作ります">＋ つなぐ</button>
         <button class="chip tool" id="tm-addSub">＋ 主体</button>
+        <button class="chip tool" id="tm-addScen" title="出来事をまとめてシナリオにする（もやで覆われます）">＋ シナリオ</button>
         <button class="chip tool" id="tm-editSub" disabled title="主体の視点で使えます">この主体を編集</button>
         <button class="chip tool" id="tm-listBtn" aria-pressed="false">一覧</button>
       </div>
@@ -76,8 +77,9 @@ export function mount(el, ctx, arg) {
         if (n.when.branch) e.branch = true;
         if (n.when.k) e.k = n.when.k;
         if (n.when.per) e.per = JSON.parse(JSON.stringify(n.when.per));
-        const g = n.parents.find(p => w.notes[p]);
-        if (g) { e.group = g; groups[g] ||= { title: w.notes[g].title || '（名前なし）', open: !w.notes[g].collapsed }; }
+        // シナリオ（なければ最初のまとめ）。時系列ではもやで覆う
+        const g = n.parents.find(p => kindOf(w.notes[p]) === 'scenario') || n.parents.find(p => w.notes[p]);
+        if (g) { e.group = g; groups[g] ||= { title: w.notes[g].title || '（名前なし）', open: !w.notes[g].collapsed, color: w.notes[g].color ?? null }; }
         events.push(e);
       }
       if (n.legs) {
@@ -175,6 +177,7 @@ export function mount(el, ctx, arg) {
     },
   };
   const tm = createTimeMap(root, host);
+  root.querySelector('#tm-addScen').onclick = () => scenarioDialog(ctx);
   tm.refresh(true);
   window.__tm = tm; // 自動確認用
   if (arg?.focus) setTimeout(() => tm.focusNote(arg.focus), 50);
@@ -185,4 +188,33 @@ export function mount(el, ctx, arg) {
     update: e => { if (e?.type !== 'search') tm.refresh(false); },
     destroy: () => tm.destroy(),
   };
+}
+
+// ＋ シナリオ：名前（いまあるシナリオの名前なら、そこに足す）と、入れる出来事（世界線ごと・時間順）を選ぶ
+function scenarioDialog(ctx) {
+  const w = ctx.world, scen = Object.values(w.notes).filter(n => kindOf(n) === 'scenario');
+  const name = h('input', { list: 'tm-scen-list', placeholder: 'シナリオの名前', autocomplete: 'off', 'aria-label': 'シナリオの名前' });
+  const evs = Object.values(w.notes).filter(n => n.when && w.tracks.some(t => t.id === n.when.tr));
+  const key = n => n.when.t.d * 86400 + n.when.t.s;
+  const boxes = w.tracks.map(tr => {
+    const list = evs.filter(n => n.when.tr === tr.id).sort((a, b) => key(a) - key(b));
+    return list.length ? h('fieldset', { class: 'scen-pick' }, h('legend', {}, tr.name), ...list.map(n => h('label', { class: 'cb' }, h('input', { type: 'checkbox', value: n.id }),
+      `${formatTime(n.when.t, { track: tr, tz: n.when.tz, prec: n.when.prec }, w)}　${n.title || '（名前なし）'}`))) : null;
+  });
+  ctx.openDialog({
+    title: '＋ シナリオ', ok: '作る', wide: true,
+    body: h('div', { class: 'fields' }, h('label', {}, 'シナリオの名前', name, h('datalist', { id: 'tm-scen-list' }, ...scen.map(n => h('option', { value: n.title })))),
+      h('p', { class: 'note-text' }, '入れる出来事を選んでください。時系列では、選んだ出来事がもやで覆われます。'), ...boxes),
+    onSave: () => {
+      const t = name.value.trim();
+      if (!t) throw '名前を入れてください';
+      const ids = [...document.querySelectorAll('#dlgBody .scen-pick input:checked')].map(x => x.value);
+      if (!ids.length) throw '出来事を1つ以上選んでください';
+      ctx.commit(w => {
+        let sc = Object.values(w.notes).find(n => kindOf(n) === 'scenario' && n.title === t);
+        if (!sc) { sc = newNote({ kind: 'scenario', title: t }); w.notes[sc.id] = sc; }
+        for (const id of ids) { const n = w.notes[id]; n.parents = [sc.id, ...n.parents.filter(p => p !== sc.id)]; }
+      }, 'シナリオを作る');
+    },
+  });
 }

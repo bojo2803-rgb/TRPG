@@ -253,9 +253,10 @@ function refreshCards() {
     const e = { tr: q.tr, t: q.a, title: `${sub.name} ${sub.origin ? '分かれて現れる' : '誕生'}`, tags: ['誕生'] };
     if (eventVisible(e)) cards.push({ k: 'b|' + sub.id, e, title: e.title, birth: true });
   }
+  // たたんだシナリオ（まとめ）は1枚の付箋。ひらいているものは、もや（buildScene）が名前を持つ
   for (const gid in firstOf) {
     const g = groups[gid];
-    cards.push({ k: 'g|' + gid, e: events[firstOf[gid]], title: `${g.open ? '▾' : '▸'} ${g.title}`, grp: true, open: g.open });
+    if (!g.open) cards.push({ k: 'g|' + gid, e: events[firstOf[gid]], title: `▸ ${g.title}`, grp: true, open: false });
   }
   cardCount = {};
   for (const c of cards) if (!c.open) { const kk = key(c.e.tr, c.e.t); cardCount[kk] = (cardCount[kk] || 0) + 1; }
@@ -800,7 +801,7 @@ function buildScene(lay, cm) {
     const p = lay.pieces[pl.pi], ref = nref(p, pl.ni), at = pos(ref);
     if (!at) continue;
     const idx = c.k.startsWith('c|') ? c.k.slice(2) : null;
-    spots.push({ id: `cd|${c.k}|${pl.tag}`, c, ref, base: bref(p, pl.ni), x: at[0], row: p.nodes[pl.ni].y, again: pl.again, title: pl.title, w: textW(pl.title) + 18 + (c.e.branch ? 10 : 0),
+    spots.push({ id: `cd|${c.k}|${pl.tag}`, c, pi: pl.pi, ref, base: bref(p, pl.ni), x: at[0], row: p.nodes[pl.ni].y, again: pl.again, title: pl.title, w: textW(pl.title) + 18 + (c.e.branch ? 10 : 0),
       dk: idx != null && pl.k ? `c|${idx}|${pl.k}` : c.k });
   }
   const rows = assignRows(spots);
@@ -813,6 +814,22 @@ function buildScene(lay, cm) {
     sc.els[s.id] = { kind: 'card', ref: s.ref, base: s.base, row: r, title: s.title, cls, color: s.c.grp ? null : T[s.c.e.tr].color, w: s.w, dk: s.dk, bp: !!s.c.e.branch };
   }
   sc.more.forEach((g, i) => { sc.els[`mo|${i}`] = { kind: 'more', ref: g.ref, base: g.base, text: `＋${g.titles.length}`, i }; });
+  // シナリオのもや：ひらいているシナリオの付箋を、破片ごとに覆う。名前は「シナリオ・世界線・その世界線で何番目の破片か」で、視点が変わっても突き合わせる
+  const fog = new Map();
+  for (const s of spots) {
+    const g = s.c.e.group, r = rows[s.id];
+    if (!g || !groups[g]?.open || s.c.grp || s.c.birth || s.again || r == null || r < 0) continue;
+    const kk = g + '|' + s.pi;
+    if (!fog.has(kk)) fog.set(kk, { g, tr: lay.pieces[s.pi].tr, x: s.x, mem: [] });
+    const f = fog.get(kk);
+    f.x = Math.min(f.x, s.x);
+    f.mem.push({ ref: s.ref, base: s.base, row: r, w: s.w });
+  }
+  const nth = {};
+  for (const f of [...fog.values()].sort((a, b) => a.x - b.x)) {
+    const i = nth[f.g + '|' + f.tr] = (nth[f.g + '|' + f.tr] ?? -1) + 1;
+    sc.els[`fg|${f.g}|${f.tr}|${i}`] = { kind: 'cloud', mem: f.mem, g: f.g, text: groups[f.g].title, color: groups[f.g].color, dim: !!(focusTrack && focusTrack !== f.tr) };
+  }
   // いまの視点（画面の左上）
   sc.els[`hd|${lay.sub.id}`] = { kind: 'head', text: lay.sub.id ? `視点：${lay.sub.name}${Wd < 560 ? '' : '（体験した順に並べています）'}` : '視点：本線（客観）' };
   // 線の当たり判定（止まっているときだけ使う）
@@ -862,7 +879,7 @@ function draw(s0, s1, e, anim) {
     G.rings[id] = p && q ? { ...r, P0: mix(r.P0, p.s, f), P1: mix(r.P1, q.e, f), k: r.k * (1 - f), op: 1 } : { ...r, op: 1 - f };
     if (G.rings[id].k < 1e-6) delete G.rings[id]; // ほどけきった輪は、ただの線（区切りをそのまま描く）
   }
-  let back = '', mid = '', front = '';
+  let back = '<defs><filter id="tm-fog" x="-10%" y="-20%" width="120%" height="140%"><feGaussianBlur stdDeviation="2.5"/></filter></defs>', mid = '', front = '';
   // いま焦点を当てている線の高さに、左右を貫く横線
   const fy = H / 2 + lerp(s0 ? s0.cm.panY : s1.cm.panY, s1.cm.panY, e);
   back += `<line class="focus" x1="0" y1="${f1(fy)}" x2="${Wd}" y2="${f1(fy)}"/>`;
@@ -920,6 +937,14 @@ function draw(s0, s1, e, anim) {
       }
       case 'more': { const p = at('ref'), pb = at('base'); if (!p || !pb) break; const w = textW(el.text) + 12, top = pb[1] - 18 - 4 * 25 - 20; front += `<g class="more" style="${sty(op)}" data-k="m|${el.i}"><rect x="${f1(p[0] - 8)}" y="${f1(top)}" width="${f1(w)}" height="20" rx="10"/><text x="${f1(p[0] - 2)}" y="${f1(top + 14)}">${el.text}</text></g>`; break; }
       case 'head': front += `<text class="lbl head" style="${sty(op)}" x="14" y="24">${esc(el.text)}</text>`; break;
+      case 'cloud': {
+        const ba = a && cloudBox(a, G), bb = b && cloudBox(b, G), bx = ba && bb ? ba.map((v, i) => lerp(v, bb[i], e)) : ba || bb;
+        if (!bx || bx[2] < -40 || bx[0] > Wd + 40) break;
+        const [x0, y0, x1, y1] = [bx[0] - 14, bx[1] - 24, bx[2] + 14, bx[3] + 12];
+        back += `<path class="cloud${el.color != null ? ` p-${el.color}` : ''}" filter="url(#tm-fog)" style="${sty(op * (el.dim ? .35 : 1))}" d="${cloudPath(x0, y0, x1, y1)}"/>`;
+        front += `<text class="cloud-l" data-k="g|${el.g}" style="${sty(op * (el.dim ? .35 : 1))}" x="${f1(x0 + 10)}" y="${f1(y0 + 13)}">☁ ${esc(el.text)}　▾</text>`;
+        break;
+      }
     }
   }
   // 止まっているときだけ、線の当たり判定
@@ -931,6 +956,23 @@ function draw(s0, s1, e, anim) {
     front += `<circle class="pickdot" cx="${f1(ax)}" cy="${f1(ay)}" r="5"/>`;
   }
   svg.innerHTML = back + mid + front;
+}
+// もやの四角：付箋の四角（段の高さを含む）から線の上の点までを囲む
+function cloudBox(el, G) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const m of el.mem) {
+    const p = resolve(m.ref, G), pb = resolve(m.base, G);
+    if (!p || !pb) continue;
+    const top = pb[1] - 18 - m.row * 25 - 20;
+    x0 = Math.min(x0, p[0] - 8); x1 = Math.max(x1, p[0] - 8 + m.w); y0 = Math.min(y0, top); y1 = Math.max(y1, p[1]);
+  }
+  return x0 < x1 ? [x0, y0, x1, y1] : null;
+}
+// 雲の形：四角のふちに沿って、外へふくらむ弧を並べる
+function cloudPath(x0, y0, x1, y1) {
+  const pts = [], edge = (ax, ay, bx, by) => { const L = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.round(L / 22)); for (let i = 1; i <= n; i++) pts.push([ax + (bx - ax) * i / n, ay + (by - ay) * i / n, L / n]); };
+  edge(x0, y0, x1, y0); edge(x1, y0, x1, y1); edge(x1, y1, x0, y1); edge(x0, y1, x0, y0);
+  return `M${f1(x0)},${f1(y0)}` + pts.map(([x, y, s]) => ` A${f1(s * .62)},${f1(s * .62)} 0 0 1 ${f1(x)},${f1(y)}`).join('') + 'Z';
 }
 function render() {
   if (!cur) return;

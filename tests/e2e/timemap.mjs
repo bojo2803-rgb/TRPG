@@ -44,5 +44,20 @@ await p.fill('#k_name', '竜宮の三年'); await p.check('#k_dur_on'); await p.
 await p.click('#dlgOk'); await p.waitForTimeout(1700);
 const len = await p.evaluate(() => { const t = __app.world.tracks.find(t => t.name === '竜宮の三年'); return t.to.d - t.from.d; });
 ok(Math.abs(len - 3 * 365.2425) < 1, 'duration track length: ' + len);
+// ＋ シナリオ：出来事を選んでシナリオにすると、もやで覆われる。名前を押すとたたむ・付箋を押すとひらく
+await p.evaluate(() => __app.go('timemap')); await p.waitForTimeout(1700);
+await p.click('#tm-addScen'); await p.waitForTimeout(300);
+await p.fill('#dlgBody input[aria-label="シナリオの名前"]', '竜宮編');
+const boxes = p.locator('#dlgBody .scen-pick input');
+for (let i = 0; i < Math.min(2, await boxes.count()); i++) await boxes.nth(i).check();
+await p.click('#dlgOk'); await p.waitForTimeout(1700);
+const sc = await p.evaluate(() => Object.values(__app.world.notes).find(n => n.title === '竜宮編'));
+ok(sc?.kind === 'scenario', 'scenario created from the time map');
+const label = p.locator('.tm .cloud-l:has-text("竜宮編")'), folded = p.locator('.tm .card.grp:has-text("竜宮編")');
+ok(await label.count() >= 1, 'scenario cloud drawn');
+await label.first().click(); await p.waitForTimeout(1700);
+ok(await label.count() === 0 && await folded.count() === 1, 'clicking the cloud name folds it');
+await folded.first().click(); await p.waitForTimeout(1700);
+ok(await label.count() >= 1, 'clicking the folded card opens it again');
 ok(!errors.filter(e => !/404|drive\.js|settings/.test(e)).length, 'errors: ' + errors.join('\n'));
 await b.close(); done();

@@ -328,6 +328,13 @@ input.add-name { min-width: 0; flex: 1 1 220px; max-width: 320px; }
 .tm .jt.k-paradox { stroke: var(--paradox); }
 .tm .jt.loopj { stroke: var(--muted); }
 .tm .hit { fill: none; stroke: transparent; stroke-width: 18; pointer-events: stroke; }
+/* シナリオのもや：白い付箋の色なら、うすい灰色のもや */
+.tm .cloud { fill: var(--soft); fill-opacity: .75; stroke: var(--muted); stroke-opacity: .35; stroke-width: 1.2; }
+.tm .cloud.p-1, .tm .cloud.p-2, .tm .cloud.p-3, .tm .cloud.p-4, .tm .cloud.p-5, .tm .cloud.p-6, .tm .cloud.p-7 { fill: var(--paper); fill-opacity: .9; }
+.tm .cloud-l { fill: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
+.tm .cloud-l:hover { fill: var(--fg); text-decoration: underline; }
+.scen-pick { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; display: grid; gap: 2px; max-height: 220px; overflow: auto; }
+.scen-pick legend { font-size: 12px; font-weight: 600; }
 .tm .card rect.bg { fill: var(--raised); stroke: var(--line); }
 .tm .card text { fill: var(--fg); font-size: 12px; }
 .tm .card.dim { opacity: .22; }
