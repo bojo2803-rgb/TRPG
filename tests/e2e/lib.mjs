@@ -8,7 +8,7 @@ let fails = 0;
 export const ok = (c, msg) => { if (!c) { fails++; console.log('FAIL', msg); } else if (process.env.VERBOSE) console.log('ok', msg); };
 export const done = () => { console.log(fails ? `${fails} failed` : 'all passed'); process.exitCode = fails ? 1 : 0; };
 export async function launch() { return chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' }); }
-export async function openApp(b, { width = 1280, height = 800, fresh = true, dark = false } = {}) {
+export async function openApp(b, { width = 1280, height = 800, fresh = true, dark = false, blank = true } = {}) {
   const ctx = await b.newContext({ viewport: { width, height }, colorScheme: dark ? 'dark' : 'light' });
   const p = await ctx.newPage();
   const errors = [];
@@ -21,5 +21,7 @@ export async function openApp(b, { width = 1280, height = 800, fresh = true, dar
   }
   await p.waitForFunction(() => window.__app && document.getElementById('worldName').textContent !== '…');
   await p.waitForTimeout(300);
+  // はじめて開くと見本の世界。ふつうは白紙の世界を作ってから試す
+  if (blank) { await p.evaluate(() => __app.createWorld('browser', 'テスト')); await p.evaluate(() => __app.go('notes')); await p.waitForTimeout(300); }
   return { p, errors, ctx };
 }

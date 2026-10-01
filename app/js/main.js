@@ -92,6 +92,10 @@ persist.onStatus(s => {
   }
   $('saveStatus').textContent = s.text;
   $('saveStatus').classList.toggle('err', s.state === 'error');
+  // ドライブの鍵の期限が切れて保存できなかったとき：押してつなぎ直す（ログインの画面はボタンからしか開けない）
+  if (s.state === 'error' && persist.current()?.backend === 'drive') $('saveStatus').append(' ', h('button', { type: 'button', class: 'btn small', onclick: async () => {
+    try { await (await import('./persist/drive.js')).connect(); persist.save(); } catch (e) { toast(e.message); }
+  } }, 'つなぎ直して保存'));
 });
 
 // ===== 世界の一覧・作成・入れ替え =====
@@ -213,6 +217,7 @@ ctx.exampleMenu = exampleMenu;
 
 // ===== 起動 =====
 async function start() {
+  (await import('./ui/settings.js')).applyTheme();
   initDialog();
   $('views').replaceChildren(...VIEWS.map(v => h('button', { type: 'button', 'data-id': v.id, onclick: () => showView(v.id) }, v.label)));
   $('worldBtn').onclick = worldMenu;
@@ -238,6 +243,22 @@ async function start() {
   if (!(await localAvailable())) toast('このブラウザでは保存できない設定になっています（プライベートウィンドウなど）。書き出して持ち出してください', 12000);
   const p = pref.get();
   const list = await persist.listAll();
+  // 前回はGoogleドライブの世界：つなぐかどうかを聞く（ログインの画面はボタンを押してからでないと開けない）
+  const drive = await import('./persist/drive.js').catch(() => null);
+  if (p.backend === 'drive' && drive?.wasConnected() && !list.some(x => x.backend === 'drive')) {
+    const local = list.find(x => x.backend === 'browser');
+    if (local) await openWorld('browser', local.id).catch(() => {});
+    else { store.replace(newWorld('（まだ開いていません）')); refreshChrome(); showView('notes'); }
+    openDialog({
+      title: 'Googleドライブにつなぐ', ok: 'つなぐ',
+      body: '<p>前回は、Googleドライブの世界を開いていました。つないで開きますか？</p><p class="note-text">「やめる」を押すと、このブラウザの世界を使います。</p>',
+      onSave: async () => {
+        await drive.connect();
+        await openWorld('drive', p.world).catch(async () => { const l = await persist.listAll(); const d = l.find(x => x.backend === 'drive'); if (d) await openWorld('drive', d.id); });
+      },
+    });
+    return;
+  }
   const last = list.find(x => x.id === p.world && x.backend === p.backend) || list[0];
   if (last) {
     try { await openWorld(last.backend, last.id); return; } catch (e) { console.error(e); toast(`前に開いていた世界を開けませんでした：${e.message}`); }

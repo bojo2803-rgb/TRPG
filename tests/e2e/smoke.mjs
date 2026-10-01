@@ -1,6 +1,10 @@
 import { launch, openApp, ok, done } from './lib.mjs';
 const b = await launch();
-const { p, errors } = await openApp(b);
+const { p, errors } = await openApp(b, { blank: false });
+// はじめて開くと見本の世界。白紙の世界を作って試す
+ok(await p.evaluate(() => Object.keys(__app.world.notes).length > 10), 'first run opens the sample world');
+await p.evaluate(() => __app.createWorld('browser', 'テスト')); await p.waitForTimeout(300);
+await p.click('nav button[data-id="notes"]');
 await p.click('#newNote');
 await p.fill('.ne-title', 'ナイアーラトテップ');
 await p.locator('.ne-title').press('Tab');
@@ -10,7 +14,7 @@ ok(await p.locator('.tpl-grid').count() === 1, 'CoC6 template fields appear for 
 await p.fill('.tpl-grid input >> nth=0', '神父');
 await p.fill('.ne-body', '# 正体\n**這い寄る混沌**。[[アーカム]]に現れる');
 await p.locator('.ne-body').blur();
-await p.click('text=表示');
+await p.click('.md-tools button:has-text("表示")');
 ok(await p.locator('.md h3').textContent() === '正体', 'markdown heading');
 ok(await p.locator('.md a.nlink.missing').count() === 1, 'missing link shown');
 await p.click('.md a.nlink.missing');

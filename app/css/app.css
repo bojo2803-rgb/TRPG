@@ -334,3 +334,10 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 .jmp { display: grid; gap: 4px; }
 #s_legs > .leg:first-child .jmp { display: none; }
 @media (max-width: 760px) { .tm-tools { width: 100%; } .tm-panel { grid-template-columns: 1fr; } }
+
+/* 設定・ランダム */
+.settings h3 { font-family: var(--font-title); font-size: 15px; margin: 10px 0 0; }
+.st-group { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px 10px; display: grid; gap: 8px; }
+.st-group legend { font-weight: 600; font-size: 13px; padding: 0 4px; }
+.rnd-name { font-family: var(--font-title); font-size: 20px; margin: 4px 0; }
+.rnd .tpl-grid b { font-size: 15px; }

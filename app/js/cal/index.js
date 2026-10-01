@@ -3,7 +3,7 @@ import { utcToWall, fmtHM, fmtOffset, offsetSeconds } from './time.js';
 import { formatWestern, isDeepPast, agoText } from './western.js';
 import { formatWareki } from './wareki.js';
 import * as kyureki from './kyureki.js';
-import { formatHijri } from './hijri.js';
+import { formatHijri, sunsetMecca } from './hijri.js';
 import { formatFict, meanYear } from './fict.js';
 
 // 暦の一覧（よく使われる順）。架空の暦は世界ごと
@@ -44,7 +44,10 @@ export function formatTime(t, opts = {}, world = null) {
     }
     const tz = opts.tz || settings.tz || 'UTC', w = utcToWall(tz, tt);
     if (isDeepPast(w.d)) return agoText(w.d);
-    const s = formatDay(w.d, opts.cal || 'west', prec === 'minute' ? 'day' : prec, settings);
+    let day = w.d;
+    // ヒジュラ暦で「日没で区切る」：メッカの日没より後の時刻は、次のヒジュラ暦の日
+    if (opts.cal === 'hijri' && settings.cal?.hijri?.dayStart === 'sunset' && prec === 'minute') { const ss = sunsetMecca(w.d); if (ss != null && tt.d + tt.s / 86400 - 0.5 >= ss) day = w.d + 1; }
+    const s = formatDay(day, opts.cal || 'west', prec === 'minute' ? 'day' : prec, settings);
     return withTime && prec === 'minute' ? `${s} ${fmtHM(w.s)}` : s;
   };
   let text = one(t, true);

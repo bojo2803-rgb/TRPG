@@ -17,6 +17,7 @@ export function mount(el, ctx) {
       h('span', { class: 'note-text' }, `${Object.keys(w.notes).length}枚`),
       h('span', { class: 'sp' }),
       h('select', { 'aria-label': '並べ方', onchange: e => { state.sort = e.target.value; render(); } }, ...Object.entries(SORTS).map(([k, v]) => h('option', { value: k, selected: k === state.sort }, v))),
+      h('button', { type: 'button', class: 'btn', title: '名前・能力値・メモまで、でたらめなキャラクターを作る（発想のきっかけ）', onclick: async () => (await import('./random.js')).open(ctx) }, '🎲 ランダムなキャラクター'),
       h('button', { type: 'button', class: 'btn', onclick: () => ctx.newNote() }, '＋ 付箋'),
       h('div', { class: 'row tagbar', role: 'group', 'aria-label': 'タグで絞る' },
         ...tags.map(t => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(state.tags.has(t)), onclick: () => { state.tags.has(t) ? state.tags.delete(t) : state.tags.add(t); render(); } }, t))),

@@ -56,7 +56,7 @@ export function mount(el, ctx, arg) {
           if (Object.keys(ctx.world.boards).length <= 1) throw '最後のボードは削除できません';
           ctx.commit(w => { delete w.boards[boardId]; }, 'ボードを削除'); boardId = lastBoard(ctx); render(true);
         } }), { danger: true }],
-      ]) }, '…'));
+      ]) }, '…')].filter(Boolean));
   }
   const remember = () => { try { localStorage.setItem('trpg-last-board', boardId); } catch { /* なし */ } };
   const center = () => { const r = stage.getBoundingClientRect(); return toWorld(r.left + r.width / 2, r.top + r.height / 2); };
