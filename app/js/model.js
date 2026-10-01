@@ -118,13 +118,13 @@ export function placePath(w, id) {
   return out;
 }
 export const placeKids = (w, id) => Object.values(w.notes).filter(n => kindOf(n) === 'place' && n.parents.includes(id));
-// そのロケーションと、中のロケーションすべて
-// ponytail: 中を探すたびに全カードを見る（数千件まで）。重くなったら親→子の表を一度だけ作る
-export function inPlace(w, id) {
-  const seen = new Set([id]), st = [id];
-  while (st.length) for (const k of placeKids(w, st.pop())) if (!seen.has(k.id)) { seen.add(k.id); st.push(k.id); }
-  return seen;
+// そこ（中のロケーションも含む）を場所にしているカードの数。道すじ（最初の上のロケーション）でたどる
+export function hereCounts(w) {
+  const c = {};
+  for (const n of Object.values(w.notes)) if (n.at && w.notes[n.at]) for (const p of placePath(w, n.at)) c[p] = (c[p] || 0) + 1;
+  return c;
 }
+export const isWithin = (w, at, id) => !!at && placePath(w, at).includes(id);
 export const mapOf = (w, placeId) => Object.values(w.maps).find(m => m.owner === placeId) || null;
 
 // 地図の線：なくなったピンを結んでいた線を消す

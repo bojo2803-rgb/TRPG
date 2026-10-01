@@ -3,7 +3,7 @@ import { launch, openApp, ok, done } from './lib.mjs';
 const b = await launch();
 const { p, errors } = await openApp(b);
 await p.evaluate(() => { __app.newNote({ title: '地球' }, { open: false }); __app.newNote({ title: '火星' }, { open: false }); });
-await p.click('nav button[data-id="map"]'); await p.waitForTimeout(400);
+await p.evaluate(() => __app.go('map')); await p.waitForTimeout(500);
 await p.click('.bar button:has-text("＋ 地図")'); await p.waitForTimeout(200);
 await p.fill('#mp_name', '太陽系');
 await p.check('input[name="mp_kind"][value="blank"]');

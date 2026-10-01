@@ -26,7 +26,7 @@ ok(await p.locator('.g-node').count() === 6, 'graph nodes: ' + await p.locator('
 ok(await p.locator('.g-body').count() === 2 && await p.locator('.g-group').count() === 1, 'graph body/group edges');
 await p.screenshot({ path: '/tmp/claude-0/-home-user-TRPG/d9632758-4ca0-5713-8fd6-526324b6f925/scratchpad/app-graph.png' });
 // 地図
-await p.click('nav button[data-id="map"]'); await p.waitForTimeout(300);
+await p.evaluate(() => __app.go('map')); await p.waitForTimeout(500);
 await p.click('text=＋ 地図');
 await p.setInputFiles('#mp_file', { name: 'arkham.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><rect width="800" height="600" fill="#cdb"/><path d="M0,300 C200,250 600,350 800,300" stroke="#58a" stroke-width="30" fill="none"/></svg>') });
 await p.fill('#mp_name', 'アーカム');

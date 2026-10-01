@@ -10,7 +10,7 @@ export function panZoom(stage, layer, { onClick, onChange, min = 0.1, max = 4, o
     v.x = sx - (sx - v.x) * (z / v.z); v.y = sy - (sy - v.y) * (z / v.z); v.z = z; apply();
   };
   stage.addEventListener('pointerdown', e => {
-    if (e.button > 0) return;
+    if (e.button > 0 || e.target.closest('button, a, input, select')) return; // 中のボタンは、ふつうに押せるように（つかむとクリックが届かない）
     stage.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) }; drag = null; return; }

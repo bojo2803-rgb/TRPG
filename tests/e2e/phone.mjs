@@ -3,7 +3,7 @@ import { launch, openApp, ok, done } from './lib.mjs';
 const SHOT = '/tmp/claude-0/-home-user-TRPG/d9632758-4ca0-5713-8fd6-526324b6f925/scratchpad/';
 const b = await launch();
 const { p, errors } = await openApp(b, { width: 390, height: 780, blank: false });
-for (const v of ['notes', 'people', 'scenarios', 'items', 'groups', 'board', 'timemap', 'map', 'graph', 'templates']) {
+for (const v of ['notes', 'people', 'scenarios', 'items', 'groups', 'places', 'map', 'board', 'timemap', 'graph', 'templates']) {
   await p.evaluate(v => __app.go(v), v); await p.waitForTimeout(900);
   const over = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   ok(over <= 0, `${v}: page overflows by ${over}px`);

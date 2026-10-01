@@ -1,6 +1,6 @@
 // 要素（人物・シナリオ・アイテム・集団）の編集画面の欄と、期間つきのつながり（所属・持ち主）の窓
 import { h, esc, uid, debounce, byTitle } from '../util.js';
-import { KINDS, kindOf, newBoard, newLink, newNote, childrenOf, findByTitle } from '../model.js';
+import { KINDS, kindOf, newBoard, newLink, newNote, childrenOf, findByTitle, placePath, placeKids, isWithin } from '../model.js';
 import { formatTime } from '../cal/index.js';
 import { pickNote } from './picker.js';
 
@@ -195,6 +195,51 @@ export function orgSec(ctx, w, n) {
     row('下部組織', ...downs.map(k => chip(ctx, k.id, null, () => ctx.commit(w => { w.notes[k.id].parents = w.notes[k.id].parents.filter(x => x !== n.id); }, '下部組織から外す'))),
       add('＋', pick('下部組織', id => ctx.commit(w => { if (!w.notes[id].parents.includes(n.id)) w.notes[id].parents.push(n.id); }, '下部組織を足す'), downs.map(k => k.id)))));
 }
+// ===== ロケーション =====
+export const pathText = (w, id) => placePath(w, id).map(x => w.notes[x].title || '名前なし').join(' › ');
+export const AT_LABEL = { person: 'いる所', item: 'ある所', group: '拠点', scenario: '舞台', note: '起きた所' };
+// 場所の欄（人物・アイテム・集団・シナリオ・出来事）
+export function atSec(ctx, w, n) {
+  const set = id => ctx.commit(w => { w.notes[n.id].at = id; }, '場所を変える');
+  const pick = () => pickNote(ctx, { title: AT_LABEL[kindOf(n)] || '場所', kinds: ['place'], newKind: 'place', exclude: [n.id], onPick: set });
+  return h('div', { class: 'row' },
+    n.at && w.notes[n.at] ? h('span', { class: 'chip p-0' }, h('a', { href: '#', onclick: e => { e.preventDefault(); ctx.openElement(n.at); } }, pathText(w, n.at)),
+      h('button', { type: 'button', class: 'x', 'aria-label': '場所を外す', onclick: () => ctx.commit(w => { delete w.notes[n.id].at; }, '場所を外す') }, '×')) : h('span', { class: 'note-text' }, 'まだ決めていません'),
+    add(n.at ? '変える' : '＋ 決める', pick));
+}
+// 上のロケーション・中のロケーション
+export function nestSec(ctx, w, n) {
+  const ups = n.parents.filter(p => kindOf(w.notes[p]) === 'place'), kids = placeKids(w, n.id).sort(byTitle);
+  return h('div', { class: 'fields' },
+    row('上', ...ups.map(p => chip(ctx, p, null, () => ctx.commit(w => { w.notes[n.id].parents = w.notes[n.id].parents.filter(x => x !== p); }, '上のロケーションから外す'))),
+      add('＋', () => pickNote(ctx, { title: '上のロケーション', kinds: ['place'], newKind: 'place', exclude: [n.id, ...ups], onPick: id => ctx.commit(w => { w.notes[n.id].parents.unshift(id); }, '上のロケーションを足す') }))),
+    row('中', ...kids.map(k => chip(ctx, k.id, k.fields?.['種類'] || null)),
+      add('＋', () => newPlaceDialog(ctx, n.id))));
+}
+// 中にロケーションを作る（名前を入れて Enter）
+export function newPlaceDialog(ctx, parent) {
+  const input = h('input', { autocomplete: 'off', placeholder: '例：東京都・新宿駅・305号室' });
+  ctx.openDialog({
+    title: parent ? `「${ctx.world.notes[parent]?.title || '名前なし'}」の中に作る` : 'ロケーションを作る', ok: '作る',
+    body: h('label', {}, '名前', input),
+    onSave: () => {
+      const t = input.value.trim();
+      if (!t) throw '名前を入れてください';
+      const p = newNote({ kind: 'place', title: t, parents: parent ? [parent] : [] });
+      ctx.commit(w => { w.notes[p.id] = p; }, 'ロケーションを追加');
+    },
+  });
+}
+// ここにあるもの：このロケーションと中のロケーションを場所にしているカード（種類ごと、どこにあるかつき）
+export function hereSec(ctx, w, n) {
+  const here = Object.values(w.notes).filter(o => o.id !== n.id && isWithin(w, o.at, n.id)).sort(byTitle);
+  if (!here.length) return h('p', { class: 'note-text' }, 'まだ何もありません（人物などの「場所」の欄で、ここを選ぶと出ます）');
+  return h('div', { class: 'fields' }, ...['person', 'group', 'item', 'scenario', 'note'].map(k => {
+    const xs = here.filter(o => kindOf(o) === k);
+    return xs.length ? row(k === 'note' ? '出来事など' : KINDS[k].label, ...xs.map(o => chip(ctx, o.id, o.at !== n.id ? `（${w.notes[o.at].title}）` : null))) : null;
+  }));
+}
+
 // 一覧のカードに出す短い説明
 export function summaryOf(w, n) {
   const f = k => n.fields?.[k];

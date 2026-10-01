@@ -2,7 +2,7 @@
 // 名前・色・タグ・テンプレートの入力欄・本文・画像・まとめ（親子）・家族・つながり・時系列・出てくるところ
 import { h, esc, uid, debounce, byTitle } from '../util.js';
 import { templatesFor, allTags, childrenOf, newLink, findByTitle, KINDS, kindOf, isElement } from '../model.js';
-import { membersSec, holdersSec, holdingsSec, scenariosSec, contentsSec, sessionsSec, orgSec, boardLabel } from './elements.js';
+import { membersSec, holdersSec, holdingsSec, scenariosSec, contentsSec, sessionsSec, orgSec, boardLabel, atSec, nestSec, hereSec, AT_LABEL } from './elements.js';
 import { renderMarkdown, imageIds } from './markdown.js';
 import { pickNote } from './picker.js';
 import { openDialog, showMenu, toast } from './dialog.js';
@@ -40,7 +40,8 @@ function render(ctx) {
   // 要素は種類ごとの欄（所属・持ち主・シナリオの中身など）。まとめの欄は、シナリオや組織の上下で表せないものがあるときだけ
   const k = kindOf(n), el = k !== 'note', isSc = id => kindOf(w.notes[id]) === 'scenario', isGr = id => kindOf(w.notes[id]) === 'group';
   const L = Object.values(w.links), mine = (l, kinds) => kinds.includes(l.kind) && (l.a === n.id || l.b === n.id);
-  const otherParents = n.parents.filter(p => !isSc(p) && !(k === 'group' && isGr(p))), otherKids = k === 'scenario' ? [] : childrenOf(w, n.id).filter(c => !(k === 'group' && kindOf(c) === 'group'));
+  const isPl = id => kindOf(w.notes[id]) === 'place';
+  const otherParents = n.parents.filter(p => !isSc(p) && !(k === 'group' && isGr(p)) && !(k === 'place' && isPl(p))), otherKids = k === 'scenario' ? [] : childrenOf(w, n.id).filter(c => !(k === 'group' && kindOf(c) === 'group') && !(k === 'place' && kindOf(c) === 'place'));
   const used = { when: !!(n.when || n.legs), group: otherParents.length > 0 || otherKids.length > 0, family: L.some(l => mine(l, ['parent', 'spouse'])), links: L.some(l => mine(l, ['link', 'order'])), scen: n.parents.some(isSc) };
   const full = showMore, show = key => full || used[key] || (el && key === 'links') || (k === 'person' && (key === 'family' || key === 'when'));
   const edit2 = (fn, label) => edit(ctx, fn, label);
@@ -53,9 +54,12 @@ function render(ctx) {
     k === 'group' ? sec('org', '上部組織・下部組織', orgSec(ctx, w, n)) : null,
     k === 'item' ? sec('holders', '持ち主の移り変わり', holdersSec(ctx, w, n)) : null,
     k === 'person' || k === 'group' ? sec('holdings', '持ち物', holdingsSec(ctx, w, n)) : null,
+    k === 'place' ? sec('nest', '上と中のロケーション', nestSec(ctx, w, n)) : null,
+    k === 'place' ? sec('here', 'ここにあるもの', hereSec(ctx, w, n)) : null,
+    k !== 'place' && (el || n.at || n.when || showMore) ? sec('at', AT_LABEL[k], atSec(ctx, w, n)) : null,
     k === 'scenario' ? sec('contents', '中身', contentsSec(ctx, w, n)) : null,
     k === 'scenario' ? sec('sessions', '遊んだ記録', sessionsSec(ctx, w, n, edit2)) : null,
-    k !== 'scenario' && (el || used.scen || n.when) ? sec('scen', el ? '登場するシナリオ' : 'シナリオ', scenariosSec(ctx, w, n)) : null,
+    k !== 'scenario' && k !== 'place' && (el || used.scen || n.when) ? sec('scen', el ? '登場するシナリオ' : 'シナリオ', scenariosSec(ctx, w, n)) : null,
     show('family') ? sec('family', '家族', familySec(ctx, w, n)) : null,
     show('when') ? sec('when', '時系列', whenSec(ctx, w, n)) : null,
     show('links') ? sec('links', 'つながり', linksSec(ctx, w, n)) : null,
@@ -66,7 +70,7 @@ function render(ctx) {
       h('button', { type: 'button', class: 'btn danger small', onclick: e => {
         if (!armedDelete) { armedDelete = true; e.target.textContent = 'もう一度押すと削除'; return; }
         const t = n.title; ctx.deleteNote(n.id); toast(`「${t || '名前なし'}」を削除しました（元に戻すで戻せます）`);
-      } }, 'この付箋を削除')),
+      } }, `この${KINDS[kindOf(n)].label}を削除`)),
   ));
   panel().scrollTop = scrollTop;
   fillImages(ctx);
@@ -104,7 +108,7 @@ function head(ctx, w, n) {
       } }, '…'),
       h('button', { type: 'button', class: 'btn icon', title: '閉じる', 'aria-label': '閉じる', onclick: () => ctx.closeNote() }, '×')),
     isElement(n) ? h('div', { class: 'row' }, h('span', { class: `kind-badge k-${kindOf(n)}` }, KINDS[kindOf(n)].label), h('span', { class: 'sp' }),
-      h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(n.id) }, 'ボードを開く')) : null,
+      h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(n.id) }, kindOf(n) === 'place' ? '地図・ボードを開く' : 'ボードを開く')) : null,
     h('div', { class: 'row swatches', role: 'radiogroup', 'aria-label': '色' },
       ...COLORS.map((c, i) => h('button', { type: 'button', class: `sw p-${i}`, role: 'radio', 'aria-checked': String((n.color ?? 0) === i), title: c, 'aria-label': c,
         onclick: () => edit(ctx, (w, n) => { n.color = i; }, '色を変更') || render(ctx) }))),

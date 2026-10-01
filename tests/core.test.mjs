@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createStore } from '../app/js/store.js';
-import { newWorld, newNote, newLink, newBoard, deleteNote, migrateWorld, subjectsOf, timedNotes, templatesFor, kindOf, isElement, placePath, inPlace, mapOf, VERSION } from '../app/js/model.js';
+import { newWorld, newNote, newLink, newBoard, deleteNote, migrateWorld, subjectsOf, timedNotes, templatesFor, kindOf, isElement, placePath, hereCounts, isWithin, mapOf, VERSION } from '../app/js/model.js';
 import { renderMarkdown, linkTitles } from '../app/js/ui/markdown.js';
 
 test('undo and redo restore the exact world', () => {
@@ -124,8 +124,9 @@ test('place paths, descendants, and cleanup when a place is deleted', () => {
   p('日本'); p('東京都', ['日本']); p('新宿', ['東京都']); p('ビル', ['新宿']); p('輪A', ['輪B']); p('輪B', ['輪A']);
   assert.deepEqual(placePath(w, 'ビル'), ['日本', '東京都', '新宿', 'ビル']);
   assert.equal(placePath(w, '輪A').length, 2);
-  assert.deepEqual([...inPlace(w, '東京都')].sort(), ['新宿', 'ビル', '東京都'].sort());
   w.notes.人 = newNote({ id: '人', kind: 'person', at: '新宿' });
+  assert.deepEqual(hereCounts(w), { 日本: 1, 東京都: 1, 新宿: 1 });
+  assert.ok(isWithin(w, '新宿', '日本') && !isWithin(w, '新宿', 'ビル'));
   w.maps.m = { id: 'm', name: '東京', owner: '東京都', image: null, w: 2000, h: 1400, pins: [], lines: [] };
   assert.equal(mapOf(w, '東京都').id, 'm');
   deleteNote(w, '東京都');

@@ -18,14 +18,14 @@ const VIEWS = [
   { id: 'scenarios', label: 'シナリオ', load: kindTab('scenario') },
   { id: 'items', label: 'アイテム', load: kindTab('item') },
   { id: 'groups', label: '集団', load: kindTab('group') },
+  { id: 'places', label: 'ロケーション', load: kindTab('place') },
   { id: 'board', label: 'ボード', load: () => import('./ui/board.js') },
   { id: 'timemap', label: '時系列', load: () => import('./timemap/view.js') },
-  { id: 'map', label: '地図', load: () => import('./ui/mapView.js') },
   { id: 'graph', label: 'グラフ', load: () => import('./ui/graph.js') },
   { id: 'templates', label: 'テンプレート', load: () => import('./ui/templates.js') },
 ];
-// 前の版の画面の名前（家系図は人物の中へ移った）
-const OLD_VIEWS = { family: ['people', { sub: 'family' }] };
+// 前の版の画面の名前（家系図は人物の中へ、地図はロケーションの中へ移った）
+const OLD_VIEWS = { family: ['people', { sub: 'family' }], map: ['places', { sub: 'maps' }] };
 
 const store = createStore(newWorld());
 const persist = createPersistence(store);
@@ -73,7 +73,7 @@ export const ctx = {
 window.__app = ctx; // 自動確認用
 
 async function showView(id, arg = null) {
-  if (OLD_VIEWS[id]) [id, arg] = OLD_VIEWS[id];
+  if (OLD_VIEWS[id]) [id, arg] = [OLD_VIEWS[id][0], { ...OLD_VIEWS[id][1], ...arg }];
   const def = VIEWS.find(v => v.id === id) || VIEWS[0];
   view?.destroy?.(); view = null;
   viewId = def.id; viewArg = arg;
