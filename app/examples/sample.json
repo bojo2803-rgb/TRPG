@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 2,
+ "version": 3,
  "id": "w-example-sample",
  "name": "基本のサンプル",
  "settings": {
@@ -28,8 +28,8 @@
   }
  },
  "notes": {
-  "nc5076v2h5": {
-   "id": "nc5076v2h5",
+  "np04iel45r": {
+   "id": "np04iel45r",
    "kind": "scenario",
    "title": "シナリオ：夏の終わりのループ",
    "body": "",
@@ -41,8 +41,8 @@
    "parents": [],
    "collapsed": false
   },
-  "nvqnuso2h5": {
-   "id": "nvqnuso2h5",
+  "nyd9bdr45r": {
+   "id": "nyd9bdr45r",
    "kind": "note",
    "title": "宇宙の始まり",
    "body": "",
@@ -62,8 +62,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ni2wca22h5": {
-   "id": "ni2wca22h5",
+  "n7dujhi45r": {
+   "id": "n7dujhi45r",
    "kind": "note",
    "title": "地球の誕生",
    "body": "",
@@ -83,8 +83,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n22yb8y2h5": {
-   "id": "n22yb8y2h5",
+  "nak0mzp45r": {
+   "id": "nak0mzp45r",
    "kind": "note",
    "title": "恐竜の絶滅",
    "body": "",
@@ -104,8 +104,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nj6rsxc2h5": {
-   "id": "nj6rsxc2h5",
+  "n3z43gz45r": {
+   "id": "n3z43gz45r",
    "kind": "note",
    "title": "亀を助ける",
    "body": "",
@@ -125,8 +125,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nb7qrpy2h5": {
-   "id": "nb7qrpy2h5",
+  "n4z16sd45r": {
+   "id": "n4z16sd45r",
    "kind": "note",
    "title": "竜宮城に着く",
    "body": "",
@@ -146,8 +146,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ns0gyie2h6": {
-   "id": "ns0gyie2h6",
+  "njsabpk45r": {
+   "id": "njsabpk45r",
    "kind": "note",
    "title": "乙姫の宴",
    "body": "",
@@ -167,8 +167,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n2cev3v2h6": {
-   "id": "n2cev3v2h6",
+  "na67g2q45r": {
+   "id": "na67g2q45r",
    "kind": "note",
    "title": "故郷が恋しくなる",
    "body": "",
@@ -188,8 +188,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nmhehze2h6": {
-   "id": "nmhehze2h6",
+  "nz32npv45r": {
+   "id": "nz32npv45r",
    "kind": "note",
    "title": "玉手箱を開ける",
    "body": "",
@@ -209,8 +209,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n6txvuk2h6": {
-   "id": "n6txvuk2h6",
+  "nj417cz45r": {
+   "id": "nj417cz45r",
    "kind": "note",
    "title": "本能寺の変",
    "body": "",
@@ -231,8 +231,8 @@
     "branch": true
    }
   },
-  "nkfbf2z2h6": {
-   "id": "nkfbf2z2h6",
+  "n59s0oc45r": {
+   "id": "n59s0oc45r",
    "kind": "note",
    "title": "本能寺の変（信長が脱出する）",
    "body": "",
@@ -252,8 +252,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nl55x242h6": {
-   "id": "nl55x242h6",
+  "n2bnb7i45r": {
+   "id": "n2bnb7i45r",
    "kind": "note",
    "title": "信長が天下を統一",
    "body": "",
@@ -273,8 +273,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nbq16yo2h6": {
-   "id": "nbq16yo2h6",
+  "n9fjs0s45r": {
+   "id": "n9fjs0s45r",
    "kind": "note",
    "title": "Rが眠りにつく",
    "body": "",
@@ -294,8 +294,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nvzk7as2h6": {
-   "id": "nvzk7as2h6",
+  "ngtifbl45s": {
+   "id": "ngtifbl45s",
    "kind": "note",
    "title": "古い夢の伝承",
    "body": "",
@@ -315,8 +315,8 @@
     "tz": null
    }
   },
-  "n2i4o9s2h6": {
-   "id": "n2i4o9s2h6",
+  "nca8dav45s": {
+   "id": "nca8dav45s",
    "kind": "note",
    "title": "猫の町を訪れる",
    "body": "",
@@ -336,8 +336,8 @@
     "tz": null
    }
   },
-  "nxtsmac2h6": {
-   "id": "nxtsmac2h6",
+  "nc41ego45s": {
+   "id": "nc41ego45s",
    "kind": "note",
    "title": "銀の鍵を得る",
    "body": "",
@@ -357,8 +357,8 @@
     "tz": null
    }
   },
-  "nyxb3v22h6": {
-   "id": "nyxb3v22h6",
+  "n6rrt6145s": {
+   "id": "n6rrt6145s",
    "kind": "note",
    "title": "Rが目覚める",
    "body": "",
@@ -378,8 +378,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nspnbgs2h6": {
-   "id": "nspnbgs2h6",
+  "nvbsh2g45s": {
+   "id": "nvbsh2g45s",
    "kind": "note",
    "title": "時計台に雷",
    "body": "",
@@ -399,8 +399,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nsvh10s2h6": {
-   "id": "nsvh10s2h6",
+  "n3zrt5845s": {
+   "id": "n3zrt5845s",
    "kind": "note",
    "title": "駐車場で実験",
    "body": "",
@@ -420,8 +420,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n52iqmh2h6": {
-   "id": "n52iqmh2h6",
+  "noffdrq45s": {
+   "id": "noffdrq45s",
    "kind": "note",
    "title": "Kが過去へ跳ぶ",
    "body": "",
@@ -442,8 +442,8 @@
     "branch": true
    }
   },
-  "n65ilck2h6": {
-   "id": "n65ilck2h6",
+  "np5brqs45s": {
+   "id": "np5brqs45s",
    "kind": "note",
    "title": "見知らぬ男が現れる",
    "body": "",
@@ -463,8 +463,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nkp1jrt2h6": {
-   "id": "nkp1jrt2h6",
+  "npiuu9345s": {
+   "id": "npiuu9345s",
    "kind": "note",
    "title": "歴史が変わり始める",
    "body": "",
@@ -485,8 +485,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nkji2zg2h6": {
-   "id": "nkji2zg2h6",
+  "ngsby9845s": {
+   "id": "ngsby9845s",
    "kind": "note",
    "title": "ループの始まり",
    "body": "",
@@ -496,7 +496,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nc5076v2h5"
+    "np04iel45r"
    ],
    "when": {
     "tr": "loop1",
@@ -508,8 +508,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nxd9uiq2h6": {
-   "id": "nxd9uiq2h6",
+  "njvqooj45s": {
+   "id": "njvqooj45s",
    "kind": "note",
    "title": "夏祭り",
    "body": "",
@@ -519,7 +519,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nc5076v2h5"
+    "np04iel45r"
    ],
    "when": {
     "tr": "loop1",
@@ -539,8 +539,8 @@
     }
    }
   },
-  "nbifzn22h6": {
-   "id": "nbifzn22h6",
+  "ni8o7ru45s": {
+   "id": "ni8o7ru45s",
    "kind": "note",
    "title": "夏休み最後の夜",
    "body": "",
@@ -550,7 +550,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nc5076v2h5"
+    "np04iel45r"
    ],
    "when": {
     "tr": "loop1",
@@ -562,8 +562,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n4iptrr2h6": {
-   "id": "n4iptrr2h6",
+  "ngcg0n245s": {
+   "id": "ngcg0n245s",
    "kind": "note",
    "title": "少女がループに気づく",
    "body": "",
@@ -573,7 +573,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "nc5076v2h5"
+    "np04iel45r"
    ],
    "when": {
     "tr": "loop1",
@@ -586,8 +586,8 @@
     "k": 3
    }
   },
-  "njgvswb2h6": {
-   "id": "njgvswb2h6",
+  "n7nrsuu45s": {
+   "id": "n7nrsuu45s",
    "kind": "note",
    "title": "同じ一日をくり返す",
    "body": "",
@@ -607,8 +607,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nsjzpbj2h6": {
-   "id": "nsjzpbj2h6",
+  "n2gzzrb45s": {
+   "id": "n2gzzrb45s",
    "kind": "note",
    "title": "夏祭り",
    "body": "",
@@ -628,8 +628,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n8b6utw2h6": {
-   "id": "n8b6utw2h6",
+  "naa3jo445s": {
+   "id": "naa3jo445s",
    "kind": "person",
    "title": "浦島太郎",
    "body": "",
@@ -673,8 +673,8 @@
     }
    ]
   },
-  "nbl79yo2h6": {
-   "id": "nbl79yo2h6",
+  "ndkm0v045s": {
+   "id": "ndkm0v045s",
    "kind": "person",
    "title": "夢見る者R",
    "body": "",
@@ -724,8 +724,8 @@
     }
    ]
   },
-  "nzuiv432h7": {
-   "id": "nzuiv432h7",
+  "nbgfqkc45s": {
+   "id": "nbgfqkc45s",
    "kind": "person",
    "title": "ループする少女",
    "body": "",
@@ -793,8 +793,8 @@
     }
    ]
   },
-  "nuzt3p32h7": {
-   "id": "nuzt3p32h7",
+  "nb94jns45s": {
+   "id": "nb94jns45s",
    "kind": "person",
    "title": "時間旅行者M",
    "body": "",
@@ -838,8 +838,8 @@
     }
    ]
   },
-  "nhltnyb2h7": {
-   "id": "nhltnyb2h7",
+  "nba20t245s": {
+   "id": "nba20t245s",
    "kind": "person",
    "title": "時間旅行者K",
    "body": "",
@@ -876,8 +876,8 @@
     }
    ]
   },
-  "naqa8mm2h7": {
-   "id": "naqa8mm2h7",
+  "neqlmoc45s": {
+   "id": "neqlmoc45s",
    "kind": "person",
    "title": "観測者O",
    "body": "",
@@ -936,8 +936,8 @@
     }
    ]
   },
-  "n2haxrh2h7": {
-   "id": "n2haxrh2h7",
+  "n311w1g45s": {
+   "id": "n311w1g45s",
    "kind": "person",
    "title": "織田信長",
    "body": "",
@@ -959,8 +959,8 @@
     }
    ]
   },
-  "n5mtqyw2h7": {
-   "id": "n5mtqyw2h7",
+  "nehc0vc45s": {
+   "id": "nehc0vc45s",
    "kind": "person",
    "title": "織田信長（世界線γ）",
    "body": "",
@@ -981,50 +981,50 @@
      }
     }
    ],
-   "origin": "n2haxrh2h7"
+   "origin": "n311w1g45s"
   }
  },
  "links": {},
  "boards": {
-  "b9m2qlv2gs": {
-   "id": "b9m2qlv2gs",
+  "blvxl7a45h": {
+   "id": "blvxl7a45h",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "n8b6utw2h6": {
+    "naa3jo445s": {
      "x": 40,
      "y": 40
     },
-    "nbl79yo2h6": {
+    "ndkm0v045s": {
      "x": 270,
      "y": 40
     },
-    "nzuiv432h7": {
+    "nbgfqkc45s": {
      "x": 500,
      "y": 40
     },
-    "nuzt3p32h7": {
+    "nb94jns45s": {
      "x": 730,
      "y": 40
     },
-    "nhltnyb2h7": {
+    "nba20t245s": {
      "x": 960,
      "y": 40
     },
-    "naqa8mm2h7": {
+    "neqlmoc45s": {
      "x": 40,
      "y": 190
     },
-    "n2haxrh2h7": {
+    "n311w1g45s": {
      "x": 270,
      "y": 190
     },
-    "n5mtqyw2h7": {
+    "nehc0vc45s": {
      "x": 500,
      "y": 190
     },
-    "nc5076v2h5": {
+    "np04iel45r": {
      "x": 730,
      "y": 190
     }
@@ -1207,13 +1207,48 @@
      "type": "text"
     },
     {
-     "key": "拠点",
-     "label": "拠点",
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-place": {
+   "id": "tpl-place",
+   "name": "ロケーションの基本",
+   "tags": [],
+   "kinds": [
+    "place"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
      "type": "text"
+    },
+    {
+     "key": "位置",
+     "label": "位置",
+     "type": "text"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "環境",
+     "label": "環境",
+     "type": "long"
     },
     {
      "key": "雰囲気",
      "label": "雰囲気",
+     "type": "long"
+    },
+    {
+     "key": "歴史",
+     "label": "歴史",
      "type": "long"
     }
    ]
@@ -1697,8 +1732,8 @@
  },
  "maps": {},
  "calendars": {
-  "c3wsbpa2h5": {
-   "id": "c3wsbpa2h5",
+  "chszbse45r": {
+   "id": "chszbse45r",
    "name": "夢暦",
    "months": [
     {
@@ -1863,7 +1898,7 @@
     "d": 720000,
     "s": 0
    },
-   "calId": "c3wsbpa2h5"
+   "calId": "chszbse45r"
   },
   {
    "id": "loop1",

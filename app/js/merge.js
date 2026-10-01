@@ -76,11 +76,12 @@ function cleanup(w) {
     for (const id of Object.keys(b.items)) if (!has(id)) delete b.items[id];
     b.collapsed = (b.collapsed || []).filter(has);
   }
-  for (const m of Object.values(w.maps)) { m.pins = (m.pins || []).filter(p => has(p.note)); dropLines(m); }
+  for (const m of Object.values(w.maps)) { if (m.owner && !has(m.owner)) { delete w.maps[m.id]; continue; } m.pins = (m.pins || []).filter(p => has(p.note)); dropLines(m); }
   const tids = new Set(w.tracks.map(t => t.id));
   for (const n of Object.values(w.notes)) {
     n.parents = (n.parents || []).filter(has);
     if (n.origin && !has(n.origin)) delete n.origin;
+    if (n.at && !has(n.at)) delete n.at;
     if (n.when && !tids.has(n.when.tr)) delete n.when;
     if (n.legs) n.legs = n.legs.filter(g => tids.has(g.tr));
   }

@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 2,
+ "version": 3,
  "id": "w-example-story4",
  "name": "物語4「時を超える影」",
  "settings": {
@@ -28,8 +28,8 @@
   }
  },
  "notes": {
-  "nmqsalu2hl": {
-   "id": "nmqsalu2hl",
+  "n9y6yqz463": {
+   "id": "n9y6yqz463",
    "kind": "note",
    "title": "イスの大いなる種族の都市",
    "body": "",
@@ -49,8 +49,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nb8gh5g2hl": {
-   "id": "nb8gh5g2hl",
+  "n0ipyve463": {
+   "id": "n0ipyve463",
    "kind": "note",
    "title": "ピーズリー教授、講義中に倒れる",
    "body": "",
@@ -70,8 +70,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "njh4pxw2hl": {
-   "id": "njh4pxw2hl",
+  "n57e0l5463": {
+   "id": "n57e0l5463",
    "kind": "note",
    "title": "ピーズリー教授、記憶が戻る",
    "body": "",
@@ -91,8 +91,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nqjyjuj2hl": {
-   "id": "nqjyjuj2hl",
+  "no5ax71463": {
+   "id": "no5ax71463",
    "kind": "note",
    "title": "チャーマーズ、角のない部屋で死ぬ",
    "body": "",
@@ -112,8 +112,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nrc6bl62hl": {
-   "id": "nrc6bl62hl",
+  "np2q4l5463": {
+   "id": "np2q4l5463",
    "kind": "note",
    "title": "オーストラリアの砂漠で遺跡を発見",
    "body": "",
@@ -133,8 +133,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nlp2wwn2hl": {
-   "id": "nlp2wwn2hl",
+  "nsrpspb463": {
+   "id": "nsrpspb463",
    "kind": "note",
    "title": "猟犬が匂いを嗅ぎつける",
    "body": "",
@@ -154,8 +154,8 @@
     "tz": null
    }
   },
-  "n3quorp2hl": {
-   "id": "n3quorp2hl",
+  "n1epw88463": {
+   "id": "n1epw88463",
    "kind": "person",
    "title": "ピーズリー（体）",
    "body": "",
@@ -177,8 +177,8 @@
     }
    ]
   },
-  "n5gwd542hl": {
-   "id": "n5gwd542hl",
+  "nn5bkkd463": {
+   "id": "nn5bkkd463",
    "kind": "person",
    "title": "ピーズリー（心）",
    "body": "",
@@ -228,8 +228,8 @@
     }
    ]
   },
-  "nijgy0d2hl": {
-   "id": "nijgy0d2hl",
+  "n8r7kgq463": {
+   "id": "n8r7kgq463",
    "kind": "person",
    "title": "イスの精神",
    "body": "",
@@ -279,8 +279,8 @@
     }
    ]
   },
-  "ncivr2a2hl": {
-   "id": "ncivr2a2hl",
+  "n344w80463": {
+   "id": "n344w80463",
    "kind": "person",
    "title": "チャーマーズ",
    "body": "",
@@ -330,8 +330,8 @@
     }
    ]
   },
-  "n0da7sb2hl": {
-   "id": "n0da7sb2hl",
+  "nijvu76463": {
+   "id": "nijvu76463",
    "kind": "person",
    "title": "ティンダロスの猟犬",
    "body": "",
@@ -384,29 +384,29 @@
  },
  "links": {},
  "boards": {
-  "b5bntmv2hl": {
-   "id": "b5bntmv2hl",
+  "bd6neck463": {
+   "id": "bd6neck463",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "n3quorp2hl": {
+    "n1epw88463": {
      "x": 40,
      "y": 40
     },
-    "n5gwd542hl": {
+    "nn5bkkd463": {
      "x": 270,
      "y": 40
     },
-    "nijgy0d2hl": {
+    "n8r7kgq463": {
      "x": 500,
      "y": 40
     },
-    "ncivr2a2hl": {
+    "n344w80463": {
      "x": 730,
      "y": 40
     },
-    "n0da7sb2hl": {
+    "nijvu76463": {
      "x": 960,
      "y": 40
     }
@@ -589,13 +589,48 @@
      "type": "text"
     },
     {
-     "key": "拠点",
-     "label": "拠点",
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-place": {
+   "id": "tpl-place",
+   "name": "ロケーションの基本",
+   "tags": [],
+   "kinds": [
+    "place"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
      "type": "text"
+    },
+    {
+     "key": "位置",
+     "label": "位置",
+     "type": "text"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "環境",
+     "label": "環境",
+     "type": "long"
     },
     {
      "key": "雰囲気",
      "label": "雰囲気",
+     "type": "long"
+    },
+    {
+     "key": "歴史",
+     "label": "歴史",
      "type": "long"
     }
    ]
@@ -1079,8 +1114,8 @@
  },
  "maps": {},
  "calendars": {
-  "cc4iis72hl": {
-   "id": "cc4iis72hl",
+  "csyry2q463": {
+   "id": "csyry2q463",
    "name": "角度の刻",
    "months": [
     {
@@ -1172,7 +1207,7 @@
     "d": 359640,
     "s": 0
    },
-   "calId": "cc4iis72hl"
+   "calId": "csyry2q463"
   }
  ]
 }

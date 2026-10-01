@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 2,
+ "version": 3,
  "id": "w-example-story1",
  "name": "物語1「電話レンジ（仮）」",
  "settings": {
@@ -28,8 +28,8 @@
   }
  },
  "notes": {
-  "nu2ffsy2hd": {
-   "id": "nu2ffsy2hd",
+  "nuqler045w": {
+   "id": "nuqler045w",
    "kind": "note",
    "title": "ラボで電話レンジを発見",
    "body": "",
@@ -49,8 +49,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n9qe7i42hd": {
-   "id": "n9qe7i42hd",
+  "nr2crs645w": {
+   "id": "nr2crs645w",
    "kind": "note",
    "title": "ロト6の抽選（外れ）",
    "body": "",
@@ -71,8 +71,8 @@
     "branch": true
    }
   },
-  "np6owrk2hd": {
-   "id": "np6owrk2hd",
+  "n6cblse45w": {
+   "id": "n6cblse45w",
    "kind": "note",
    "title": "SERNのハッキング",
    "body": "",
@@ -92,8 +92,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n76mcdx2hd": {
-   "id": "n76mcdx2hd",
+  "nxawqvq45w": {
+   "id": "nxawqvq45w",
    "kind": "note",
    "title": "ロト6の抽選（Dメールの番号で当たり）",
    "body": "",
@@ -113,8 +113,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ngo3n6e2hd": {
-   "id": "ngo3n6e2hd",
+  "nn2ibno45w": {
+   "id": "nn2ibno45w",
    "kind": "note",
    "title": "ラウンダーの襲撃",
    "body": "",
@@ -134,8 +134,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nt2mt7a2hd": {
-   "id": "nt2mt7a2hd",
+  "no2l4hq45w": {
+   "id": "no2l4hq45w",
    "kind": "note",
    "title": "まゆりが倒れる",
    "body": "",
@@ -155,8 +155,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "ndr0bql2hd": {
-   "id": "ndr0bql2hd",
+  "niaqm7i45x": {
+   "id": "niaqm7i45x",
    "kind": "note",
    "title": "フェイリスの父の飛行機事故",
    "body": "",
@@ -177,8 +177,8 @@
     "branch": true
    }
   },
-  "ng28hso2hd": {
-   "id": "ng28hso2hd",
+  "nzh5umq45x": {
+   "id": "nzh5umq45x",
    "kind": "note",
    "title": "フェイリスの父が飛行機に乗らない",
    "body": "",
@@ -198,8 +198,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nl3uk732hd": {
-   "id": "nl3uk732hd",
+  "n6uguqb45x": {
+   "id": "n6uguqb45x",
    "kind": "person",
    "title": "まゆり（α）",
    "body": "",
@@ -221,8 +221,8 @@
     }
    ]
   },
-  "nlfjjol2hd": {
-   "id": "nlfjjol2hd",
+  "nz4826y45x": {
+   "id": "nz4826y45x",
    "kind": "person",
    "title": "まゆり（β）",
    "body": "",
@@ -243,10 +243,10 @@
      }
     }
    ],
-   "origin": "nl3uk732hd"
+   "origin": "n6uguqb45x"
   },
-  "nh9dfki2hd": {
-   "id": "nh9dfki2hd",
+  "nrq5hfq45x": {
+   "id": "nrq5hfq45x",
    "kind": "person",
    "title": "岡部",
    "body": "",
@@ -341,21 +341,21 @@
  },
  "links": {},
  "boards": {
-  "b1lc3to2hc": {
-   "id": "b1lc3to2hc",
+  "bojjifw45w": {
+   "id": "bojjifw45w",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "nl3uk732hd": {
+    "n6uguqb45x": {
      "x": 40,
      "y": 40
     },
-    "nlfjjol2hd": {
+    "nz4826y45x": {
      "x": 270,
      "y": 40
     },
-    "nh9dfki2hd": {
+    "nrq5hfq45x": {
      "x": 500,
      "y": 40
     }
@@ -538,13 +538,48 @@
      "type": "text"
     },
     {
-     "key": "拠点",
-     "label": "拠点",
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-place": {
+   "id": "tpl-place",
+   "name": "ロケーションの基本",
+   "tags": [],
+   "kinds": [
+    "place"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
      "type": "text"
+    },
+    {
+     "key": "位置",
+     "label": "位置",
+     "type": "text"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "環境",
+     "label": "環境",
+     "type": "long"
     },
     {
      "key": "雰囲気",
      "label": "雰囲気",
+     "type": "long"
+    },
+    {
+     "key": "歴史",
+     "label": "歴史",
      "type": "long"
     }
    ]

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createStore } from '../app/js/store.js';
-import { newWorld, newNote, newLink, newBoard, deleteNote, migrateWorld, subjectsOf, timedNotes, templatesFor, kindOf, isElement } from '../app/js/model.js';
+import { newWorld, newNote, newLink, newBoard, deleteNote, migrateWorld, subjectsOf, timedNotes, templatesFor, kindOf, isElement, placePath, inPlace, mapOf, VERSION } from '../app/js/model.js';
 import { renderMarkdown, linkTitles } from '../app/js/ui/markdown.js';
 
 test('undo and redo restore the exact world', () => {
@@ -86,7 +86,7 @@ test('a version 1 world gets kinds, kind templates once, pin ids and lines', () 
   mk('npc', { tags: ['NPC'] }); mk('pc', { tags: ['探索者'] }); mk('sub', { legs: [] }); mk('sc', { tags: ['シナリオ'] }); mk('idea', {});
   v1.maps.m = { id: 'm', name: '地図', image: 'i', w: 10, h: 10, pins: [{ note: 'idea', x: 1, y: 1 }] };
   const w = migrateWorld(JSON.parse(JSON.stringify(v1)));
-  assert.equal(w.version, 2);
+  assert.equal(w.version, VERSION);
   assert.deepEqual(['npc', 'pc', 'sub', 'sc', 'idea'].map(id => w.notes[id].kind), ['person', 'person', 'person', 'scenario', 'note']);
   for (const k of ['person', 'scenario', 'item', 'group']) assert.ok(Object.values(w.templates).some(t => t.kinds.includes(k)), k);
   assert.ok(w.maps.m.pins[0].id);
@@ -115,4 +115,23 @@ test('removing a note or pin removes the map lines that used it', () => {
   deleteNote(w, 'a');
   assert.deepEqual(w.maps.m.lines.map(l => l.id), ['l2']);
   assert.deepEqual(w.maps.m.pins.map(p => p.id), ['pb', 'pc']);
+});
+
+// ロケーション：入れ子の道すじ（輪でも止まる）・中を含む・消したときの片付け
+test('place paths, descendants, and cleanup when a place is deleted', () => {
+  const w = newWorld();
+  const p = (id, parents = []) => { w.notes[id] = newNote({ id, kind: 'place', title: id, parents }); };
+  p('日本'); p('東京都', ['日本']); p('新宿', ['東京都']); p('ビル', ['新宿']); p('輪A', ['輪B']); p('輪B', ['輪A']);
+  assert.deepEqual(placePath(w, 'ビル'), ['日本', '東京都', '新宿', 'ビル']);
+  assert.equal(placePath(w, '輪A').length, 2);
+  assert.deepEqual([...inPlace(w, '東京都')].sort(), ['新宿', 'ビル', '東京都'].sort());
+  w.notes.人 = newNote({ id: '人', kind: 'person', at: '新宿' });
+  w.maps.m = { id: 'm', name: '東京', owner: '東京都', image: null, w: 2000, h: 1400, pins: [], lines: [] };
+  assert.equal(mapOf(w, '東京都').id, 'm');
+  deleteNote(w, '東京都');
+  assert.equal(w.maps.m, undefined);
+  assert.deepEqual(w.notes.新宿.parents, []);
+  w.notes.人.at = 'ビル';
+  deleteNote(w, 'ビル');
+  assert.equal(w.notes.人.at, undefined);
 });

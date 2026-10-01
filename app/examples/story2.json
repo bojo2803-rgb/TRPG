@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 2,
+ "version": 3,
  "id": "w-example-story2",
  "name": "物語2「七夜祭」",
  "settings": {
@@ -28,8 +28,8 @@
   }
  },
  "notes": {
-  "n8a5k2h2hh": {
-   "id": "n8a5k2h2hh",
+  "nrpi9di460": {
+   "id": "nrpi9di460",
    "kind": "scenario",
    "title": "シナリオ：七夜祭",
    "body": "",
@@ -41,8 +41,8 @@
    "parents": [],
    "collapsed": false
   },
-  "nqp1zg62hh": {
-   "id": "nqp1zg62hh",
+  "n4tjja9460": {
+   "id": "n4tjja9460",
    "kind": "note",
    "title": "祭りの始まり",
    "body": "",
@@ -52,7 +52,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "n8a5k2h2hh"
+    "nrpi9di460"
    ],
    "when": {
     "tr": "lpw3h01y",
@@ -64,8 +64,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nlbz5sa2hh": {
-   "id": "nlbz5sa2hh",
+  "n3p0s1e460": {
+   "id": "n3p0s1e460",
    "kind": "note",
    "title": "神楽の夜",
    "body": "",
@@ -75,7 +75,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "n8a5k2h2hh"
+    "nrpi9di460"
    ],
    "when": {
     "tr": "lpw3h01y",
@@ -87,8 +87,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n2fu2u52hh": {
-   "id": "n2fu2u52hh",
+  "nh8br78460": {
+   "id": "nh8br78460",
    "kind": "note",
    "title": "神隠し",
    "body": "",
@@ -98,7 +98,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "n8a5k2h2hh"
+    "nrpi9di460"
    ],
    "when": {
     "tr": "lpw3h01y",
@@ -110,8 +110,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n29ebar2hh": {
-   "id": "n29ebar2hh",
+  "n3k6h9c460": {
+   "id": "n3k6h9c460",
    "kind": "note",
    "title": "花火が上がらない（3周目だけ）",
    "body": "",
@@ -121,7 +121,7 @@
    "color": null,
    "fields": {},
    "parents": [
-    "n8a5k2h2hh"
+    "nrpi9di460"
    ],
    "when": {
     "tr": "lpw3h01y",
@@ -134,8 +134,8 @@
     "k": 3
    }
   },
-  "nzkrhxd2hh": {
-   "id": "nzkrhxd2hh",
+  "nsy9du6460": {
+   "id": "nsy9du6460",
    "kind": "person",
    "title": "巫女ハル",
    "body": "",
@@ -205,8 +205,8 @@
     }
    ]
   },
-  "nkp4qvo2hh": {
-   "id": "nkp4qvo2hh",
+  "nsnmtsk460": {
+   "id": "nsnmtsk460",
    "kind": "person",
    "title": "村人タロウ",
    "body": "",
@@ -250,8 +250,8 @@
     }
    ]
   },
-  "n3c939q2hh": {
-   "id": "n3c939q2hh",
+  "nvyr0nw460": {
+   "id": "nvyr0nw460",
    "kind": "person",
    "title": "旅人ソラ",
    "body": "",
@@ -306,25 +306,25 @@
  },
  "links": {},
  "boards": {
-  "bq6abv62hf": {
-   "id": "bq6abv62hf",
+  "byqju9845y": {
+   "id": "byqju9845y",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "nzkrhxd2hh": {
+    "nsy9du6460": {
      "x": 40,
      "y": 40
     },
-    "nkp4qvo2hh": {
+    "nsnmtsk460": {
      "x": 270,
      "y": 40
     },
-    "n3c939q2hh": {
+    "nvyr0nw460": {
      "x": 500,
      "y": 40
     },
-    "n8a5k2h2hh": {
+    "nrpi9di460": {
      "x": 730,
      "y": 40
     }
@@ -507,13 +507,48 @@
      "type": "text"
     },
     {
-     "key": "拠点",
-     "label": "拠点",
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-place": {
+   "id": "tpl-place",
+   "name": "ロケーションの基本",
+   "tags": [],
+   "kinds": [
+    "place"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
      "type": "text"
+    },
+    {
+     "key": "位置",
+     "label": "位置",
+     "type": "text"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "環境",
+     "label": "環境",
+     "type": "long"
     },
     {
      "key": "雰囲気",
      "label": "雰囲気",
+     "type": "long"
+    },
+    {
+     "key": "歴史",
+     "label": "歴史",
      "type": "long"
     }
    ]

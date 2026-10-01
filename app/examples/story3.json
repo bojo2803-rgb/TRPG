@@ -1,6 +1,6 @@
 {
  "format": "trpg-world",
- "version": 2,
+ "version": 3,
  "id": "w-example-story3",
  "name": "物語3「妖精郷の百年」",
  "settings": {
@@ -28,8 +28,8 @@
   }
  },
  "notes": {
-  "nb5mgbo2hj": {
-   "id": "nb5mgbo2hj",
+  "nynxlaj462": {
+   "id": "nynxlaj462",
    "kind": "note",
    "title": "騎士が妖精の輪に踏み込む",
    "body": "",
@@ -49,8 +49,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "n4zzi9h2hj": {
-   "id": "n4zzi9h2hj",
+  "n2nh46c462": {
+   "id": "n2nh46c462",
    "kind": "note",
    "title": "見知らぬ村に戻る騎士（100年後）",
    "body": "",
@@ -70,8 +70,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "njh7hk02hj": {
-   "id": "njh7hk02hj",
+  "nlf2gsf462": {
+   "id": "nlf2gsf462",
    "kind": "note",
    "title": "騎士が再び現れる",
    "body": "",
@@ -91,8 +91,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "njuhmf12hj": {
-   "id": "njuhmf12hj",
+  "n8l22p9462": {
+   "id": "n8l22p9462",
    "kind": "note",
    "title": "妖精の宴に招かれる",
    "body": "",
@@ -112,8 +112,8 @@
     "tz": null
    }
   },
-  "n23w8qu2hj": {
-   "id": "n23w8qu2hj",
+  "nih9mgx462": {
+   "id": "nih9mgx462",
    "kind": "note",
    "title": "舞踏会の始まり",
    "body": "",
@@ -133,8 +133,8 @@
     "tz": null
    }
   },
-  "ntzs3m32hj": {
-   "id": "ntzs3m32hj",
+  "nl5chww462": {
+   "id": "nl5chww462",
    "kind": "note",
    "title": "妖精郷が人間界に溶ける",
    "body": "",
@@ -154,8 +154,8 @@
     "tz": null
    }
   },
-  "n5bemkz2hj": {
-   "id": "n5bemkz2hj",
+  "nyks2az462": {
+   "id": "nyks2az462",
    "kind": "note",
    "title": "町に妖精の気配が満ちる",
    "body": "",
@@ -175,8 +175,8 @@
     "tz": "Asia/Tokyo"
    }
   },
-  "nuec1g92hj": {
-   "id": "nuec1g92hj",
+  "nc1csaf462": {
+   "id": "nc1csaf462",
    "kind": "person",
    "title": "妖精の女王",
    "body": "",
@@ -220,8 +220,8 @@
     }
    ]
   },
-  "nqxb8q12hj": {
-   "id": "nqxb8q12hj",
+  "njru1xz462": {
+   "id": "njru1xz462",
    "kind": "person",
    "title": "騎士アルト",
    "body": "",
@@ -321,8 +321,8 @@
     }
    ]
   },
-  "nn1c0tb2hj": {
-   "id": "nn1c0tb2hj",
+  "neig0md462": {
+   "id": "neig0md462",
    "kind": "person",
    "title": "魔女モルガ",
    "body": "",
@@ -387,21 +387,21 @@
  },
  "links": {},
  "boards": {
-  "by48xu92hj": {
-   "id": "by48xu92hj",
+  "br3srga462": {
+   "id": "br3srga462",
    "name": "コルクボード",
    "kind": "cork",
    "owner": null,
    "items": {
-    "nuec1g92hj": {
+    "nc1csaf462": {
      "x": 40,
      "y": 40
     },
-    "nqxb8q12hj": {
+    "njru1xz462": {
      "x": 270,
      "y": 40
     },
-    "nn1c0tb2hj": {
+    "neig0md462": {
      "x": 500,
      "y": 40
     }
@@ -584,13 +584,48 @@
      "type": "text"
     },
     {
-     "key": "拠点",
-     "label": "拠点",
+     "key": "雰囲気",
+     "label": "雰囲気",
+     "type": "long"
+    }
+   ]
+  },
+  "tpl-place": {
+   "id": "tpl-place",
+   "name": "ロケーションの基本",
+   "tags": [],
+   "kinds": [
+    "place"
+   ],
+   "fields": [
+    {
+     "key": "種類",
+     "label": "種類",
      "type": "text"
+    },
+    {
+     "key": "位置",
+     "label": "位置",
+     "type": "text"
+    },
+    {
+     "key": "規模",
+     "label": "規模",
+     "type": "text"
+    },
+    {
+     "key": "環境",
+     "label": "環境",
+     "type": "long"
     },
     {
      "key": "雰囲気",
      "label": "雰囲気",
+     "type": "long"
+    },
+    {
+     "key": "歴史",
+     "label": "歴史",
      "type": "long"
     }
    ]
@@ -1074,8 +1109,8 @@
  },
  "maps": {},
  "calendars": {
-  "coszdf02hj": {
-   "id": "coszdf02hj",
+  "cy0zmu7462": {
+   "id": "cy0zmu7462",
    "name": "妖精暦",
    "months": [
     {
@@ -1174,7 +1209,7 @@
      "s": 54000
     }
    ],
-   "calId": "coszdf02hj"
+   "calId": "cy0zmu7462"
   },
   {
    "id": "lpljlfdb",
@@ -1205,7 +1240,7 @@
     }
    ],
    "loop": 3,
-   "calId": "coszdf02hj"
+   "calId": "cy0zmu7462"
   }
  ]
 }

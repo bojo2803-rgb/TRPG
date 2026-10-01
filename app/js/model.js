@@ -3,7 +3,7 @@
 import { uid, clone } from './util.js';
 import { T, isT, fromDays, wallToUtc } from './cal/time.js';
 
-export const FORMAT = 'trpg-world', VERSION = 2;
+export const FORMAT = 'trpg-world', VERSION = 3;
 
 export const DEFAULT_SETTINGS = () => ({
   tz: 'Asia/Tokyo',
@@ -16,14 +16,16 @@ export const DEFAULT_SETTINGS = () => ({
 });
 
 // カード { id, kind, title, body, tags, color, fields, parents（まとめの親）, collapsed（まとめをたたむ）,
-//          when（時系列マップ上の位置）, legs（主体の区間）, origin（分身の元）, sessions（シナリオの遊んだ記録） }
-// 種類：付箋（アイデア）と、要素（人物・シナリオ・アイテム・集団。自分のボードを持ち、付箋をそこに貼る）
+//          when（時系列マップ上の位置）, legs（主体の区間）, origin（分身の元）, sessions（シナリオの遊んだ記録）,
+//          at（場所：ロケーションの id。人物＝いる所・アイテム＝ある所・集団＝拠点・シナリオ＝舞台・出来事＝起きた所） }
+// 種類：付箋（アイデア）と、要素（人物・シナリオ・アイテム・集団・ロケーション。自分のボードを持ち、付箋をそこに貼る）
 export const KINDS = {
   note: { label: '付箋', tab: 'notes' },
   person: { label: '人物', tab: 'people' },
   scenario: { label: 'シナリオ', tab: 'scenarios' },
   item: { label: 'アイテム', tab: 'items' },
   group: { label: '集団', tab: 'groups' },
+  place: { label: 'ロケーション', tab: 'places' },
 };
 export const kindOf = n => (n?.kind in KINDS ? n.kind : 'note');
 export const isElement = n => kindOf(n) !== 'note';
@@ -60,7 +62,8 @@ export function builtinTemplates() {
     kind('person', '人物の基本', [f('よみ'), f('性別'), f('年齢'), f('職業'), f('外見', 'long'), f('性格', 'long'), f('口調'), f('経歴', 'long')]),
     kind('scenario', 'シナリオの基本', [sel('状態', ['準備中', '完成', '遊んだ']), f('人数'), f('遊ぶ時間'), f('概要', 'long'), f('導入', 'long'), f('ハンドアウト', 'long'), f('真相', 'long'), f('結末', 'long')]),
     kind('item', 'アイテムの基本', [sel('区分', ['キーアイテム', 'アーティファクト', 'そのほか']), f('見た目', 'long'), f('効果', 'long'), f('由来', 'long'), f('代償', 'long')]),
-    kind('group', '集団の基本', [f('種類'), f('目的', 'long'), f('規模'), f('資金'), f('拠点'), f('雰囲気', 'long')]),
+    kind('group', '集団の基本', [f('種類'), f('目的', 'long'), f('規模'), f('資金'), f('雰囲気', 'long')]),
+    kind('place', 'ロケーションの基本', [f('種類'), f('位置'), f('規模'), f('環境', 'long'), f('雰囲気', 'long'), f('歴史', 'long')]),
     {
     id: 'tpl-coc6', name: 'クトゥルフ神話TRPG 6版 キャラクター', tags: ['探索者', 'NPC'], kinds: [],
     fields: [
@@ -96,14 +99,33 @@ export function deleteNote(w, id) {
     if (b.owner === id) delete w.boards[b.id];
   }
   for (const m of Object.values(w.maps)) {
+    if (m.owner === id) { delete w.maps[m.id]; continue; } // ロケーションの地図（画像は残る）
     m.pins = m.pins.filter(p => p.note !== id);
     dropLines(m);
   }
   for (const o of Object.values(w.notes)) {
     o.parents = o.parents.filter(p => p !== id);
     if (o.origin === id) delete o.origin;
+    if (o.at === id) delete o.at;
   }
 }
+
+// ロケーションの入れ子：上のロケーション（最初のもの）をたどる。輪になっていても止まる
+export const placeParent = (w, id) => w.notes[id]?.parents.find(p => kindOf(w.notes[p]) === 'place') || null;
+export function placePath(w, id) {
+  const out = [], seen = new Set();
+  for (let x = id; x && w.notes[x] && !seen.has(x); x = placeParent(w, x)) { seen.add(x); out.unshift(x); }
+  return out;
+}
+export const placeKids = (w, id) => Object.values(w.notes).filter(n => kindOf(n) === 'place' && n.parents.includes(id));
+// そのロケーションと、中のロケーションすべて
+// ponytail: 中を探すたびに全カードを見る（数千件まで）。重くなったら親→子の表を一度だけ作る
+export function inPlace(w, id) {
+  const seen = new Set([id]), st = [id];
+  while (st.length) for (const k of placeKids(w, st.pop())) if (!seen.has(k.id)) { seen.add(k.id); st.push(k.id); }
+  return seen;
+}
+export const mapOf = (w, placeId) => Object.values(w.maps).find(m => m.owner === placeId) || null;
 
 // 地図の線：なくなったピンを結んでいた線を消す
 export function dropLines(m) {
@@ -130,12 +152,11 @@ function fill(d) {
   for (const b of Object.values(w.boards)) { b.items ||= {}; b.collapsed ||= []; }
   for (const m of Object.values(w.maps)) { m.pins ||= []; for (const p of m.pins) p.id ||= uid('p'); m.lines ||= []; }
   if (!w.tracks?.some(t => t.id === 'main')) throw new Error('本線がありません');
-  // 版1 → 2：カードに種類を付け、種類ごとのテンプレートを足す
-  if ((d.version || 1) < 2) {
-    for (const n of Object.values(w.notes)) n.kind = guessKind(n);
-    for (const t of builtinTemplates()) if (!w.templates[t.id]) w.templates[t.id] = t;
-    w.version = 2;
-  }
+  // 版を上げる。1 → 2：カードに種類を付ける。2 → 3：ロケーション。どちらも、種類ごとのテンプレートでまだないものを足す
+  const v = d.version || 1;
+  if (v < 2) for (const n of Object.values(w.notes)) n.kind = guessKind(n);
+  if (v < 3) for (const t of builtinTemplates()) if (!w.templates[t.id]) w.templates[t.id] = t;
+  w.version = VERSION;
   for (const n of Object.values(w.notes)) n.kind = kindOf(n);
   for (const t of Object.values(w.templates)) t.kinds ||= [];
   return w;
