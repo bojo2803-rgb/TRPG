@@ -169,3 +169,12 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 .pick-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .pick-tags { font-size: 11px; color: var(--muted); }
 .pick-new { color: var(--accent); font-weight: 600; }
+
+/* 日時の入力 */
+.dinput { display: grid; gap: 6px; }
+.dblocks { display: grid; gap: 6px; }
+.dblock { gap: 4px 6px; }
+.dgrp { display: inline-flex; align-items: center; gap: 3px; }
+.dbetween { color: var(--muted); }
+.dpreview.err { color: var(--paradox); }
+.dinput input[type="time"] { width: 7.5em; }

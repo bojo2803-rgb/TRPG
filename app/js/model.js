@@ -120,7 +120,7 @@ function fromPrototype(p) {
     if (t.cal === 'fict') {
       const key = JSON.stringify([t.calName, t.months || null]);
       if (!cals[key]) {
-        const c = { id: uid('c'), name: t.calName || '架空の暦', months: (t.months || Array.from({ length: 12 }, (_, i) => `${i + 1}月`)).map(name => ({ name, days: 30 })), weekdays: [], epoch: '' };
+        const c = { id: uid('c'), name: t.calName || '架空の暦', months: (t.months?.length === 12 ? t.months.map(m => `${m}の月`) : Array.from({ length: 12 }, (_, i) => `${i + 1}月`)).map(name => ({ name, days: 30 })), weekdays: [], firstYear: 1, leap: { every: 0, month: 11, days: 1 } };
         cals[key] = c; w.calendars[c.id] = c;
       }
       o.calId = cals[key].id;
