@@ -59,6 +59,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .views button:focus-visible { outline: 2px solid var(--accent); }
 .view { grid-area: view; min-width: 0; min-height: 0; position: relative; overflow: hidden; display: flex; flex-direction: column; }
 .panel { grid-area: panel; width: min(420px, 100vw); box-sizing: border-box; border-left: 1px solid var(--line); background: var(--surface); overflow: auto; min-height: 0; }
+/* 詳しい画面だけを大きく（スマホは、詳しい画面がもともと全体を覆う） */
+@media (min-width: 761px) {
+  #app.wide-panel { grid-template: "top top" auto "nav panel" 1fr / auto 1fr; }
+  #app.wide-panel .view { display: none; }
+  #app.wide-panel .panel { width: auto; }
+  #app.wide-panel .ne { max-width: 980px; margin: 0 auto; }
+}
 
 /* ボタンと入力 */
 .btn { border: 1px solid var(--line); background: var(--raised); border-radius: var(--r); padding: 5px 12px; cursor: pointer; white-space: nowrap; }

@@ -2,7 +2,7 @@
 // 人物は「一覧／家系図」、集団は「一覧／組織図／相関図」、ロケーションは「木／地図」を切り替える
 import { h, byTitle, collator } from '../util.js';
 import { KINDS, kindOf, newNote, placePath, placeParent, hereCounts, mapOf, movePlace } from '../model.js';
-import { ensureOwnBoard, summaryOf, linksOfKind, newPlaceDialog } from './elements.js';
+import { ensureOwnBoard, summaryOf, linksOfKind, newPlaceDialog, putHere } from './elements.js';
 import { closeDialog } from './dialog.js';
 
 const SUBS = {
@@ -118,6 +118,8 @@ const LOOSE = ['person', 'item', 'group', 'scenario']; // 一番上に「場所�
 
 function renderTree(main, ctx, rerender) {
   const w = ctx.world, q = ctx.query().toLowerCase();
+  // 選ぶ：中身を出し、一番右の詳しい画面もそのロケーションにする（スマホは画面を覆うので開かない）
+  const pick = id => { sel = id; rerender(); if (id && innerWidth > 760) ctx.openNote(id); };
   if (sel && kindOf(w.notes[sel]) !== 'place') sel = null;
   const places = Object.values(w.notes).filter(n => kindOf(n) === 'place').sort(byTitle);
   const kids = new Map(places.map(n => [n.id, []])), roots = [];
@@ -141,14 +143,14 @@ function renderTree(main, ctx, rerender) {
 
   // 左：木
   const seen = new Set(), rows = [drop(h('div', { class: 'tree-row root', 'aria-current': String(sel === null) }, h('span', { class: 'tree-fold' }),
-    h('button', { type: 'button', class: 'tree-name', onclick: () => { sel = null; rerender(); } }, '一番上')), null)];
+    h('button', { type: 'button', class: 'tree-name', onclick: () => pick(null) }, '一番上')), null)];
   const walk = (n, depth) => {
     if (seen.has(n.id) || (shown && !shown.has(n.id))) return;
     seen.add(n.id);
     const ks = kids.get(n.id).filter(k => !seen.has(k.id)), fold = closed.has(n.id) && !shown;
     rows.push(drop(drag(h('div', { class: 'tree-row', style: { paddingLeft: 8 + (depth + 1) * 18 + 'px' }, 'data-id': n.id, 'aria-current': String(sel === n.id) },
       ks.length ? h('button', { type: 'button', class: 'tree-fold', 'aria-label': fold ? 'ひらく' : 'たたむ', 'aria-expanded': String(!fold), onclick: () => { fold ? closed.delete(n.id) : closed.add(n.id); rerender(); } }, fold ? '▸' : '▾') : h('span', { class: 'tree-fold' }),
-      h('button', { type: 'button', class: 'tree-name', title: '押すと中身を出す。ダブルクリックで開く', onclick: () => { sel = n.id; rerender(); }, ondblclick: () => ctx.openElement(n.id) }, n.title || '（名前なし）'),
+      h('button', { type: 'button', class: 'tree-name', title: '押すと中身を出す。ダブルクリックで開く', onclick: () => pick(n.id), ondblclick: () => ctx.openElement(n.id) }, n.title || '（名前なし）'),
       mapOf(w, n.id) ? h('span', { class: 'note-text', title: '地図あり' }, '🗺') : null,
       count[n.id] ? h('span', { class: 'note-text', title: 'ここ（中も含む）を場所にしているカード' }, `${count[n.id]}`) : null,
       h('span', { class: 'sp' }),
@@ -164,7 +166,7 @@ function renderTree(main, ctx, rerender) {
   const crumbs = [null, ...(sel ? placePath(w, sel) : [])];
   const right = h('div', { class: 'explorer-main scroll' },
     h('nav', { class: 'crumbs', 'aria-label': 'いまの場所' }, ...crumbs.flatMap((p, i) => [i ? h('span', { 'aria-hidden': 'true' }, '›') : null,
-      drop(h('button', { type: 'button', class: 'linkish', 'aria-current': String(p === sel), onclick: () => { sel = p; rerender(); } }, p ? w.notes[p].title || '名前なし' : '一番上'), p)]).filter(Boolean)),
+      drop(h('button', { type: 'button', class: 'linkish', 'aria-current': String(p === sel), onclick: () => pick(p) }, p ? w.notes[p].title || '名前なし' : '一番上'), p)]).filter(Boolean)),
     h('div', { class: 'row explorer-head' },
       h('h3', {}, here ? here.title || '（名前なし）' : 'ロケーション'),
       here?.fields?.['種類'] ? h('span', { class: 'note-text' }, here.fields['種類']) : null,
@@ -172,10 +174,11 @@ function renderTree(main, ctx, rerender) {
       here ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(sel) }, mapOf(w, sel) ? '開く（地図）' : '開く') : null,
       here ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openNote(sel) }, '詳しく') : null,
       here ? moveBtn(sel) : null,
+      here ? h('button', { type: 'button', class: 'btn small', title: '人物・アイテム・集団・シナリオの場所を、ここにする', onclick: () => putHere(ctx, sel) }, '＋ ここに置く') : null,
       h('button', { type: 'button', class: 'btn small', onclick: () => newPlaceDialog(ctx, sel) }, '＋ ロケーション')),
     h('h4', {}, `中のロケーション（${subs.length}）`),
     subs.length ? h('div', { class: 'tiles' }, ...subs.map(k => drop(drag(h('div', { class: 'tile place', 'data-id': k.id },
-      h('button', { type: 'button', class: 'tile-name', title: '押すと中へ。ダブルクリックで開く', onclick: () => { sel = k.id; closed.delete(placeParent(w, k.id)); rerender(); }, ondblclick: () => ctx.openElement(k.id) }, `📁 ${k.title || '（名前なし）'}`),
+      h('button', { type: 'button', class: 'tile-name', title: '押すと中へ。ダブルクリックで開く', onclick: () => { closed.delete(placeParent(w, k.id)); pick(k.id); }, ondblclick: () => ctx.openElement(k.id) }, `📁 ${k.title || '（名前なし）'}`),
       h('span', { class: 'note-text' }, [k.fields?.['種類'], (kids.get(k.id) || []).length ? `中に${kids.get(k.id).length}` : '', count[k.id] ? `${count[k.id]}件` : ''].filter(Boolean).join('・')),
       moveBtn(k.id)), k.id), k.id)))
       : h('p', { class: 'note-text' }, sel ? 'まだありません。「＋ ロケーション」でこの中に作れます。' : 'まだロケーションがありません。上の欄に名前（例：日本）を入れて Enter で作れます。'),
@@ -185,7 +188,11 @@ function renderTree(main, ctx, rerender) {
       h('span', { class: `kind-badge k-${kindOf(o)}` }, KINDS[kindOf(o)].label),
       moveBtn(o.id)), o.id)))
       : h('p', { class: 'note-text' }, sel ? '人物・アイテム・集団・シナリオ・出来事の「場所」をここにすると出ます。ここへ引っぱってきても移せます。' : 'ありません'));
-  main.replaceChildren(h('div', { class: 'explorer' }, h('div', { class: 'explorer-tree scroll' }, h('div', { class: 'tree' }, ...rows)), right));
+  // 描き直しても、左右の欄のスクロールの位置はそのまま
+  const keepT = main.querySelector('.explorer-tree')?.scrollTop || 0, keepM = main.querySelector('.explorer-main')?.scrollTop || 0;
+  const left = h('div', { class: 'explorer-tree scroll' }, h('div', { class: 'tree' }, ...rows));
+  main.replaceChildren(h('div', { class: 'explorer' }, left, right));
+  left.scrollTop = keepT; right.scrollTop = keepM;
 }
 
 // 移す：ロケーションなら上のロケーションを変える（中にあるものごと）。カードなら場所を変える。to が null なら一番上・場所なし

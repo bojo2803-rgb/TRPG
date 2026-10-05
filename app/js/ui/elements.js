@@ -230,11 +230,18 @@ export function newPlaceDialog(ctx, parent) {
     },
   });
 }
+// ここに置く：人物・アイテム・集団・シナリオを選ぶと、その場所（いる所・ある所…）がこのロケーションになる。ない名前なら人物を作る
+export function putHere(ctx, placeId) {
+  const w = ctx.world, title = w.notes[placeId]?.title || '名前なし';
+  pickNote(ctx, { title: `「${title}」に置く（人物・アイテム・集団・シナリオ）`, kinds: ['person', 'item', 'group', 'scenario'], newKind: 'person', filter: o => o.at !== placeId,
+    onPick: id => { ctx.commit(w => { w.notes[id].at = placeId; }, 'ここに置く'); ctx.toast(`「${ctx.world.notes[id].title}」を「${title}」に置きました`); } });
+}
 // ここにあるもの：このロケーションと中のロケーションを場所にしているカード（種類ごと、どこにあるかつき）
 export function hereSec(ctx, w, n) {
   const here = Object.values(w.notes).filter(o => o.id !== n.id && isWithin(w, o.at, n.id)).sort(byTitle);
-  if (!here.length) return h('p', { class: 'note-text' }, 'まだ何もありません（人物などの「場所」の欄で、ここを選ぶと出ます）');
-  return h('div', { class: 'fields' }, ...['person', 'group', 'item', 'scenario', 'note'].map(k => {
+  const btn = h('div', { class: 'row' }, add('＋ ここに置く', () => putHere(ctx, n.id)));
+  if (!here.length) return h('div', { class: 'fields' }, h('p', { class: 'note-text' }, 'まだ何もありません（「＋ ここに置く」か、人物などの「いる所」「ある所」の欄で、ここを選ぶと出ます）'), btn);
+  return h('div', { class: 'fields' }, btn, ...['person', 'group', 'item', 'scenario', 'note'].map(k => {
     const xs = here.filter(o => kindOf(o) === k);
     return xs.length ? row(k === 'note' ? '出来事など' : KINDS[k].label, ...xs.map(o => chip(ctx, o.id, o.at !== n.id ? `（${w.notes[o.at].title}）` : null))) : null;
   }));

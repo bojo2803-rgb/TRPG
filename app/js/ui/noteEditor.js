@@ -16,11 +16,17 @@ export function open(ctx, id, opts = {}) {
   if (curId !== id) { bodyMode = ctx.world.notes[id].body ? 'view' : 'edit'; armedDelete = false; showMore = false; }
   curId = id; iterK = opts.k || 0; // ループの何周目から開いたか（その周だけの書き換えができる）
   panel().hidden = false;
+  applyWide();
   render(ctx);
   if (opts.focusTitle) panel().querySelector('.ne-title')?.select();
   if (opts.section) panel().querySelector(`[data-sec="${opts.section}"]`)?.scrollIntoView({ block: 'start' });
 }
-export function close() { curId = null; panel().hidden = true; panel().replaceChildren(); }
+export function close() { curId = null; panel().hidden = true; panel().replaceChildren(); applyWide(); }
+// 詳しい画面だけを大きくする（地図やボードを隠す）。どちらにしていたかは覚えておく
+const WIDE = 'trpg-wide-panel';
+let wide = (() => { try { return localStorage.getItem(WIDE) === '1'; } catch { return false; } })();
+function applyWide() { document.getElementById('app')?.classList.toggle('wide-panel', wide && !panel().hidden); }
+function toggleWide(ctx) { wide = !wide; try { localStorage.setItem(WIDE, wide ? '1' : '0'); } catch { /* なし */ } applyWide(); render(ctx); }
 export function update(ctx, e) {
   if (!curId) return;
   if (!ctx.world.notes[curId]) { close(); return; }
@@ -111,6 +117,7 @@ function head(ctx, w, n) {
           ...Object.keys(KINDS).filter(k => k !== kindOf(n)).map(k => [k === 'note' ? '付箋に戻す' : `${KINDS[k].label}にする`, () => ctx.setKind(n.id, k)]),
         ], r.left - 120, r.bottom + 4);
       } }, '…'),
+      h('button', { type: 'button', class: 'btn small wide-only', title: wide ? '元の大きさに戻す（地図やボードも出す）' : '詳しい画面だけを大きくする（地図やボードを隠す）', 'aria-pressed': String(wide), onclick: () => toggleWide(ctx) }, wide ? '戻す' : '大きく'),
       h('button', { type: 'button', class: 'btn icon', title: '閉じる', 'aria-label': '閉じる', onclick: () => ctx.closeNote() }, '×')),
     isElement(n) ? h('div', { class: 'row' }, h('span', { class: `kind-badge k-${kindOf(n)}` }, KINDS[kindOf(n)].label), h('span', { class: 'sp' }),
       h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(n.id) }, kindOf(n) === 'place' ? '地図・ボードを開く' : 'ボードを開く')) : null,
