@@ -2,7 +2,7 @@
 // 名前・色・タグ・テンプレートの入力欄・本文・画像・まとめ（親子）・家族・つながり・時系列・出てくるところ
 import { h, esc, uid, debounce, byTitle } from '../util.js';
 import { templatesFor, allTags, childrenOf, newLink, findByTitle, KINDS, kindOf, isElement } from '../model.js';
-import { membersSec, holdersSec, holdingsSec, scenariosSec, contentsSec, sessionsSec, orgSec, boardLabel, atSec, nestSec, hereSec, AT_LABEL } from './elements.js';
+import { membersSec, holdersSec, holdingsSec, scenariosSec, contentsSec, sessionsSec, orgSec, boardLabel, atSec, nestSec, hereSec, AT_LABEL, bornSec, periodSec } from './elements.js';
 import { renderMarkdown, imageIds } from './markdown.js';
 import { pickNote } from './picker.js';
 import { openDialog, showMenu, toast } from './dialog.js';
@@ -60,6 +60,8 @@ function render(ctx) {
     head(ctx, w, n),
     tagsSec(ctx, w, n),
     ...templatesFor(w, n).map(t => templateSec(ctx, t, n)),
+    k === 'person' ? sec('born', '生年月日', bornSec(ctx, w, n)) : null,
+    k === 'scenario' ? sec('period', '時期', periodSec(ctx, w, n)) : null,
     sec('body', el ? 'メモ' : '本文', bodySec(ctx, w, n)),
     k === 'person' || k === 'group' ? sec('member', k === 'person' ? '所属' : 'メンバー', membersSec(ctx, w, n)) : null,
     k === 'group' ? sec('org', '上部組織・下部組織', orgSec(ctx, w, n)) : null,

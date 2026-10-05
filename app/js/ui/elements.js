@@ -2,6 +2,7 @@
 import { h, esc, uid, debounce, byTitle } from '../util.js';
 import { KINDS, kindOf, newBoard, newLink, newNote, childrenOf, findByTitle, placePath, placeKids, isWithin } from '../model.js';
 import { formatTime } from '../cal/index.js';
+import { ageAt, ageText } from '../cal/age.js';
 import { pickNote } from './picker.js';
 
 // 要素のボード（なければ作る。真ん中に要素自身のカード）。ボードの id を返す
@@ -150,7 +151,7 @@ export function holdingsSec(ctx, w, n) {
 export function scenariosSec(ctx, w, n) {
   const ps = n.parents.filter(p => kindOf(w.notes[p]) === 'scenario');
   const rm = p => () => ctx.commit(w => { w.notes[n.id].parents = w.notes[n.id].parents.filter(x => x !== p); }, 'シナリオから外す');
-  return h('div', { class: 'row' }, ...ps.map(p => chip(ctx, p, null, rm(p))), ps.length ? null : h('span', { class: 'note-text' }, 'なし'),
+  return h('div', { class: 'row' }, ...ps.map(p => chip(ctx, p, kindOf(n) === 'person' ? ageIn(w, n, w.notes[p]) || null : null, rm(p))), ps.length ? null : h('span', { class: 'note-text' }, 'なし'),
     add('＋ シナリオに入れる', () => pickNote(ctx, { title: 'どのシナリオに入れるか', kinds: ['scenario'], newKind: 'scenario', exclude: [n.id, ...ps], onPick: id => ctx.commit(w => { w.notes[n.id].parents.push(id); }, 'シナリオに入れる') })));
 }
 // シナリオの中身：出来事（時間順）・登場（人物・アイテム・集団）・付箋
@@ -165,7 +166,7 @@ export function contentsSec(ctx, w, n) {
     h('div', { class: 'fields' }, h('span', { class: 'lbl' }, '出来事'),
       ...events.map(e => h('div', { class: 'row link-row' }, h('span', { class: 'data dir' }, fmtWhen(w, e.when)), chip(ctx, e.id, null, out(e.id)))),
       h('div', { class: 'row' }, add('＋ 出来事を入れる', put('入れる出来事（時系列にある付箋）', ['note'], 'note', o => !!o.when)))),
-    row('登場', ...cast.map(c => chip(ctx, c.id, KINDS[kindOf(c)].label, out(c.id))), add('＋', put('登場させる人物・アイテム・集団', ['person', 'item', 'group'], 'person'))),
+    row('登場', ...cast.map(c => chip(ctx, c.id, [KINDS[kindOf(c)].label, kindOf(c) === 'person' ? ageIn(w, c, n) : ''].filter(Boolean).join('・'), out(c.id))), add('＋', put('登場させる人物・アイテム・集団', ['person', 'item', 'group'], 'person'))),
     rest.length ? row('付箋', ...rest.map(c => chip(ctx, c.id, null, out(c.id)))) : null);
 }
 // 遊んだ記録（シナリオ）：日付・参加者・メモを何回分でも
@@ -195,6 +196,54 @@ export function orgSec(ctx, w, n) {
     row('下部組織', ...downs.map(k => chip(ctx, k.id, null, () => ctx.commit(w => { w.notes[k.id].parents = w.notes[k.id].parents.filter(x => x !== n.id); }, '下部組織から外す'))),
       add('＋', pick('下部組織', id => ctx.commit(w => { if (!w.notes[id].parents.includes(n.id)) w.notes[id].parents.push(n.id); }, '下部組織を足す'), downs.map(k => k.id)))));
 }
+// ===== 生年月日・シナリオの時期・年齢 =====
+// 生年月日：入れたもの。なければ時系列の「誕生」（主体の最初の区間の始まり）
+export function bornOf(w, n) {
+  if (n?.born) return n.born;
+  const g = n?.legs?.[0], tr = g && w.tracks.find(t => t.id === g.tr);
+  return tr ? { tr: g.tr, t: g.a, prec: 'day', tz: tr.cal === 'fict' ? null : w.settings?.tz, fromMap: true } : null;
+}
+// シナリオの時期：入れたもの。なければ、シナリオに入れた出来事のいちばん早い日時
+export function periodOf(w, sc) {
+  if (sc?.period) return sc.period;
+  return childrenOf(w, sc.id).filter(k => k.when).sort((a, b) => tKey(a) - tKey(b))[0]?.when || null;
+}
+export const ageIn = (w, person, sc) => ageText(ageAt(w, bornOf(w, person), periodOf(w, sc)));
+// 日時を選ぶ窓（世界線も選べる。架空の暦の世界線なら、その暦で入れる）
+async function dateDialog(ctx, { title, value, onSave, onClear }) {
+  const { dateInput } = await import('./dateInput.js');
+  const w = ctx.world;
+  const trSel = h('select', { 'aria-label': '世界線' }, ...w.tracks.map(t => h('option', { value: t.id, selected: t.id === (value?.tr || 'main') }, t.name)));
+  const box = h('div');
+  let di;
+  const mount = () => { const tr = w.tracks.find(t => t.id === trSel.value); di = dateInput(w, { track: tr, value: value && value.tr === tr.id ? value : null }); box.replaceChildren(di.el); };
+  trSel.addEventListener('change', mount); mount();
+  ctx.openDialog({
+    title, wide: true, body: h('div', { class: 'fields' }, w.tracks.length > 1 ? h('label', {}, '世界線', trSel) : null, box),
+    onSave: () => { const v = di.read(); onSave({ tr: trSel.value, t: v.t, prec: v.prec, tz: v.tz, ...(v.approx && { approx: true }), ...(v.until && { until: v.until }) }); },
+    onDelete: value ? onClear : null,
+  });
+}
+// 生年月日の欄（人物）
+export function bornSec(ctx, w, n) {
+  const b = bornOf(w, n);
+  const set = () => dateDialog(ctx, { title: '生年月日', value: n.born, onSave: v => ctx.commit(w => { w.notes[n.id].born = v; }, '生年月日を決める'), onClear: () => ctx.commit(w => { delete w.notes[n.id].born; }, '生年月日を外す') });
+  return h('div', { class: 'row' },
+    b ? h('span', { class: 'data' }, fmtWhen(w, b)) : h('span', { class: 'note-text' }, 'まだ決めていません'),
+    b?.fromMap ? h('span', { class: 'note-text' }, '（時系列の「誕生」から）') : null,
+    add(n.born ? '変える' : '＋ 決める', set));
+}
+// 時期の欄（シナリオ）：年齢はこの日時で数える
+export function periodSec(ctx, w, n) {
+  const p = periodOf(w, n);
+  const set = () => dateDialog(ctx, { title: 'シナリオの時期', value: n.period, onSave: v => ctx.commit(w => { w.notes[n.id].period = v; }, '時期を決める'), onClear: () => ctx.commit(w => { delete w.notes[n.id].period; }, '時期を外す') });
+  return h('div', { class: 'fields' },
+    h('div', { class: 'row' }, p ? h('span', { class: 'data' }, fmtWhen(w, p)) : h('span', { class: 'note-text' }, 'まだ決めていません'),
+      p && !n.period ? h('span', { class: 'note-text' }, '（いちばん早い出来事から）') : null,
+      add(n.period ? '変える' : '＋ 決める', set)),
+    h('p', { class: 'note-text' }, '登場する人物の年齢は、この時期で数えます（人物の「生年月日」から）。'));
+}
+
 // ===== ロケーション =====
 export const pathText = (w, id) => placePath(w, id).map(x => w.notes[x].title || '名前なし').join(' › ');
 export const AT_LABEL = { person: 'いる所', item: 'ある所', group: '拠点', scenario: '舞台', note: '起きた所' };
