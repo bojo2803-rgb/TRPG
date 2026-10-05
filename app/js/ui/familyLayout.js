@@ -1,7 +1,7 @@
 // 家系図の自動配置：親子・夫婦のつながりから、世代ごとの段に並べる。親は子の真上、夫婦は隣どうし。循環していても止まる
 export const NODE_W = 150, NODE_H = 56, GAP = 34, SPOUSE_GAP = 26, ROW = 130;
 
-// people：人物の id の並び（名前順）。parents：[{ a: 親, b: 子 }]。spouses：[{ a, b }]
+// people：人物の id の並び（名前順）。parents：[{ a: 親, b: 子, gen?：何代離れているか（遠い先祖。空なら2） }]。spouses：[{ a, b }]
 export function layoutFamily(people, parents, spouses) {
   const ids = [...people], set = new Set(ids);
   const P = parents.filter(l => set.has(l.a) && set.has(l.b) && l.a !== l.b), S = spouses.filter(l => set.has(l.a) && set.has(l.b) && l.a !== l.b);
@@ -9,7 +9,8 @@ export function layoutFamily(people, parents, spouses) {
   // 世代：子は親の1つ下、夫婦は同じ段（循環があれば、決まった回数で打ち切る）
   for (let it = 0; it < ids.length + 2; it++) {
     let ch = false;
-    for (const l of P) if (gen[l.b] < gen[l.a] + 1) { gen[l.b] = gen[l.a] + 1; ch = true; }
+    // 子は親より d 段下（d：親なら1、遠い先祖なら何代か）。親は子の d 段上まで下げる（子が遠い先祖のせいで下がっても、親は子の真上に来る）
+    for (const l of P) { const d = 'gen' in l ? l.gen || 2 : 1; if (gen[l.b] < gen[l.a] + d) { gen[l.b] = gen[l.a] + d; ch = true; } if (gen[l.a] < gen[l.b] - d) { gen[l.a] = gen[l.b] - d; ch = true; } }
     for (const l of S) { const g = Math.max(gen[l.a], gen[l.b]); if (gen[l.a] !== g || gen[l.b] !== g) { gen[l.a] = gen[l.b] = g; ch = true; } }
     if (!ch) break;
   }
@@ -73,6 +74,17 @@ export function layoutFamily(people, parents, spouses) {
     xOffset = Math.max(...c.map(id => pos[id].x)) + NODE_W + GAP * 3;
   }
   return { pos, gen };
+}
+// 結婚していないが同じ子の親である2人（家系図では隣に並べ、点線で結ぶ）
+export function coParents(parents, spouses) {
+  const married = new Set(spouses.flatMap(l => [l.a + '|' + l.b, l.b + '|' + l.a])), out = new Map();
+  const byKid = new Map();
+  for (const l of parents) { if (!byKid.has(l.b)) byKid.set(l.b, []); byKid.get(l.b).push(l.a); }
+  for (const ps of byKid.values()) for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) {
+    const [a, b] = [ps[i], ps[j]].sort();
+    if (a !== b && !married.has(a + '|' + b)) out.set(a + '|' + b, { a, b });
+  }
+  return [...out.values()];
 }
 function components(ids, links) {
   const adj = Object.fromEntries(ids.map(id => [id, []]));

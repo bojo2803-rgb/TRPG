@@ -1,7 +1,7 @@
 // 家系図の自動配置
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layoutFamily, NODE_W, ROW } from '../app/js/ui/familyLayout.js';
+import { layoutFamily, coParents, NODE_W, ROW } from '../app/js/ui/familyLayout.js';
 
 const overlap = pos => { const v = Object.values(pos); for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++) if (v[i].y === v[j].y && Math.abs(v[i].x - v[j].x) < NODE_W) return true; return false; };
 
@@ -23,4 +23,21 @@ test('cycles and separate families do not hang or overlap', () => {
   const { pos } = layoutFamily(['甲', '乙', '丙', '丁'], [{ a: '甲', b: '乙' }, { a: '乙', b: '甲' }], [{ a: '丙', b: '丁' }]);
   assert.equal(Object.keys(pos).length, 4);
   assert.ok(!overlap(pos));
+});
+
+test('unmarried parents of the same child become a pair placed side by side', () => {
+  const P = [{ a: '父', b: '子' }, { a: '母', b: '子' }, { a: '夫', b: '娘' }, { a: '妻', b: '娘' }];
+  const S = [{ a: '夫', b: '妻' }];
+  const pairs = coParents(P, S);
+  assert.deepEqual(pairs.map(p => [p.a, p.b].sort().join()), ['母,父']); // 結婚している2人は数えない
+  const { pos } = layoutFamily(['父', '母', '子', '夫', '妻', '娘'], P, [...S, ...pairs]);
+  assert.ok(Math.abs(pos['父'].x - pos['母'].x) < NODE_W * 1.5, 'co-parents adjacent');
+  assert.equal(pos['父'].y, pos['母'].y);
+});
+
+test('a distant ancestor sits that many rows above; unknown counts as two', () => {
+  const { gen } = layoutFamily(['始祖', '私', '謎の祖', '妹', '父'], [{ a: '始祖', b: '私', gen: 5 }, { a: '謎の祖', b: '妹', gen: null }, { a: '父', b: '私' }], []);
+  assert.equal(gen['私'] - gen['始祖'], 5);
+  assert.equal(gen['私'] - gen['父'], 1, 'the parent stays right above the child');
+  assert.equal(gen['妹'] - gen['謎の祖'], 2);
 });

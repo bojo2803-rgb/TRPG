@@ -28,7 +28,7 @@ export function mount(el, ctx, arg) {
     }
     for (const l of Object.values(w.links)) {
       if ((l.kind === 'link' || l.kind === 'order') && !show.links) continue;
-      if ((l.kind === 'parent' || l.kind === 'spouse') && !show.family) continue;
+      if ((l.kind === 'parent' || l.kind === 'spouse' || l.kind === 'ancestor') && !show.family) continue;
       out.push({ a: l.a, b: l.b, kind: l.kind, label: l.label });
     }
     if (show.parents) for (const n of Object.values(w.notes)) for (const p of n.parents) if (w.notes[p]) out.push({ a: p, b: n.id, kind: 'group' });
@@ -55,7 +55,7 @@ export function mount(el, ctx, arg) {
     if (!ids.length) { layer.replaceChildren(h('div', { class: 'fam-empty' }, only ? 'まだ集団がありません' : 'つながりのある付箋がまだありません（「つながりのない付箋も出す」で全部出せます）')); pz.fit(0, 0, 400, 100); return; }
     const xs = ids.map(id => pos[id].x), ys = ids.map(id => pos[id].y), x0 = Math.min(...xs) - 60, y0 = Math.min(...ys) - 40;
     const X = id => pos[id].x - x0, Y = id => pos[id].y - y0;
-    const CLS = { link: 'g-link', order: 'g-link', parent: 'g-fam', spouse: 'g-fam', group: 'g-group', body: 'g-body' };
+    const CLS = { link: 'g-link', order: 'g-link', parent: 'g-fam', spouse: 'g-fam', ancestor: 'g-fam', group: 'g-group', body: 'g-body' };
     let svg = '';
     for (const e of es) svg += `<line x1="${X(e.a)}" y1="${Y(e.a)}" x2="${X(e.b)}" y2="${Y(e.b)}" class="${CLS[e.kind] || 'g-link'}${dim(e.a) || dim(e.b) ? ' dim' : ''}"/>`;
     if (only) for (const e of es) if (e.label) svg += `<text class="g-elabel" x="${(X(e.a) + X(e.b)) / 2}" y="${(Y(e.a) + Y(e.b)) / 2 - 4}" text-anchor="middle">${esc(e.label)}</text>`;

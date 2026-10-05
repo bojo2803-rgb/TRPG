@@ -1,7 +1,8 @@
-// 家系図：付箋の「家族」（親子・夫婦）のつながりから、自動で家系図の形に並べる。位置を手で直す必要はない
+// 家系図：付箋の「家族」（親子・夫婦・遠い先祖）のつながりから、自動で家系図の形に並べる。位置を手で直す必要はない。
+// 結婚していない2人に子がいれば、2人を隣に並べて点線で結ぶ。遠い先祖は、その代の数だけ段を離して点線で結ぶ
 import { h, esc, byTitle } from '../util.js';
 import { newLink } from '../model.js';
-import { layoutFamily, NODE_W, NODE_H, ROW } from './familyLayout.js';
+import { layoutFamily, coParents, NODE_W, NODE_H, ROW } from './familyLayout.js';
 import { panZoom } from './panzoom.js';
 import { pickNote } from './picker.js';
 
@@ -16,7 +17,7 @@ export function mount(el, ctx, arg) {
   let first = true;
 
   function people() {
-    const w = ctx.world, L = Object.values(w.links).filter(l => l.kind === 'parent' || l.kind === 'spouse');
+    const w = ctx.world, L = Object.values(w.links).filter(l => l.kind === 'parent' || l.kind === 'spouse' || l.kind === 'ancestor');
     const ids = new Set(L.flatMap(l => [l.a, l.b]).filter(id => w.notes[id]));
     return { ids, L };
   }
@@ -41,8 +42,9 @@ export function mount(el, ctx, arg) {
       show = [...seen];
     }
     show.sort((a, b) => byTitle(w.notes[a], w.notes[b]));
-    const parents = L.filter(l => l.kind === 'parent'), spouses = L.filter(l => l.kind === 'spouse');
-    const { pos } = layoutFamily(show, parents, spouses);
+    const parents = L.filter(l => l.kind === 'parent'), spouses = L.filter(l => l.kind === 'spouse'), ancestors = L.filter(l => l.kind === 'ancestor');
+    const partners = coParents(parents, spouses);
+    const { pos } = layoutFamily(show, [...parents, ...ancestors.map(l => ({ a: l.a, b: l.b, gen: l.gen ?? null }))], [...spouses, ...partners]);
     if (!show.length) {
       layer.replaceChildren(h('div', { class: 'fam-empty' }, 'まだ家族のつながりがありません。人物の付箋を開いて「家族」の＋で親・子・配偶者をつなぐか、「＋ 家族をつなぐ」を押してください。'));
       pz.fit(0, 0, 400, 100); return;
@@ -51,6 +53,13 @@ export function mount(el, ctx, arg) {
     let svg = '';
     const c = id => ({ x: pos[id].x + NODE_W / 2, y: pos[id].y + NODE_H / 2 });
     for (const l of spouses) if (pos[l.a] && pos[l.b]) { const a = c(l.a), b = c(l.b); svg += `<line x1="${a.x}" y1="${a.y - 3}" x2="${b.x}" y2="${b.y - 3}" class="fam-sp"/><line x1="${a.x}" y1="${a.y + 3}" x2="${b.x}" y2="${b.y + 3}" class="fam-sp"/>`; }
+    // 結婚していない親どうし：細い点線
+    for (const l of partners) if (pos[l.a] && pos[l.b]) { const a = c(l.a), b = c(l.b); svg += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="fam-partner"/>`; }
+    // 遠い先祖：点線と「〇代前」
+    for (const l of ancestors) if (pos[l.a] && pos[l.b]) {
+      const x1 = pos[l.a].x + NODE_W / 2, y1 = pos[l.a].y + NODE_H, x2 = pos[l.b].x + NODE_W / 2, y2 = pos[l.b].y, my = (y1 + y2) / 2;
+      svg += `<path class="fam-anc" d="M${x1},${y1} V${my} H${x2} V${y2}"/><text class="fam-anc-l" x="${x2 + 6}" y="${(my + y2) / 2 + 4}">${l.gen ? `${l.gen}代前の先祖` : '遠い先祖'}</text>`;
+    }
     const groups = new Map();
     for (const kid of show) {
       const ps = parents.filter(l => l.b === kid && pos[l.a]).map(l => l.a).sort();
@@ -76,11 +85,12 @@ export function mount(el, ctx, arg) {
     pickNote(ctx, { title: '1人目', onPick: a => {
       ctx.openDialog({
         title: 'どんなつながり？', ok: '次へ',
-        body: `<p>${esc(ctx.world.notes[a].title)} は…</p><label class="cb"><input type="radio" name="rel" value="parent" checked> 親（次に選ぶ人の親）</label><label class="cb"><input type="radio" name="rel" value="child"> 子（次に選ぶ人の子）</label><label class="cb"><input type="radio" name="rel" value="spouse"> 配偶者</label>`,
+        body: `<p>${esc(ctx.world.notes[a].title)} は…</p><label class="cb"><input type="radio" name="rel" value="parent" checked> 親（次に選ぶ人の親）</label><label class="cb"><input type="radio" name="rel" value="child"> 子（次に選ぶ人の子）</label><label class="cb"><input type="radio" name="rel" value="spouse"> 配偶者</label>
+          <label class="cb"><input type="radio" name="rel" value="ancestor"> 遠い先祖（次に選ぶ人の、何代か前）</label><label>何代前か（わからなければ空）<input id="rel_gen" type="number" min="2" inputmode="numeric" style="width:6em"></label>`,
         onSave: () => {
-          const rel = document.querySelector('input[name="rel"]:checked').value;
+          const rel = document.querySelector('input[name="rel"]:checked').value, g = +document.getElementById('rel_gen').value || null;
           setTimeout(() => pickNote(ctx, { title: '2人目', exclude: [a], onPick: b => {
-            const l = rel === 'spouse' ? newLink(a, b, { kind: 'spouse' }) : rel === 'parent' ? newLink(a, b, { kind: 'parent' }) : newLink(b, a, { kind: 'parent' });
+            const l = rel === 'spouse' ? newLink(a, b, { kind: 'spouse' }) : rel === 'parent' ? newLink(a, b, { kind: 'parent' }) : rel === 'ancestor' ? newLink(a, b, { kind: 'ancestor', gen: g }) : newLink(b, a, { kind: 'parent' });
             ctx.commit(w => { w.links[l.id] = l; }, '家族をつなぐ');
           } }), 0);
         },

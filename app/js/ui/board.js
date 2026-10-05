@@ -12,7 +12,7 @@ import { quickInput } from './quickNote.js';
 
 const views = new Map(); // ボードごとの表示位置 { x, y, z }
 const CARD_W = 190;
-const KIND_STYLE = { parent: { dash: '', label: '親子' }, spouse: { dash: '', label: '夫婦' }, order: { dash: '6 4', label: '' }, member: { dash: '8 5', label: '所属' }, holds: { dash: '2 4', label: '持ち物' } };
+const KIND_STYLE = { parent: { dash: '', label: '親子' }, spouse: { dash: '', label: '夫婦' }, order: { dash: '6 4', label: '' }, member: { dash: '8 5', label: '所属' }, holds: { dash: '2 4', label: '持ち物' }, ancestor: { dash: '2 6', label: '遠い先祖' } };
 
 // arg.embedded：要素のタブの中に出す（ボードの切り替えやメニューは出さない）
 export function mount(el, ctx, arg) {

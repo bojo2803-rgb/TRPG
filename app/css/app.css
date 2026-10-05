@@ -290,6 +290,9 @@ input.add-name { min-width: 0; flex: 1 1 220px; max-width: 320px; }
 .fam-layer, .graph-layer, .map-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .fam-lines { position: absolute; left: 0; top: 0; pointer-events: none; }
 .fam-sp { stroke: var(--fg); stroke-width: 1.5; }
+.fam-partner { stroke: var(--fg); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.fam-anc { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 2 5; }
+.fam-anc-l { font-size: 11px; fill: var(--muted); }
 .fam-pc { fill: none; stroke: var(--muted); stroke-width: 1.5; }
 .fam-node { position: absolute; box-sizing: border-box; display: grid; align-content: center; gap: 1px; padding: 6px 10px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow); cursor: pointer; overflow: hidden; }
 .fam-node b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

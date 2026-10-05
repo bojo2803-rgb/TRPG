@@ -237,7 +237,11 @@ function familySec(ctx, w, n) {
   const L = Object.values(w.links);
   const parents = L.filter(l => l.kind === 'parent' && l.b === n.id), children = L.filter(l => l.kind === 'parent' && l.a === n.id);
   const spouses = L.filter(l => l.kind === 'spouse' && (l.a === n.id || l.b === n.id));
+  const ancestors = L.filter(l => l.kind === 'ancestor' && l.b === n.id), descendants = L.filter(l => l.kind === 'ancestor' && l.a === n.id);
   const rm = l => () => ctx.commit(w => { delete w.links[l.id]; }, '家族のつながりを外す');
+  // 遠い先祖・子孫：相手を選んでから、何代離れているかを聞く（わからなければ空）
+  const addFar = asAncestor => () => pickNote(ctx, { title: asAncestor ? '遠い先祖' : '遠い子孫', kinds: ['person'], newKind: 'person', exclude: [n.id], onPick: id => setTimeout(() => ancestorDialog(ctx, asAncestor ? newLink(id, n.id, { kind: 'ancestor', gen: null }) : newLink(n.id, id, { kind: 'ancestor', gen: null }), true), 0) });
+  const farRow = (label, list, other, addFn) => h('div', { class: 'row' }, h('span', { class: 'lbl' }, label), ...list.map(l => noteChip(ctx, other(l), rm(l), h('span', { class: 'note-text' }, l.gen ? ` ${l.gen}代` : ' 遠い'))), h('button', { type: 'button', class: 'btn small', onclick: addFn }, '＋'));
   const add = (kind, asParent) => () => pickNote(ctx, { title: kind === 'spouse' ? '配偶者' : asParent ? '親' : '子', exclude: [n.id], onPick: id => {
     const l = kind === 'spouse' ? newLink(n.id, id, { kind }) : asParent ? newLink(id, n.id, { kind }) : newLink(n.id, id, { kind });
     ctx.commit(w => { w.links[l.id] = l; }, '家族のつながりを追加');
@@ -246,7 +250,19 @@ function familySec(ctx, w, n) {
   return h('div', { class: 'fields' },
     row('親', parents, l => l.a, add('parent', true)),
     row('子', children, l => l.b, add('parent', false)),
-    row('配偶者', spouses, l => l.a === n.id ? l.b : l.a, add('spouse')));
+    row('配偶者', spouses, l => l.a === n.id ? l.b : l.a, add('spouse')),
+    farRow('遠い先祖', ancestors, l => l.a, addFar(true)),
+    farRow('遠い子孫', descendants, l => l.b, addFar(false)));
+}
+// 遠い先祖のつながり：何代前か（空ならわからない）。isNew なら保存したときに足す
+function ancestorDialog(ctx, l, isNew = false) {
+  const t = id => esc(ctx.world.notes[id]?.title || '名前なし');
+  openDialog({
+    title: '遠い先祖', ok: '保存',
+    body: `<p>${t(l.a)} は ${t(l.b)} の遠い先祖</p><label>何代前か（わからなければ空。2以上）<input id="anc_gen" type="number" min="2" inputmode="numeric" value="${l.gen ?? ''}" style="width:6em"></label>`,
+    onSave: () => { const g = +document.getElementById('anc_gen').value || null; if (g !== null && g < 2) throw '2代以上で入れてください（1代なら「親」です）'; ctx.commit(w => { w.links[l.id] = { ...l, gen: g }; }, isNew ? '遠い先祖をつなぐ' : '遠い先祖を直す'); },
+    onDelete: isNew ? null : () => ctx.commit(w => { delete w.links[l.id]; }, '遠い先祖を外す'),
+  });
 }
 
 // つながり：ラベル・色・線の種類・矢印を付けられる線（ボードとグラフに出る）
@@ -263,9 +279,14 @@ function linksSec(ctx, w, n) {
       h('button', { type: 'button', class: 'btn small', onclick: () => pickNote(ctx, { title: 'つなぐ相手', exclude: [n.id], onPick: id => { const l = newLink(n.id, id); ctx.commit(w => { w.links[l.id] = l; }, 'つなぐ'); editLink(ctx, l.id); } }) }, '＋ つなぐ'),
       h('button', { type: 'button', class: 'btn small', title: '日付のない出来事どうしの前後', onclick: () => pickNote(ctx, { title: 'この後に起きること', exclude: [n.id], onPick: id => { const l = newLink(n.id, id, { kind: 'order', arrow: 'end' }); ctx.commit(w => { w.links[l.id] = l; }, '前後をつなぐ'); } }) }, '＋ この後に起きること')));
 }
-export function editLink(ctx, id) {
+export async function editLink(ctx, id) {
   const l = ctx.world.links[id];
   if (!l) return;
+  // 種類の決まったつながりは、それぞれの窓で直す（ふつうのつながりの窓だと種類が変わってしまう）
+  if (l.kind === 'ancestor') return ancestorDialog(ctx, l);
+  if (l.kind === 'member') return (await import('./elements.js')).memberDialog(ctx, { linkId: id });
+  if (l.kind === 'holds') return (await import('./elements.js')).holderDialog(ctx, l.b, id);
+  if (l.kind === 'parent' || l.kind === 'spouse') return openDialog({ title: '家族のつながり', ok: null, body: `<p>${esc(ctx.world.notes[l.a]?.title)} ${l.kind === 'spouse' ? 'と' : 'は'} ${esc(ctx.world.notes[l.b]?.title)} ${l.kind === 'spouse' ? 'は夫婦' : 'の親'}</p><p class="note-text">家族の欄で直せます。</p>`, onDelete: () => ctx.commit(w => { delete w.links[id]; }, '家族のつながりを外す') });
   const A = ctx.world.notes[l.a]?.title, B = ctx.world.notes[l.b]?.title;
   openDialog({
     title: 'つながりを編集',
