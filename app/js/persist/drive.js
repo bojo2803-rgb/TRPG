@@ -77,8 +77,9 @@ export function createDriveBackend({ fetch: f = (...a) => fetch(...a), token }) 
       const now = await api('GET', `${API}/files/${m.fileId}?fields=version`);
       let out = w, conflicts = [];
       if (String(now.version) !== String(m.version)) {
-        const remote = JSON.parse(await (await download(m.fileId)).text());
-        ({ world: out, conflicts } = mergeWorlds(JSON.parse(m.base), w, remote));
+        // ドライブは中身が同じでも版を進めることがある。中身が前に保存したときと同じなら、取り込まずにそのまま保存する
+        const text = await (await download(m.fileId)).text();
+        if (text !== m.base) ({ world: out, conflicts } = mergeWorlds(JSON.parse(m.base), w, JSON.parse(text)));
       }
       const text = JSON.stringify(out);
       const r = await api('PATCH', `${UP}/files/${m.fileId}?uploadType=media&fields=version`, { body: text, headers: { 'Content-Type': 'application/json' } });

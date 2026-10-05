@@ -1,6 +1,7 @@
 // 保存先の切り替えと自動保存。保存先は「このブラウザ」か「Googleドライブ」。どちらも同じ形の関数を持つ
 import { debounce, emitter } from '../util.js';
 import { local } from './local.js';
+import { mergeWorlds } from '../merge.js';
 
 const backends = { browser: local };
 export const registerBackend = (name, b) => { backends[name] = b; };
@@ -21,11 +22,18 @@ export function createPersistence(store) {
     setStatus('saving', '保存しています…');
     try {
       const b = backends[cur.backend];
-      const w = store.get();
-      const merged = await b.saveWorld(w);
-      // ドライブで、もう一方の端末の変更を取り込んだときは、その結果に入れ替える（元に戻す履歴は残す）
-      if (merged?.world && merged.world !== w) store.replace(merged.world, { keepHistory: true });
-      if (merged?.conflicts?.length) ev.emit({ state: 'conflict', conflicts: merged.conflicts });
+      // 保存するのは、いまの姿の写し（保存の通信を待つあいだも入力は続くので、世界そのものは渡さない）
+      const snap = JSON.stringify(store.get());
+      const merged = await b.saveWorld(JSON.parse(snap));
+      // ドライブで、もう一方の端末の変更を取り込んだときは、その結果に入れ替える（元に戻す履歴は残す）。
+      // 保存を待つあいだに入力したものは、取り込んだ結果に重ねる（消さない）。それはまだ保存していないので、もう一度保存する
+      if (merged?.world) {
+        const nowJson = JSON.stringify(store.get());
+        let next = merged.world, conflicts = merged.conflicts || [];
+        if (nowJson !== snap) { const r = mergeWorlds(JSON.parse(snap), store.get(), merged.world); next = r.world; conflicts = [...conflicts, ...r.conflicts]; again = true; }
+        store.replace(next, { keepHistory: true });
+        if (conflicts.length) ev.emit({ state: 'conflict', conflicts });
+      }
       setStatus('saved', `${b.label}に保存しました`);
     } catch (e) {
       console.error(e);

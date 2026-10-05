@@ -25,15 +25,20 @@ export function update(ctx, e) {
   if (!curId) return;
   if (!ctx.world.notes[curId]) { close(); return; }
   if (self) return; // 自分で書き換えたときは、入力中の欄を作り直さない
+  // もう一方の端末の変更を取り込んだとき：この付箋が変わっていなければ、入力中の欄は作り直さない（打ちかけの文字が消えないように）
+  const a = document.activeElement;
+  if (e?.type === 'replace' && panel().contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && JSON.stringify(ctx.world.notes[curId]) === shownJson) return;
   render(ctx);
 }
 // この画面からの変更：入力欄を作り直さない
-function edit(ctx, fn, label) { self = true; try { ctx.commit(w => fn(w, w.notes[curId]), label); } finally { self = false; } }
+function edit(ctx, fn, label) { self = true; try { ctx.commit(w => fn(w, w.notes[curId]), label); shownJson = JSON.stringify(ctx.world.notes[curId]); } finally { self = false; } }
 
 const COLORS = ['白', '黄', '桃', '緑', '青', '紫', '橙', '灰'];
 
+let shownJson = ''; // いま画面に出している付箋の中身
 function render(ctx) {
   const w = ctx.world, n = w.notes[curId];
+  shownJson = JSON.stringify(n);
   const scrollTop = panel().scrollTop;
   const sec = (key, title, ...body) => h('section', { class: 'ne-sec', 'data-sec': key }, h('h3', {}, title), ...body);
   // 付箋（アイデア）は軽く：使っていない欄は「もっと」を押すまで出さない
