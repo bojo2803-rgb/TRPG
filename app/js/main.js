@@ -114,9 +114,13 @@ persist.onStatus(s => {
   $('saveStatus').textContent = s.text;
   $('saveStatus').classList.toggle('err', s.state === 'error');
   // ドライブの鍵の期限が切れて保存できなかったとき：押してつなぎ直す（ログインの画面はボタンからしか開けない）
-  if (s.state === 'error' && persist.current()?.backend === 'drive') $('saveStatus').append(' ', h('button', { type: 'button', class: 'btn small', onclick: async () => {
-    try { await (await import('./persist/drive.js')).connect(); persist.save(); } catch (e) { toast(e.message); }
-  } }, 'つなぎ直して保存'));
+  if (s.state === 'error' && persist.current()?.backend === 'drive') {
+    $('saveStatus').append(' ', h('button', { type: 'button', class: 'btn small', onclick: async () => {
+      try { await (await import('./persist/drive.js')).connect(); persist.save(); } catch (e) { toast(e.message); }
+    } }, 'つなぎ直して保存'));
+    // 鍵が切れて保存できなかった：次に画面のどこかを押したら、つなぎ直して保存する
+    import('./persist/drive.js').then(d => { if (!d.isConnected()) d.reconnectOnClick(() => persist.save()); });
+  }
 });
 
 // ===== 世界の一覧・作成・入れ替え =====
@@ -264,19 +268,20 @@ async function start() {
   if (!(await localAvailable())) toast('このブラウザでは保存できない設定になっています（プライベートウィンドウなど）。書き出して持ち出してください', 12000);
   const p = pref.get();
   const list = await persist.listAll();
-  // 前回はGoogleドライブの世界：つなぐかどうかを聞く（ログインの画面はボタンを押してからでないと開けない）
+  // 前回はGoogleドライブの世界。鍵がまだ使えれば（読み込み直しただけなど）そのまま開く。
+  // 切れていたら、画面のどこかを押したときにつなぎ直して開く（ブラウザは、押した時にしかGoogleの窓を開かせない）
   const drive = await import('./persist/drive.js').catch(() => null);
   if (p.backend === 'drive' && drive?.wasConnected() && !list.some(x => x.backend === 'drive')) {
-    const local = list.find(x => x.backend === 'browser');
-    if (local) await openWorld('browser', local.id).catch(() => {});
-    else { store.replace(newWorld('（まだ開いていません）')); refreshChrome(); showView('notes'); }
-    openDialog({
-      title: 'Googleドライブにつなぐ', ok: 'つなぐ',
-      body: '<p>前回は、Googleドライブの世界を開いていました。つないで開きますか？</p><p class="note-text">「やめる」を押すと、このブラウザの世界を使います。</p>',
-      onSave: async () => {
-        await drive.connect();
-        await openWorld('drive', p.world).catch(async () => { const l = await persist.listAll(); const d = l.find(x => x.backend === 'drive'); if (d) await openWorld('drive', d.id); });
-      },
+    const openDrive = () => openWorld('drive', p.world).catch(async () => { const l = await persist.listAll(); const d = l.find(x => x.backend === 'drive'); if (d) await openWorld('drive', d.id); });
+    store.replace(newWorld('（Googleドライブにつないでいます）')); refreshChrome(); showView('notes');
+    toast('画面のどこかを押すと、Googleドライブにつないで前の世界を開きます', 600000);
+    drive.reconnectOnClick(() => { $('toast').hidden = true; openDrive(); }, () => {
+      // 窓を開けなかったとき（ブラウザが止めた・閉じられた）：ボタンでつなぐ
+      openDialog({
+        title: 'Googleドライブにつなぐ', ok: 'つなぐ',
+        body: '<p>前回は、Googleドライブの世界を開いていました。つないで開きますか？</p><p class="note-text">「やめる」を押すと、このブラウザの世界を使えます（左上の世界の名前から選べます）。</p>',
+        onSave: async () => { await drive.connect(); await openDrive(); },
+      });
     });
     return;
   }

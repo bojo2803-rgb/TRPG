@@ -109,7 +109,11 @@ export function createDriveBackend({ fetch: f = (...a) => fetch(...a), token }) 
 }
 
 // ===== Googleでログイン（Google Identity Services） =====
-let tokenClient = null, accessToken = null, expires = 0, pending = null;
+// 鍵（アクセストークン。約1時間有効）は、このタブの中に覚えておく。読み込み直しても使える（タブを閉じると消える）
+const TOKEN = 'trpg-drive-token';
+const kept = (() => { try { const t = JSON.parse(sessionStorage.getItem(TOKEN)); return t && t.expires > Date.now() ? t : null; } catch { return null; } })();
+let tokenClient = null, accessToken = kept?.token || null, expires = kept?.expires || 0, pending = null;
+const keep = () => { try { if (accessToken) sessionStorage.setItem(TOKEN, JSON.stringify({ token: accessToken, expires })); else sessionStorage.removeItem(TOKEN); } catch { /* なし */ } };
 function loadGis() {
   if (window.google?.accounts?.oauth2) return Promise.resolve();
   return new Promise((ok, ng) => {
@@ -119,19 +123,22 @@ function loadGis() {
     document.head.append(s);
   });
 }
-async function requestToken(prompt) {
-  const { clientId } = conf.get();
-  if (!clientId) throw new Error('クライアント ID が設定されていません');
-  await loadGis();
+function makeClient() {
   if (!tokenClient) tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: clientId, scope: SCOPE,
-    callback: r => { const p = pending; pending = null; if (r.error) p?.ng(new Error(`Googleにつなげませんでした（${r.error}）`)); else { accessToken = r.access_token; expires = Date.now() + (Number(r.expires_in) - 60) * 1000; p?.ok(accessToken); } },
+    client_id: conf.get().clientId, scope: SCOPE,
+    callback: r => { const p = pending; pending = null; if (r.error) p?.ng(new Error(`Googleにつなげませんでした（${r.error}）`)); else { accessToken = r.access_token; expires = Date.now() + (Number(r.expires_in) - 60) * 1000; keep(); p?.ok(accessToken); } },
     error_callback: e => { const p = pending; pending = null; p?.ng(new Error(e?.message || 'Googleにつなげませんでした（ログインの画面が閉じられました）')); },
   });
+}
+// Googleの窓を開く。押した・打ったその場で呼ぶこと（それ以外のときはブラウザが窓を止める）。部品を先に読んでおけば、待たずに開ける
+async function requestToken(prompt) {
+  if (!conf.get().clientId) throw new Error('クライアント ID が設定されていません');
+  if (!window.google?.accounts?.oauth2) await loadGis();
+  makeClient();
   return new Promise((ok, ng) => { pending = { ok, ng }; tokenClient.requestAccessToken({ prompt }); });
 }
 const getToken = async force => (!force && accessToken && Date.now() < expires) ? accessToken : requestToken('');
-const connected = () => !!accessToken;
+const connected = () => !!accessToken && Date.now() < expires;
 const backend = createDriveBackend({ token: getToken });
 backend.ready = connected;
 
@@ -142,7 +149,23 @@ export async function init(ctx) {
   const m = location.hash.match(/[#&]drive=([\w.-]+\.apps\.googleusercontent\.com)/);
   if (m) { if (m[1] !== conf.get().clientId) { conf.set({ clientId: m[1] }); tokenClient = null; } history.replaceState(null, '', location.pathname + location.search); }
   registerBackend('drive', backend);
+  if (wasConnected()) {
+    loadGis().catch(() => {}); // 押したときにすぐ窓を開けるよう、部品を先に読んでおく
+    // 使っているあいだに鍵が切れそうなら、次に押したときに取り直す（キーを打ったときは、入力の邪魔になるので取り直さない）
+    addEventListener('pointerdown', () => { if (accessToken && expires - Date.now() < 10 * 60 * 1000 && !pending) requestToken('').catch(() => {}); }, true);
+  }
 }
+// 鍵が切れているとき：次に画面のどこかを押したら、つなぎ直す（Googleの窓が一瞬出て、すぐ閉じる）
+let armed = null;
+export function reconnectOnClick(onOk, onFail) {
+  if (armed) removeEventListener('pointerdown', armed, true); // 待っているのは1つだけ（あとから頼まれた方）
+  const go = armed = () => {
+    removeEventListener('pointerdown', go, true); armed = null;
+    requestToken('').then(() => { conf.set({ connected: true }); onOk?.(); }, e => onFail?.(e));
+  };
+  addEventListener('pointerdown', go, true);
+}
+export const isConnected = () => connected();
 // つなぐ（ボタンを押したときに呼ぶ。ログインの画面はボタンからでないと開けない）
 export async function connect() {
   await requestToken(conf.get().connected ? '' : 'consent');
@@ -150,7 +173,7 @@ export async function connect() {
 }
 export function disconnect() {
   if (accessToken && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(accessToken, () => {});
-  accessToken = null; expires = 0; conf.set({ connected: false });
+  accessToken = null; expires = 0; keep(); conf.set({ connected: false });
 }
 export const wasConnected = () => !!conf.get().connected && !!conf.get().clientId;
 
