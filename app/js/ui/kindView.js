@@ -10,7 +10,9 @@ const SUBS = {
   group: [['list', '一覧'], ['org', '組織図'], ['rel', '相関図']],
   place: [['list', '木'], ['maps', '地図']],
 };
-const placeView = {}; // ロケーションごとに、地図とボードのどちらを見ていたか
+const placeView = {}; // 要素ごとに、どの見せ方（地図・チャート・ボード）にしていたか
+// 開いたときの見せ方の切り替え：ロケーションは地図／ボード、シナリオはチャート／ボード
+const OPEN_MODES = { place: [['map', '地図'], ['board', 'ボード']], scenario: [['chart', 'チャート'], ['board', 'ボード']] };
 const closed = new Set(); // 木でたたんだロケーション
 // 一覧の絞り込み：テンプレートの選ぶ欄（シナリオの状態・アイテムの区分）、人物は所属
 const FILTER = { scenario: '状態', item: '区分' };
@@ -33,7 +35,8 @@ function openMode(kind, el, ctx, id) {
   const head = h('div', { class: 'bar el-head' }), body = h('div', { class: 'el-board' });
   el.append(head, body);
   const isPlace = kind === 'place';
-  let mode = isPlace ? placeView[id] || (mapOf(ctx.world, id) ? 'map' : 'board') : 'board';
+  const modes = OPEN_MODES[kind];
+  let mode = placeView[id] || (isPlace ? (mapOf(ctx.world, id) ? 'map' : 'board') : kind === 'scenario' ? 'chart' : 'board');
   const renderHead = () => {
     const w = ctx.world, n = w.notes[id], path = isPlace ? placePath(w, id).slice(0, -1) : [];
     head.replaceChildren(...[
@@ -42,7 +45,7 @@ function openMode(kind, el, ctx, id) {
       path.length ? h('nav', { class: 'crumbs', 'aria-label': '上のロケーション' }, ...path.flatMap(p => [h('button', { type: 'button', class: 'linkish', onclick: () => ctx.openElement(p) }, w.notes[p].title || '名前なし'), h('span', { 'aria-hidden': 'true' }, '›')])) : null,
       h('h2', {}, n.title || '（名前なし）'),
       h('span', { class: 'sp' }),
-      isPlace ? h('div', { class: 'seg', role: 'group', 'aria-label': '見せ方' }, ...[['map', '地図'], ['board', 'ボード']].map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(mode === k), onclick: () => { if (mode !== k) { mode = placeView[id] = k; show(); renderHead(); } } }, v))) : null,
+      modes ? h('div', { class: 'seg', role: 'group', 'aria-label': '見せ方' }, ...modes.map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(mode === k), onclick: () => { if (mode !== k) { mode = placeView[id] = k; show(); renderHead(); } } }, v))) : null,
       h('button', { type: 'button', class: 'btn', onclick: () => ctx.openNote(id) }, '詳しく'),
     ].filter(Boolean));
   };
@@ -50,7 +53,9 @@ function openMode(kind, el, ctx, id) {
   const show = () => {
     inner?.destroy?.(); inner = null; body.replaceChildren();
     const my = ++seq;
-    const load = mode === 'map' ? import('./mapView.js').then(m => m.mount(body, ctx, { owner: id, embedded: true })) : import('./board.js').then(m => m.mount(body, ctx, { board: boardId, embedded: true }));
+    const load = mode === 'map' ? import('./mapView.js').then(m => m.mount(body, ctx, { owner: id, embedded: true }))
+      : mode === 'chart' ? import('./chartView.js').then(m => m.mount(body, ctx, { scenario: id }))
+      : import('./board.js').then(m => m.mount(body, ctx, { board: boardId, embedded: true }));
     load.then(v => { if (gone || my !== seq) v?.destroy?.(); else inner = v; });
   };
   renderHead(); show();
