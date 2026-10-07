@@ -1,32 +1,38 @@
 // ストーリーチャートの画面（シナリオを開いたとき）：点を作る・「＋ 次へ」・つなぐ・動かす・自動に並べる・手がかりの一覧。
 // drawChart は共有の読むページでも使う（readOnly）
 import { h, esc } from '../util.js';
-import { NODE_TYPES, CHART_W, layoutChart, clueList, emptyChart, newChartNode, newChartEdge } from '../chart.js';
-import { KINDS, newNote } from '../model.js';
+import { NODE_TYPES, CHART_W, layoutChart, clueList, emptyChart, newChartNode, newChartEdge, scenesByPlace } from '../chart.js';
+import { KINDS, newNote, kindOf, placePath } from '../model.js';
 import { panZoom } from './panzoom.js';
 import { pickNote } from './picker.js';
 
-// 点と矢印を描く。onRef(id)：結び付けたカードを押したとき
-export function drawChart(layer, chart, { readOnly = false, linking = null, cardTitle = id => id, onRef = null, moved = {} } = {}) {
-  const pos = layoutChart(chart);
-  for (const [id, p] of Object.entries(moved)) pos[id] = p;
-  // 左や上へはみ出す点（分かれ道は真ん中から左右へ広がる）があれば、描くときだけ全体をずらす（記録する位置はずらさない）
-  const ps = Object.values(pos), ox = -Math.min(0, ...ps.map(p => p.x)), oy = -Math.min(0, ...ps.map(p => p.y));
+// 点と矢印を描く。onRef(id)：結び付けたカードを押したとき。placeLabel(id)：場所の道すじ
+export function drawChart(layer, chart, { readOnly = false, linking = null, cardTitle = id => id, placeLabel = cardTitle, onRef = null, moved = {} } = {}) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.classList.add('chart-edges');
   const nodes = Object.values(chart.nodes).map(n => {
     const t = NODE_TYPES[n.type] || NODE_TYPES.memo, preview = (n.body || '').split('\n').filter(Boolean).slice(0, 2).join(' ');
-    return h('div', { class: `cnode t-${n.type}${linking === n.id ? ' linking' : ''}${n.pos ? ' placed' : ''}`, 'data-node': n.id, 'data-click': 'node', 'data-drag': readOnly ? null : '1', style: { left: pos[n.id].x + ox + 'px', top: pos[n.id].y + oy + 'px', width: CHART_W + 'px' } },
+    const chips = (ids, icon) => ids?.length ? h('div', { class: 'cnode-refs' }, h('span', { class: 'cnode-ic', 'aria-hidden': 'true' }, icon), ...ids.map(r => h('button', { type: 'button', class: 'chip', onclick: e => { e.stopPropagation(); onRef?.(r); } }, cardTitle(r)))) : null;
+    return h('div', { class: `cnode t-${n.type}${linking === n.id ? ' linking' : ''}${n.pos ? ' placed' : ''}`, 'data-node': n.id, 'data-click': 'node', 'data-drag': readOnly ? null : '1', style: { width: CHART_W + 'px' } },
       h('div', { class: 'cnode-type' }, `${t.icon} ${t.label}`),
       h('div', { class: 'cnode-t' }, n.title || '（題名なし）'),
+      n.time ? h('div', { class: 'cnode-m' }, `🕒 ${n.time}`) : null,
+      n.place ? h('button', { type: 'button', class: 'cnode-m cnode-place', title: '場所', onclick: e => { e.stopPropagation(); onRef?.(n.place); } }, `📍 ${placeLabel(n.place)}`) : null,
       preview ? h('div', { class: 'cnode-b' }, preview) : null,
-      n.refs?.length ? h('div', { class: 'cnode-refs' }, ...n.refs.map(r => h('button', { type: 'button', class: 'chip', onclick: e => { e.stopPropagation(); onRef?.(r); } }, cardTitle(r)))) : null,
+      chips(n.cast, '👤'), chips(n.items, '🎁'), chips(n.refs, '🔗'),
       readOnly ? null : h('div', { class: 'cnode-acts' },
         h('button', { type: 'button', class: 'btn small', 'data-act': 'next', title: '矢印でつながった次の点を作る' }, '＋ 次へ'),
         h('button', { type: 'button', class: 'btn small', 'data-act': 'link', title: 'ほかの点へ矢印を引く' }, '→ つなぐ'),
         h('button', { type: 'button', class: 'btn small', 'data-act': 'menu', 'aria-label': '点のメニュー' }, '…')));
   });
   layer.replaceChildren(svg, ...nodes);
+  // 描いてから高さを測り、段の高さを合わせて並べる（場所や登場の多い点が、下の点に重ならない）
+  const hs = new Map(nodes.map(el => [el.dataset.node, el.offsetHeight]));
+  const pos = layoutChart(chart, id => hs.get(id) || 0);
+  for (const [id, p] of Object.entries(moved)) pos[id] = p;
+  // 左や上へはみ出す点（分かれ道は真ん中から左右へ広がる）があれば、描くときだけ全体をずらす（記録する位置はずらさない）
+  const ps = Object.values(pos), ox = -Math.min(0, ...ps.map(p => p.x)), oy = -Math.min(0, ...ps.map(p => p.y));
+  for (const el of nodes) Object.assign(el.style, { left: pos[el.dataset.node].x + ox + 'px', top: pos[el.dataset.node].y + oy + 'px' });
   // 矢印：上の点の下から、下の点の上へ。前の場面へ戻る矢印は右側を回る
   const drawEdges = (over = {}) => {
     const box = id => { const el = layer.querySelector(`[data-node="${id}"]`), p = over[id] || pos[id]; return { x: p.x + ox, y: p.y + oy, w: CHART_W, h: el?.offsetHeight || 80 }; };
@@ -86,23 +92,83 @@ export function mount(el, ctx, arg) {
     else nodeMenu(id, b);
   });
 
-  const typeSel = v => `<select id="cn_type">${Object.entries(NODE_TYPES).map(([k, t]) => `<option value="${k}"${k === v ? ' selected' : ''}>${t.icon} ${t.label}</option>`).join('')}</select>`;
-  // 点を直す・作る（from があれば、その点から矢印でつながった次の点）
+  const pathOf = pid => placePath(ctx.world, pid).map(x => ctx.world.notes[x].title || '名前なし').join(' › ');
+  // 場所の欄：候補は道すじ（日本 › 東京都 › 図書館）。名前だけでもよい。ない名前なら、そのロケーションを作る
+  function placeField(cur) {
+    const list = 'cn-places', w = ctx.world;
+    const input = h('input', { list, value: cur && w.notes[cur] ? pathOf(cur) : '', autocomplete: 'off', placeholder: '例：日本 › 東京都 › 図書館（名前だけでもよい）' });
+    const places = Object.values(w.notes).filter(x => kindOf(x) === 'place');
+    return {
+      el: h('label', {}, '場所', input, h('datalist', { id: list }, ...places.map(x => h('option', { value: pathOf(x.id) })))),
+      resolve(w) {
+        const t = input.value.trim();
+        if (!t) return null;
+        const hit = places.find(x => pathOf(x.id) === t) || places.find(x => x.title === t) || places.find(x => x.title === t.split('›').pop().trim());
+        if (hit) return hit.id;
+        const pl = newNote({ kind: 'place', title: t.split('›').pop().trim() });
+        w.notes[pl.id] = pl;
+        return pl.id;
+      },
+    };
+  }
+  // いくつも入れる欄（登場・アイテム）：名前を入れて Enter で1つ足す。×で外す
+  function namesField(label, ids, kinds, newKind, ph) {
+    const list = 'cn-' + newKind, w = ctx.world, cur = ids.filter(x => w.notes[x]).map(x => ({ id: x }));
+    const input = h('input', { list, autocomplete: 'off', placeholder: `${ph}（Enter で足す）` });
+    const chipsEl = h('span', { class: 'names-chips' });
+    const draw = () => chipsEl.replaceChildren(...cur.map((x, i) => h('span', { class: 'chip' }, x.id ? w.notes[x.id].title || '名前なし' : `${x.name}（新しく作る）`, h('button', { type: 'button', class: 'x', 'aria-label': '外す', onclick: () => { cur.splice(i, 1); draw(); } }, '×'))));
+    const add = () => {
+      const t = input.value.trim();
+      if (!t) return;
+      const hit = Object.values(w.notes).find(x => x.title === t && kinds.includes(kindOf(x)));
+      if (!cur.some(x => (hit ? x.id === hit.id : x.name === t))) cur.push(hit ? { id: hit.id } : { name: t });
+      input.value = ''; draw();
+    };
+    input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); add(); } });
+    input.addEventListener('input', e => { if (e.inputType === 'insertReplacementText') add(); }); // 候補から選んだとき
+    input.addEventListener('change', add);
+    draw();
+    return {
+      el: h('div', { class: 'fields' }, h('span', {}, label), h('div', { class: 'row names' }, chipsEl, input), h('datalist', { id: list }, ...Object.values(w.notes).filter(x => kinds.includes(kindOf(x))).map(x => h('option', { value: x.title })))),
+      resolve(w) {
+        if (input.value.trim()) add();
+        return cur.map(x => {
+          if (x.id) return x.id;
+          const nn = newNote({ kind: newKind, title: x.name, parents: [sid] }); // 新しい人物・アイテムは、このシナリオの登場に入れる
+          w.notes[nn.id] = nn;
+          return nn.id;
+        });
+      },
+    };
+  }
+  // 点を直す・作る（from があれば、その点から矢印でつながった次の点）。
+  // 場所・登場・アイテムは名前で入れる（候補から選ぶ。ない名前なら、そのカードを作る。登場・アイテムはシナリオに入る）
   function editNode(id, from = null) {
     const n = id ? chart().nodes[id] : null, prev = from ? chart().nodes[from] : null;
+    const place = placeField(n?.place ?? prev?.place), cast = namesField('登場（人物・集団）', n?.cast || [], ['person', 'group'], 'person', '例：アーミテッジ'), items = namesField('アイテム（手に入る・使う）', n?.items || [], ['item'], 'item', '例：古い鍵');
+    const typeEl = h('select', { id: 'cn_type' }, ...Object.entries(NODE_TYPES).map(([k, t]) => h('option', { value: k, selected: k === (n?.type || 'event') }, `${t.icon} ${t.label}`)));
     ctx.openDialog({
-      title: n ? '点を直す' : prev ? `「${prev.title || '題名なし'}」の次の点` : '点を作る', ok: n ? '保存' : '作る',
-      body: `<label>題名<input id="cn_title" value="${esc(n?.title || '')}" autocomplete="off" placeholder="例：図書館で古い日記を見つける"></label>
-        <label>種類${typeSel(n?.type || 'event')}</label>
-        ${prev ? '<label>矢印に書くこと（PLの行動・条件）<input id="cn_label" autocomplete="off" placeholder="例：図書館を調べる・〈目星〉成功"></label>' : ''}
-        <label>メモ<textarea id="cn_body" rows="4" placeholder="この点で起きること・わかること・次に考えられる動き">${esc(n?.body || '')}</textarea></label>`,
+      title: n ? '点を直す' : prev ? `「${prev.title || '題名なし'}」の次の点` : '点を作る', ok: n ? '保存' : '作る', wide: true,
+      body: h('div', { class: 'fields' },
+        h('label', {}, '題名', h('input', { id: 'cn_title', value: n?.title || '', autocomplete: 'off', placeholder: '例：図書館で古い日記を見つける' })),
+        h('div', { class: 'row' }, h('label', {}, '種類', typeEl), h('label', { style: { flex: '1' } }, 'いつ', h('input', { id: 'cn_time', value: n?.time || '', autocomplete: 'off', placeholder: '例：1日目・夜、23時ごろ' }))),
+        prev ? h('label', {}, '矢印に書くこと（PLの行動・条件）', h('input', { id: 'cn_label', autocomplete: 'off', placeholder: '例：図書館を調べる・〈目星〉成功' })) : null,
+        place.el, cast.el, items.el,
+        h('label', {}, 'メモ', h('textarea', { id: 'cn_body', rows: 4, placeholder: 'この点で起きること・わかること・次に考えられる動き' }, n?.body || ''))),
       onSave: () => {
         const v = s => document.getElementById(s)?.value ?? '';
-        const title = v('cn_title').trim(), type = v('cn_type'), body = v('cn_body');
+        const title = v('cn_title').trim(), type = v('cn_type'), body = v('cn_body'), time = v('cn_time').trim();
         if (!title) throw '題名を入れてください';
-        if (n) { C(c => Object.assign(c.nodes[id], { title, type, body }), '点を直す'); return; }
-        const nn = newChartNode({ title, type, body }), ed = prev && newChartEdge(from, nn.id, v('cn_label').trim());
-        C(c => { c.nodes[nn.id] = nn; if (ed) c.edges[ed.id] = ed; }, prev ? '次の点を作る' : '点を作る');
+        const label = v('cn_label').trim(), nid = n ? id : newChartNode().id;
+        ctx.commit(w => {
+          const sc = w.notes[sid]; sc.chart ||= emptyChart();
+          const fields = { title, type, body, place: place.resolve(w), cast: cast.resolve(w), items: items.resolve(w) };
+          if (time) fields.time = time;
+          if (n) { const x = sc.chart.nodes[id]; Object.assign(x, fields); if (!time) delete x.time; if (!fields.place) delete x.place; return; }
+          sc.chart.nodes[nid] = newChartNode({ ...fields, id: nid });
+          if (!fields.place) delete sc.chart.nodes[nid].place;
+          if (prev) { const ed = newChartEdge(from, nid, label); sc.chart.edges[ed.id] = ed; }
+        }, n ? '点を直す' : prev ? '次の点を作る' : '点を作る');
       },
       onDelete: n ? () => C(c => { delete c.nodes[id]; for (const e of Object.values(c.edges)) if (e.from === id || e.to === id) delete c.edges[e.id]; }, '点を消す') : null,
     });
@@ -136,7 +202,7 @@ export function mount(el, ctx, arg) {
   async function toEvent(id) {
     const n = chart().nodes[id], { periodOf } = await import('./elements.js'), { T, wallToUtc, UNIX_EPOCH_JDN } = await import('../cal/time.js');
     const tz = ctx.world.settings.tz, at = periodOf(ctx.world, sc()) || { tr: 'main', t: wallToUtc(tz, T(UNIX_EPOCH_JDN + Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000))), prec: 'day', tz };
-    const ev = newNote({ title: n.title, body: n.body, parents: [sid], when: { tr: at.tr, t: at.t, prec: at.prec || 'day', tz: at.tz } });
+    const ev = newNote({ title: n.title, body: n.body, parents: [sid], when: { tr: at.tr, t: at.t, prec: at.prec || 'day', tz: at.tz }, ...(n.place && ctx.world.notes[n.place] && { at: n.place }) });
     ctx.commit(w => { w.notes[ev.id] = ev; w.notes[sid].chart.nodes[id].refs = [...(w.notes[sid].chart.nodes[id].refs || []), ev.id]; }, '出来事として時系列に置く');
     ctx.openNote(ev.id, { section: 'when' });
   }
@@ -151,6 +217,16 @@ export function mount(el, ctx, arg) {
         ctx.commit(w => { w.notes[card.id] = card; const x = w.notes[sid].chart.nodes[id]; x.refs = [...(x.refs || []), card.id]; }, 'カードにする');
         setTimeout(() => ctx.openNote(card.id), 0);
       },
+    });
+  }
+  // 場所ごとの一覧：点を場所（道すじ）ごとにまとめる
+  function scenes() {
+    const groups = scenesByPlace(chart(), ctx.world);
+    ctx.openDialog({
+      title: '場所ごとの一覧', wide: true,
+      body: h('div', { class: 'fields' }, h('p', { class: 'note-text' }, 'チャートの点を、場所ごとにまとめました。その場所で何が起き、何がわかるかを見渡せます。'),
+        ...groups.map(g => h('div', { class: 'clue' }, h('b', {}, g.place ? `📍 ${g.label}` : g.label),
+          h('ul', {}, ...g.nodes.map(n => h('li', {}, `${(NODE_TYPES[n.type] || NODE_TYPES.memo).icon} ${n.title || '題名なし'}${n.time ? `（${n.time}）` : ''}`)))))),
     });
   }
   function clues() {
@@ -173,11 +249,12 @@ export function mount(el, ctx, arg) {
       h('button', { type: 'button', class: 'btn', onclick: () => editNode(null) }, '＋ 点'),
       empty ? null : h('button', { type: 'button', class: 'btn', title: '手で動かした点も、自動の位置に戻す', onclick: () => { C(c => { for (const n of Object.values(c.nodes)) delete n.pos; }, '自動に並べる'); first = true; } }, '自動に並べる'),
       empty ? null : h('button', { type: 'button', class: 'btn', onclick: clues }, '手がかりの一覧'),
+      empty ? null : h('button', { type: 'button', class: 'btn', onclick: scenes }, '場所ごとの一覧'),
       h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; render(); } }, '⤢'),
     ].filter(Boolean));
     stage.classList.toggle('placing', !!linking);
     if (empty) { layer.replaceChildren(h('div', { class: 'fam-empty' }, h('p', {}, 'まだ点がありません。導入の出来事などを「＋ 点」で作り、点の「＋ 次へ」で、PLの行動ごとに次の点をつなげていきます。'), h('button', { type: 'button', class: 'btn primary', onclick: () => editNode(null) }, '＋ 最初の点'))); pz.fit(0, 0, 420, 140); return; }
-    cur = drawChart(layer, c, { linking, cardTitle: r => ctx.world.notes[r]?.title || '（消えたカード）', onRef: r => ctx.world.notes[r] && ctx.openNote(r) });
+    cur = drawChart(layer, c, { linking, cardTitle: r => ctx.world.notes[r]?.title || '（消えたカード）', placeLabel: r => ctx.world.notes[r] ? pathOf(r) : '（消えた場所）', onRef: r => ctx.world.notes[r] && ctx.openNote(r) });
     const size = cur.drawEdges();
     if (first) { pz.fit(-30, -30, size.w + 90, size.h + 30, 1); first = false; }
   }

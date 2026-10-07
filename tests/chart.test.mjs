@@ -31,3 +31,28 @@ test('clue list shows where each piece of information comes from, and orphans', 
   const list = clueList(c);
   assert.deepEqual(list.map(x => [x.node.id, x.from.map(f => `${f.node.id}:${f.label}`), x.orphan]), [['日記', ['図書館:〈図書館〉成功'], false], ['噂', [], true]]);
 });
+
+test('scenes are grouped by place path; points without a place come last', async () => {
+  const { scenesByPlace } = await import('../app/js/chart.js');
+  const w = { notes: { 日本: { id: '日本', kind: 'place', title: '日本', parents: [] }, 図書館: { id: '図書館', kind: 'place', title: '図書館', parents: ['日本'] }, 屋敷: { id: '屋敷', kind: 'place', title: '屋敷', parents: ['日本'] } } };
+  const c = chart([['a'], ['b'], ['c'], ['d']], []);
+  c.nodes.a.place = '図書館'; c.nodes.b.place = '屋敷'; c.nodes.c.place = '図書館';
+  const g = scenesByPlace(c, w);
+  assert.deepEqual(g.map(x => [x.label, x.nodes.map(n => n.id)]), [['日本 › 図書館', ['a', 'c']], ['日本 › 屋敷', ['b']], ['場所なし', ['d']]].sort((p, q) => p[0] === '場所なし' ? 1 : q[0] === '場所なし' ? -1 : p[0].localeCompare(q[0], 'ja')));
+});
+
+test('scrubbing drops references to cards that no longer exist', async () => {
+  const { scrubChart, nodeCards } = await import('../app/js/chart.js');
+  const c = chart([['a']], []);
+  Object.assign(c.nodes.a, { place: 'gone', cast: ['p1', 'gone'], items: ['gone'], refs: ['r1'] });
+  scrubChart(c, id => id !== 'gone');
+  assert.deepEqual(nodeCards(c.nodes.a), ['p1', 'r1']);
+  assert.equal(c.nodes.a.place, undefined);
+});
+
+test('a tall point pushes the next row down so they do not overlap', () => {
+  const c = chart([['A'], ['B'], ['C']], [['A', 'B'], ['B', 'C']]);
+  const p = layoutChart(c, id => (id === 'A' ? 300 : 80));
+  assert.ok(p.B.y >= 300 + 40, 'row below the tall point clears it');
+  assert.equal(p.C.y - p.B.y, CHART_ROW, 'normal rows keep the usual spacing');
+});

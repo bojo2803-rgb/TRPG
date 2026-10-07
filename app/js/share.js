@@ -3,6 +3,7 @@
 import { uid, clone } from './util.js';
 import { childrenOf, placePath } from './model.js';
 import { imageIds } from './ui/markdown.js';
+import { nodeCards } from './chart.js';
 
 export const PKG = 'trpg-scenario';
 
@@ -12,7 +13,7 @@ export function scenarioPackage(w, sid, { sessions = false } = {}) {
   if (!sc) throw new Error('シナリオが見つかりません');
   const ids = new Set([sid]);
   for (const n of childrenOf(w, sid)) ids.add(n.id);
-  for (const nd of Object.values(sc.chart?.nodes || {})) for (const r of nd.refs || []) if (w.notes[r]) ids.add(r);
+  for (const nd of Object.values(sc.chart?.nodes || {})) for (const r of nodeCards(nd)) if (w.notes[r]) ids.add(r);
   // 場所：入るカードの場所と、ロケーションの上をたどったもの
   for (const id of [...ids]) {
     const n = w.notes[id];
@@ -53,7 +54,10 @@ export function importPackage(w, pkg) {
     if (n.origin) n.origin = re(n.origin) || undefined;
     if (!n.at) delete n.at;
     if (!n.origin) delete n.origin;
-    for (const nd of Object.values(n.chart?.nodes || {})) nd.refs = (nd.refs || []).map(re).filter(Boolean);
+    for (const nd of Object.values(n.chart?.nodes || {})) {
+      for (const k of ['refs', 'cast', 'items']) if (nd[k]) nd[k] = nd[k].map(re).filter(Boolean);
+      if (nd.place) { nd.place = re(nd.place); if (!nd.place) delete nd.place; }
+    }
     w.notes[n.id] = n;
   }
   for (const l of Object.values(pkg.links || {})) if (map[l.a] && map[l.b]) { const nl = { ...clone(l), id: uid('l'), a: map[l.a], b: map[l.b] }; w.links[nl.id] = nl; }

@@ -6,6 +6,7 @@
 //   ボード：貼ってある付箋の位置は1枚ずつ取り込む。そのほか（つながり・テンプレートなど）は、両方が直していればこの端末の版
 import { uid } from './util.js';
 import { dropLines } from './model.js';
+import { scrubChart } from './chart.js';
 
 const J = v => JSON.stringify(v);
 const COLLECTIONS = ['notes', 'links', 'boards', 'templates', 'maps', 'calendars', 'images'];
@@ -82,6 +83,7 @@ function cleanup(w) {
     n.parents = (n.parents || []).filter(has);
     if (n.origin && !has(n.origin)) delete n.origin;
     if (n.at && !has(n.at)) delete n.at;
+    if (n.chart) scrubChart(n.chart, has);
     if (n.when && !tids.has(n.when.tr)) delete n.when;
     if (n.legs) n.legs = n.legs.filter(g => tids.has(g.tr));
   }

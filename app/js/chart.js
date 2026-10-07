@@ -1,6 +1,8 @@
-// ストーリーチャート：シナリオのカードの chart = { nodes: { id: { id, title, body, type, refs, pos? } }, edges: { id: { id, from, to, label } } }。
-// 点は出来事・情報・探索の考えなど、矢印は「PLがこうしたら」。分岐・合流・前へ戻る（輪）を許す
+// ストーリーチャート：シナリオのカードの chart = { nodes: { id: { id, title, body, type, refs, pos?, time?, place?, cast?, items? } }, edges: { id: { id, from, to, label } } }。
+// 点は出来事・情報・探索の考えなど、矢印は「PLがこうしたら」。分岐・合流・前へ戻る（輪）を許す。
+// 点に付けられるもの：time（いつ。自由に書く）・place（場所。ロケーション1つ）・cast（登場する人物・集団）・items（アイテム）・refs（そのほかのカード）
 import { uid } from './util.js';
+import { placePath } from './model.js';
 
 export const NODE_TYPES = {
   event: { label: '出来事', icon: '◆' },
@@ -18,8 +20,9 @@ export const newChartEdge = (from, to, label = '') => ({ id: uid('ce'), from, to
 
 // 自動の並び：入ってくる矢印のない点を一番上に、上→下の段へ。輪になる矢印（前の場面へ戻る）は段の計算に使わない。
 // 段の中は、上の点の真ん中の平均で並べ、重ならないよう詰めてから、段全体を上の点の真ん中に寄せる。
+// 段の高さは、その段の一番背の高い点に合わせる（heightOf(id)：描いた点の高さ。わからなければ 0 で CHART_ROW ずつ）。
 // 手で置いた点（pos）はそのまま。戻り値：点の id → 左上の { x, y }
-export function layoutChart(chart) {
+export function layoutChart(chart, heightOf = () => 0) {
   const nodes = Object.values(chart.nodes), ids = nodes.map(n => n.id), has = new Set(ids);
   const edges = Object.values(chart.edges).filter(e => has.has(e.from) && has.has(e.to) && e.from !== e.to);
   const out = new Map(ids.map(id => [id, []]));
@@ -43,6 +46,7 @@ export function layoutChart(chart) {
   const pos = {}, cx = {};
   for (const n of nodes) if (n.pos) { pos[n.id] = { x: n.pos.x, y: n.pos.y }; cx[n.id] = n.pos.x + CHART_W / 2; }
   const maxL = Math.max(0, ...layer.values());
+  let y = 0;
   for (let L = 0; L <= maxL; L++) {
     const row = nodes.filter(n => !n.pos && layer.get(n.id) === L).map((n, i) => {
       const ps = parents(n.id).filter(p => p in cx);
@@ -52,7 +56,8 @@ export function layoutChart(chart) {
     let prev = -Infinity;
     for (const r of row) { r.x = Math.max(r.want ?? (prev === -Infinity ? 0 : prev + CHART_W + CHART_GAP), prev + CHART_W + CHART_GAP); prev = r.x; }
     const wants = row.filter(r => r.want != null), shift = wants.length ? wants.reduce((s, r) => s + r.want - r.x, 0) / wants.length : 0;
-    for (const r of row) { cx[r.id] = r.x + shift; pos[r.id] = { x: Math.round(cx[r.id] - CHART_W / 2), y: L * CHART_ROW }; }
+    for (const r of row) { cx[r.id] = r.x + shift; pos[r.id] = { x: Math.round(cx[r.id] - CHART_W / 2), y }; }
+    y += Math.max(CHART_ROW, Math.max(0, ...row.map(r => heightOf(r.id))) + CHART_ROW - 80); // 80：ふつうの点の高さ。残りは矢印とラベルの間
   }
   return pos;
 }
@@ -65,3 +70,24 @@ export function clueList(chart) {
     return { node: n, from, orphan: !from.length };
   });
 }
+
+// 点が指しているカード（場所・登場・アイテム・そのほか）
+export const nodeCards = n => [n.place, ...(n.cast || []), ...(n.items || []), ...(n.refs || [])].filter(Boolean);
+// もうないカードを指しているところを外す（has(id)：カードがあるか）
+export function scrubChart(chart, has) {
+  for (const n of Object.values(chart?.nodes || {})) {
+    if (n.place && !has(n.place)) delete n.place;
+    for (const k of ['cast', 'items', 'refs']) if (n[k]) n[k] = n[k].filter(has);
+  }
+}
+// 場所ごとのシーン：点を場所（道すじ）ごとにまとめる。場所のない点は最後
+export function scenesByPlace(chart, w) {
+  const groups = new Map();
+  for (const n of Object.values(chart.nodes)) {
+    const key = n.place && w.notes[n.place] ? n.place : null;
+    if (!groups.has(key)) groups.set(key, { place: key, label: key ? placePath(w, key).map(x => w.notes[x].title || '名前なし').join(' › ') : '場所なし', nodes: [] });
+    groups.get(key).nodes.push(n);
+  }
+  return [...groups.values()].sort((a, b) => (a.place ? 0 : 1) - (b.place ? 0 : 1) || a.label.localeCompare(b.label, 'ja'));
+}
+

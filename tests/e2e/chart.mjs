@@ -56,5 +56,51 @@ ok((await chart()).nodes[Object.values((await chart()).nodes).find(n => n.title 
 ok(await node('古い日記').locator('.cnode-refs .chip').count() === 1, 'linked card chip shown on the point');
 await p.keyboard.press('Control+z'); await wait(300);
 ok(!(await p.evaluate(() => Object.values(__app.world.notes).some(n => n.title === '古い日記' && n.when))), 'undo removes the event');
+// 場所・いつ・登場・アイテム
+const pl = await p.evaluate(() => { const a = __app.newNote({ kind: 'place', title: 'アーカム' }, { open: false }); return { a, lib: __app.newNote({ kind: 'place', title: 'ミスカトニック大学図書館', parents: [a] }, { open: false }) }; });
+const nid = t => p.evaluate(([id, t]) => Object.values(__app.world.notes[id].chart.nodes).find(n => n.title === t).id, [sid, t]);
+await node('図書館').locator('.cnode-t').click(); await wait(300);
+await p.fill('#cn_time', '1日目・昼');
+await p.getByLabel('場所', { exact: true }).fill('ミスカトニック大学図書館');
+const castIn = p.locator('#dlgBody input[placeholder*="アーミテッジ"]'), itemIn = p.locator('#dlgBody input[placeholder*="古い鍵"]');
+await castIn.fill('アーミテッジ'); await castIn.press('Enter'); await wait(100);
+ok((await p.locator('#dlgBody').textContent()).includes('アーミテッジ（新しく作る）'), 'new name shows as a chip before saving');
+await itemIn.fill('古い鍵'); // Enter なしで保存しても入る
+await p.click('#dlgOk'); await wait(300);
+let lib = (await chart()).nodes[await nid('図書館')];
+const W = () => p.evaluate(() => __app.world);
+let w = await W();
+ok(lib.place === pl.lib && lib.time === '1日目・昼', 'point keeps place (picked by name) and time');
+ok(lib.cast.length === 1 && w.notes[lib.cast[0]].kind === 'person' && w.notes[lib.cast[0]].parents.includes(sid), 'new cast member is a person in the scenario');
+ok(lib.items.length === 1 && w.notes[lib.items[0]].title === '古い鍵' && w.notes[lib.items[0]].kind === 'item', 'new item made');
+ok((await node('図書館').textContent()).includes('📍 アーカム › ミスカトニック大学図書館'), 'point shows the place path');
+ok((await node('図書館').textContent()).includes('🕒 1日目・昼'), 'point shows the time');
+// 次の点は場所を引き継ぐ。ない場所の名前はロケーションを作る
+await node('屋敷').locator('.cnode-t').click(); await wait(300);
+await p.getByLabel('場所', { exact: true }).fill('ウェイトリー家');
+await p.click('#dlgOk'); await wait(300);
+w = await W();
+const wh = (await chart()).nodes[await nid('屋敷')].place;
+ok(w.notes[wh]?.kind === 'place' && w.notes[wh].title === 'ウェイトリー家', 'unknown place name creates a location');
+await node('図書館').locator('[data-act="next"]').click(); await wait(200);
+ok((await p.getByLabel('場所', { exact: true }).inputValue()) === 'アーカム › ミスカトニック大学図書館', 'next point starts in the same place');
+await p.click('#dlgCancel'); await wait(100);
+// 場所ごとの一覧
+await p.click('.bar button:has-text("場所ごとの一覧")'); await wait(200);
+const sc = await p.locator('#dlgBody').textContent();
+ok(sc.includes('📍 アーカム › ミスカトニック大学図書館') && sc.includes('📍 ウェイトリー家') && sc.includes('場所なし'), 'scenes grouped by place');
+await p.screenshot({ path: SHOT + 'chart-scenes.png' });
+await p.click('#dlgCancel'); await wait(100);
+await p.screenshot({ path: SHOT + 'chart-place.png' });
+// 時系列に置く → 出来事の場所になる
+await node('図書館').locator('[data-act="menu"]').click(); await wait(100);
+await p.click('#menu button:has-text("出来事として時系列に置く")'); await wait(400);
+ok(await p.evaluate(([id, at]) => Object.values(__app.world.notes).some(n => n.title === '図書館' && n.when && n.at === at && n.parents.includes(id)), [sid, pl.lib]), 'event made from the point is at its place');
+// ロケーションの詳しい画面：ここで起きること（上のロケーションでも出る）
+await p.evaluate(id => __app.openNote(id), pl.a); await wait(300);
+ok((await p.locator('.ne [data-sec="here"]').textContent()).includes('ダンウィッチの怪 › 図書館（ミスカトニック大学図書館）'), 'location shows chart points inside it');
+// 人物を消すと、点からも消える
+await p.evaluate(id => __app.deleteNote(id), lib.cast[0]); await wait(300);
+ok(!(await chart()).nodes[await nid('図書館')].cast.length, 'deleted person leaves the point');
 ok(!errors.length, 'errors: ' + errors.join('\n'));
 await b.close(); done();

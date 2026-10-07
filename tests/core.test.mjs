@@ -153,3 +153,12 @@ test('moving a place carries everything below and refuses moving into itself', (
   assert.equal(movePlace(w, '新宿', null), null);
   assert.deepEqual(placePath(w, 'ビル'), ['新宿', 'ビル']);
 });
+
+test('deleting a card removes it from story chart points', () => {
+  const w = newWorld();
+  w.notes.p = newNote({ id: 'p', kind: 'place' }); w.notes.m = newNote({ id: 'm', kind: 'person' });
+  w.notes.sc = newNote({ id: 'sc', kind: 'scenario', chart: { nodes: { a: { id: 'a', title: '', type: 'event', refs: ['m'], place: 'p', cast: ['m'], items: [] } }, edges: {} } });
+  deleteNote(w, 'p'); deleteNote(w, 'm');
+  const a = w.notes.sc.chart.nodes.a;
+  assert.equal(a.place, undefined); assert.deepEqual(a.cast, []); assert.deepEqual(a.refs, []);
+});

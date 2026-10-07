@@ -288,12 +288,15 @@ export function putHere(ctx, placeId) {
 // ここにあるもの：このロケーションと中のロケーションを場所にしているカード（種類ごと、どこにあるかつき）
 export function hereSec(ctx, w, n) {
   const here = Object.values(w.notes).filter(o => o.id !== n.id && isWithin(w, o.at, n.id)).sort(byTitle);
+  // シナリオのストーリーチャートで、ここ（中も含む）を場所にしている点
+  const scenes = Object.values(w.notes).filter(o => kindOf(o) === 'scenario').flatMap(s => Object.values(s.chart?.nodes || {}).filter(p => isWithin(w, p.place, n.id)).map(p => [s, p]));
   const btn = h('div', { class: 'row' }, add('＋ ここに置く', () => putHere(ctx, n.id)));
-  if (!here.length) return h('div', { class: 'fields' }, h('p', { class: 'note-text' }, 'まだ何もありません（「＋ ここに置く」か、人物などの「いる所」「ある所」の欄で、ここを選ぶと出ます）'), btn);
+  if (!here.length && !scenes.length) return h('div', { class: 'fields' }, h('p', { class: 'note-text' }, 'まだ何もありません（「＋ ここに置く」か、人物などの「いる所」「ある所」の欄で、ここを選ぶと出ます）'), btn);
   return h('div', { class: 'fields' }, btn, ...['person', 'group', 'item', 'scenario', 'note'].map(k => {
     const xs = here.filter(o => kindOf(o) === k);
     return xs.length ? row(k === 'note' ? '出来事など' : KINDS[k].label, ...xs.map(o => chip(ctx, o.id, o.at !== n.id ? `（${w.notes[o.at].title}）` : null))) : null;
-  }));
+  }), scenes.length ? row('ここで起きること（チャート）', ...scenes.map(([s, p]) => h('button', { type: 'button', class: 'chip', title: 'シナリオのチャートを開く', onclick: () => ctx.openElement(s.id) },
+    `${s.title || '名前なし'} › ${p.title || '題名なし'}${p.place !== n.id ? `（${w.notes[p.place].title}）` : ''}`))) : null);
 }
 
 // 一覧のカードに出す短い説明

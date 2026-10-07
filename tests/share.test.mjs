@@ -9,7 +9,8 @@ function world() {
   const add = (id, p) => { w.notes[id] = newNote({ id, title: id, ...p }); };
   add('日本', { kind: 'place' }); add('東京', { kind: 'place', parents: ['日本'] });
   add('sc', { kind: 'scenario', title: 'ダンウィッチの怪', at: '東京', sessions: [{ id: 's1', date: '2026-10-01', who: 'A', memo: '秘密' }], share: { fileId: 'x' },
-    chart: { nodes: { n1: { id: 'n1', title: '導入', type: 'event', refs: ['屋敷'], body: '' } }, edges: {} } });
+    chart: { nodes: { n1: { id: 'n1', title: '導入', type: 'event', refs: ['屋敷'], body: '', place: '酒場', cast: ['店主'], items: ['鍵'] } }, edges: {} } });
+  add('酒場', { kind: 'place', parents: ['日本'] }); add('店主', { kind: 'person' }); add('鍵', { kind: 'item' });
   add('アーミテッジ', { kind: 'person', parents: ['sc'], at: '東京' });
   add('日記', { when: { tr: 'main', t: { d: 2425000, s: 0 }, prec: 'day' }, parents: ['sc'], body: '![絵](img:i1)' });
   add('屋敷', { kind: 'place' });
@@ -22,7 +23,7 @@ function world() {
 test('a scenario package carries what the scenario uses, and nothing else', () => {
   const pkg = scenarioPackage(world(), 'sc');
   assert.equal(pkg.format, PKG);
-  assert.deepEqual(Object.keys(pkg.notes).sort(), ['sc', 'アーミテッジ', '屋敷', '日本', '日記', '東京'].sort());
+  assert.deepEqual(Object.keys(pkg.notes).sort(), ['sc', 'アーミテッジ', '屋敷', '日本', '日記', '東京', '酒場', '店主', '鍵'].sort());
   assert.equal(Object.keys(pkg.links).length, 1, 'only links between included cards');
   assert.equal(pkg.notes.sc.sessions, undefined, 'play records left out by default');
   assert.equal(pkg.notes.sc.share, undefined);
@@ -44,6 +45,7 @@ test('importing gives every card a new id and never overwrites the receiving wor
   assert.equal(byTitle('アーミテッジ').at, byTitle('東京').id);
   assert.deepEqual(byTitle('東京').parents, [byTitle('日本').id]);
   assert.deepEqual(sc.chart.nodes.n1.refs, [byTitle('屋敷').id]);
+  assert.deepEqual([sc.chart.nodes.n1.place, ...sc.chart.nodes.n1.cast, ...sc.chart.nodes.n1.items], [byTitle('酒場').id, byTitle('店主').id, byTitle('鍵').id]);
   assert.equal(byTitle('日記').when.tr, 'main');
   const l = Object.values(target.links)[0];
   assert.deepEqual([l.a, l.b], [byTitle('アーミテッジ').id, byTitle('日記').id]);

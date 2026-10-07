@@ -2,6 +2,7 @@
 // 世界 = 付箋（notes）・つながり（links）・ボード（boards）・テンプレート（templates）・世界線（tracks）・地図（maps）・架空の暦（calendars）・画像（images）
 import { uid, clone } from './util.js';
 import { T, isT, fromDays, wallToUtc } from './cal/time.js';
+import { scrubChart } from './chart.js';
 
 export const FORMAT = 'trpg-world', VERSION = 3;
 
@@ -107,6 +108,7 @@ export function deleteNote(w, id) {
     o.parents = o.parents.filter(p => p !== id);
     if (o.origin === id) delete o.origin;
     if (o.at === id) delete o.at;
+    if (o.chart) scrubChart(o.chart, x => x !== id);
   }
 }
 

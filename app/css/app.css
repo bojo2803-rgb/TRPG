@@ -451,6 +451,13 @@ input.add-name { min-width: 0; flex: 1 1 220px; max-width: 320px; }
 .cnode-b { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .cnode-refs { display: flex; flex-wrap: wrap; gap: 4px; }
 .cnode-refs .chip { font-size: 11px; padding: 1px 6px; }
+.cnode-ic { font-size: 11px; }
+.cnode-m { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+button.cnode-place { all: unset; cursor: pointer; font-size: 12px; color: var(--c-c1); overflow-wrap: anywhere; }
+button.cnode-place:hover, button.cnode-place:focus-visible { text-decoration: underline; }
+.names { gap: 4px; flex-wrap: wrap; }
+.names-chips { display: contents; }
+.names input { flex: 1 1 160px; min-width: 0; }
 .cnode-acts { display: flex; gap: 4px; flex-wrap: wrap; }
 .cnode-acts .btn { padding: 2px 6px; font-size: 11px; }
 .cnode.t-event { border-top-color: var(--c-c3); } .cnode.t-info { border-top-color: var(--c-c1); } .cnode.t-place { border-top-color: var(--c-c6); }

@@ -29,7 +29,7 @@ const sid = await p.evaluate(async () => {
     w.notes[id].at = place;
     w.notes[id].period = { tr: 'main', t: { d: 2425403, s: 0 }, prec: 'day', tz: 'Asia/Tokyo' };
     w.notes[id].sessions = [{ id: 's1', date: '2026-10-01', who: 'A・B', memo: '秘密の記録' }];
-    w.notes[id].chart = { nodes: { a: { id: 'a', title: '導入', type: 'event', refs: [], body: '' }, b: { id: 'b', title: '図書館', type: 'place', refs: [place], body: '' } }, edges: { e: { id: 'e', from: 'a', to: 'b', label: '調べに行く' } } };
+    w.notes[id].chart = { nodes: { a: { id: 'a', title: '導入', type: 'event', refs: [], body: '' }, b: { id: 'b', title: '図書館', type: 'place', refs: [], place, time: '2日目・昼', body: '' } }, edges: { e: { id: 'e', from: 'a', to: 'b', label: '調べに行く' } } };
   });
   const pc = __app.newNote({ kind: 'person', title: 'アーミテッジ', parents: [id], born: { tr: 'main', t: { d: 2411094, s: 0 }, prec: 'day', tz: 'Asia/Tokyo' } }, { open: false });
   return id;
@@ -44,6 +44,8 @@ ok(/share\.html#f=.+&k=AIzaTEST/.test(url), 'link points at the reading page wit
 await p.goto(url); await p.waitForSelector('.share h1'); await wait(500);
 ok(await p.locator('.share h1').textContent() === 'ダンウィッチの怪', 'reading page shows the scenario');
 ok(await p.locator('.share .cnode').count() === 2 && await p.locator('.share .cedge-l').textContent() === '調べに行く', 'chart drawn read-only');
+ok((await p.locator('.share .cnode').nth(1).textContent()).includes('📍 ダンウィッチ村') && (await p.locator('.share').textContent()).includes('🕒 2日目・昼'), 'chart points show place and time');
+ok((await p.locator('.share-sec:has(h2:text-is("場所ごとのシーン"))').textContent()).includes('📍 ダンウィッチ村図書館（2日目・昼）'), 'scenes by place listed');
 ok((await p.locator('.share').textContent()).includes('アーミテッジ（39歳）'), 'person with age at the scenario time (born 1889-04-01, scenario 1928-06-05)');
 ok((await p.locator('.share').textContent()).includes('ヨグ＝ソトースの子'), 'GM fields included');
 ok(!(await p.locator('.share').textContent()).includes('秘密の記録'), 'play records left out');
