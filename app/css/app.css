@@ -459,3 +459,31 @@ input.add-name { min-width: 0; flex: 1 1 220px; max-width: 320px; }
 .clue ul { margin: 4px 0 0; padding-left: 20px; }
 .clue.orphan b { color: var(--c-c5); }
 
+/* 共有されたシナリオを読むページ */
+body.share-page { height: auto; }
+.share { max-width: 920px; margin: 0 auto; padding: 24px 16px 48px; box-sizing: border-box; }
+.share h1 { font-family: var(--font-title); font-size: 28px; margin: 4px 0; overflow-wrap: anywhere; }
+.share h2 { font-family: var(--font-title); font-size: 19px; margin: 0 0 10px; padding-bottom: 4px; border-bottom: 2px solid var(--line); }
+.share h3 { font-size: 16px; margin: 0 0 4px; overflow-wrap: anywhere; }
+.share-head { margin-bottom: 20px; }
+.share-tools { margin-top: 8px; gap: 8px; }
+a.btn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+.share-sec { margin: 22px 0; }
+.share-card { background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
+.share-card.k-person { border-left: 4px solid var(--c-c4); } .share-card.k-item { border-left: 4px solid var(--c-c6); } .share-card.k-group { border-left: 4px solid var(--c-c3); } .share-card.k-place { border-left: 4px solid var(--c-c1); }
+.share-fields { display: grid; gap: 6px; }
+.share-fields h4 { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.sf { display: grid; grid-template-columns: 9em 1fr; gap: 8px; align-items: start; }
+.sf .lbl { color: var(--muted); font-size: 13px; }
+.share-chart { overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); max-height: 80vh; }
+.share-chart-layer { position: relative; margin: 20px; }
+.share-chart-layer .cnode { cursor: default; }
+.share-foot { margin-top: 32px; }
+@media (max-width: 560px) { .sf { grid-template-columns: 1fr; gap: 0; } }
+@media print {
+  .share-tools { display: none; }
+  .share-chart { max-height: none; overflow: visible; border: 0; }
+  .share-card { break-inside: avoid; }
+  body.share-page { background: #fff; }
+}
+

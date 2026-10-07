@@ -10,11 +10,13 @@ import { pickNote } from './picker.js';
 export function drawChart(layer, chart, { readOnly = false, linking = null, cardTitle = id => id, onRef = null, moved = {} } = {}) {
   const pos = layoutChart(chart);
   for (const [id, p] of Object.entries(moved)) pos[id] = p;
+  // 左や上へはみ出す点（分かれ道は真ん中から左右へ広がる）があれば、描くときだけ全体をずらす（記録する位置はずらさない）
+  const ps = Object.values(pos), ox = -Math.min(0, ...ps.map(p => p.x)), oy = -Math.min(0, ...ps.map(p => p.y));
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.classList.add('chart-edges');
   const nodes = Object.values(chart.nodes).map(n => {
     const t = NODE_TYPES[n.type] || NODE_TYPES.memo, preview = (n.body || '').split('\n').filter(Boolean).slice(0, 2).join(' ');
-    return h('div', { class: `cnode t-${n.type}${linking === n.id ? ' linking' : ''}${n.pos ? ' placed' : ''}`, 'data-node': n.id, 'data-click': 'node', 'data-drag': readOnly ? null : '1', style: { left: pos[n.id].x + 'px', top: pos[n.id].y + 'px', width: CHART_W + 'px' } },
+    return h('div', { class: `cnode t-${n.type}${linking === n.id ? ' linking' : ''}${n.pos ? ' placed' : ''}`, 'data-node': n.id, 'data-click': 'node', 'data-drag': readOnly ? null : '1', style: { left: pos[n.id].x + ox + 'px', top: pos[n.id].y + oy + 'px', width: CHART_W + 'px' } },
       h('div', { class: 'cnode-type' }, `${t.icon} ${t.label}`),
       h('div', { class: 'cnode-t' }, n.title || '（題名なし）'),
       preview ? h('div', { class: 'cnode-b' }, preview) : null,
@@ -27,7 +29,7 @@ export function drawChart(layer, chart, { readOnly = false, linking = null, card
   layer.replaceChildren(svg, ...nodes);
   // 矢印：上の点の下から、下の点の上へ。前の場面へ戻る矢印は右側を回る
   const drawEdges = (over = {}) => {
-    const box = id => { const el = layer.querySelector(`[data-node="${id}"]`), p = over[id] || pos[id]; return { x: p.x, y: p.y, w: CHART_W, h: el?.offsetHeight || 80 }; };
+    const box = id => { const el = layer.querySelector(`[data-node="${id}"]`), p = over[id] || pos[id]; return { x: p.x + ox, y: p.y + oy, w: CHART_W, h: el?.offsetHeight || 80 }; };
     let maxX = 0, maxY = 0, out = '<defs><marker id="carr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>';
     for (const id of Object.keys(chart.nodes)) { const b = box(id); maxX = Math.max(maxX, b.x + b.w); maxY = Math.max(maxY, b.y + b.h); }
     for (const e of Object.values(chart.edges)) {
@@ -48,7 +50,7 @@ export function drawChart(layer, chart, { readOnly = false, linking = null, card
     svg.innerHTML = out;
     return { w: maxX, h: maxY };
   };
-  return { pos, drawEdges };
+  return { pos, off: { x: ox, y: oy }, drawEdges };
 }
 
 export function mount(el, ctx, arg) {
@@ -70,7 +72,7 @@ export function mount(el, ctx, arg) {
     },
     onDragItem: (target, dx, dy, done) => {
       const id = target.dataset.node, p = cur.pos[id], np = { x: Math.round(p.x + dx), y: Math.round(p.y + dy) };
-      if (!done) { target.style.left = np.x + 'px'; target.style.top = np.y + 'px'; cur.drawEdges({ [id]: np }); return; }
+      if (!done) { target.style.left = np.x + cur.off.x + 'px'; target.style.top = np.y + cur.off.y + 'px'; cur.drawEdges({ [id]: np }); return; }
       C(c => { c.nodes[id].pos = np; }, '点を動かす');
     },
   });

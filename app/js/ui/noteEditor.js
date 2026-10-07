@@ -72,6 +72,7 @@ function render(ctx) {
     k !== 'place' && (el || n.at || n.when || showMore) ? sec('at', AT_LABEL[k], atSec(ctx, w, n)) : null,
     k === 'scenario' ? sec('contents', '中身', contentsSec(ctx, w, n)) : null,
     k === 'scenario' ? sec('sessions', '遊んだ記録', sessionsSec(ctx, w, n, edit2)) : null,
+    k === 'scenario' ? sec('share', '共有', lazy(() => import('./shareUI.js').then(m => m.shareSec(ctx, ctx.world, ctx.world.notes[n.id])))) : null,
     k !== 'scenario' && k !== 'place' && (el || used.scen || n.when) ? sec('scen', el ? '登場するシナリオ' : 'シナリオ', scenariosSec(ctx, w, n)) : null,
     show('family') ? sec('family', '家族', familySec(ctx, w, n)) : null,
     show('when') ? sec('when', '時系列', whenSec(ctx, w, n)) : null,
@@ -210,6 +211,12 @@ async function fillImages(ctx) {
   }
 }
 
+// あとから読み込む欄（使うときだけ読み込む部品）
+function lazy(load) {
+  const box = h('div', {}, h('p', { class: 'note-text' }, '読み込んでいます…'));
+  load().then(el => box.replaceChildren(el), e => box.replaceChildren(h('p', { class: 'err' }, `読み込めませんでした：${e.message}`)));
+  return box;
+}
 // 時系列：時系列マップの画面が用意する（日時の入力は暦の部品を使う）
 let whenMod = null;
 function whenSec(ctx, w, n) {

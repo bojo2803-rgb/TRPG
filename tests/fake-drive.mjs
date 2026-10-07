@@ -19,8 +19,12 @@ export function fakeDrive() {
   }
   const fetch = async (url, opt = {}) => {
     const u = new URL(url), method = opt.method || 'GET';
-    if (!opt.headers?.Authorization?.startsWith('Bearer ')) return json({ error: { message: 'no auth' } }, 401);
     const idm = /\/files\/([^/?]+)/.exec(u.pathname);
+    // リンクを知っている人は読める：API キーだけで中身を読める
+    if (!opt.headers?.Authorization && u.searchParams.get('key') && method === 'GET' && u.searchParams.get('alt') === 'media') { const f = idm && files.get(idm[1]); return f?.public ? new Response(f.content) : json({ error: { message: 'not found' } }, 404); }
+    if (!opt.headers?.Authorization?.startsWith('Bearer ')) return json({ error: { message: 'no auth' } }, 401);
+    if (method === 'POST' && /\/permissions$/.test(u.pathname)) { const f = files.get(idm[1]); if (!f) return json({ error: { message: 'not found' } }, 404); const pm = JSON.parse(opt.body); if (pm.type === 'anyone') f.public = true; return json({ id: 'perm' }); }
+    if (method === 'DELETE') { files.delete(idm[1]); return new Response(null, { status: 204 }); }
     if (method === 'GET' && !idm) return json({ files: [...files.values()].filter(f => match(f, u.searchParams.get('q'))).map(({ content, ...f }) => f) });
     if (method === 'POST' && u.pathname.startsWith('/drive')) { const meta = JSON.parse(opt.body), id = 'f' + (++n); files.set(id, { id, version: 1, modifiedTime: new Date().toISOString(), ...meta }); return json({ id }); }
     if (method === 'POST' && u.pathname.startsWith('/upload')) { const { meta, data } = await parseMultipart(opt.body, opt.headers['Content-Type']); const id = 'f' + (++n); files.set(id, { id, version: 1, ...meta, content: data }); return json({ id, version: 1 }); }

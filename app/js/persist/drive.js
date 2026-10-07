@@ -26,7 +26,7 @@ export function createDriveBackend({ fetch: f = (...a) => fetch(...a), token }) 
       const r = await f(url, { method, headers: { Authorization: `Bearer ${t}`, ...headers }, body });
       if (r.status === 401 && attempt === 0) continue; // 鍵の期限切れ：取り直してもう一度
       if (!r.ok) { let msg = ''; try { msg = (await r.json()).error?.message || ''; } catch { /* なし */ } throw new Error(`Googleドライブ（${r.status}）${msg}`); }
-      return raw ? r : r.status === 204 ? null : r.json();
+      return raw ? r : r.status === 204 || method === 'DELETE' ? null : r.json();
     }
   }
   const q = s => encodeURIComponent(s);
@@ -93,6 +93,17 @@ export function createDriveBackend({ fetch: f = (...a) => fetch(...a), token }) 
       if (folderId) await api('PATCH', `${API}/files/${folderId}?fields=id`, { body: JSON.stringify({ trashed: true }), headers: { 'Content-Type': 'application/json' } });
       metas.delete(id);
     },
+    // シナリオの共有：世界のフォルダ（なければ「TRPG 世界設定」フォルダ）にファイルを置き、リンクを知っている人は読めるようにする。
+    // fileId があれば、その中身を入れ替える（同じリンクのまま）。戻り値：ファイルの id
+    async share(worldId, name, text, fileId = null) {
+      if (fileId) { await api('PATCH', `${UP}/files/${fileId}?uploadType=media&fields=id`, { body: text, headers: { 'Content-Type': 'application/json' } }); return fileId; }
+      const folderId = await folderOf(worldId) || await root();
+      const r = await api('POST', `${UP}/files?uploadType=multipart&fields=id`, multipart({ name, parents: [folderId], mimeType: 'application/json', appProperties: { trpgShare: '1' } }, text, 'application/json'));
+      await api('POST', `${API}/files/${r.id}/permissions?fields=id`, { body: JSON.stringify({ role: 'reader', type: 'anyone' }), headers: { 'Content-Type': 'application/json' } });
+      return r.id;
+    },
+    // 共有をやめる：ファイルを消す（リンクで読めなくなる）
+    async unshare(fileId) { await api('DELETE', `${API}/files/${fileId}`); },
     async putImage(worldId, imageId, blob) {
       const folderId = await folderOf(worldId);
       if (!folderId) throw new Error('世界のフォルダが見つかりません');
@@ -181,11 +192,13 @@ export const wasConnected = () => !!conf.get().connected && !!conf.get().clientI
 export function settingsSection(ctx, el) {
   if (!el) return;
   const c = conf.get();
+  const apiKey = h('input', { value: c.apiKey || '', placeholder: 'AIza……', 'aria-label': 'API キー', style: { width: '100%' }, onchange: e => conf.set({ apiKey: e.target.value.trim() }) });
   const id = h('input', { value: c.clientId || '', placeholder: '…….apps.googleusercontent.com', 'aria-label': 'OAuth クライアント ID', style: { width: '100%' } });
   const status = h('p', { class: 'note-text' }, connected() ? 'つながっています。' : c.clientId ? 'まだつないでいません。' : 'クライアント ID を貼ってから「つなぐ」を押してください。');
   const render = () => el.replaceChildren(
     h('p', { class: 'note-text' }, '世界をGoogleドライブに保存すると、PCとスマホの両方で同じ世界を開けます。最初に一度だけ、Google Cloud でクライアント ID を作る必要があります（無料）。', h('a', { href: GUIDE_URL, target: '_blank', rel: 'noopener' }, '手順書を開く')),
     h('label', {}, 'OAuth クライアント ID', id),
+    h('label', {}, 'API キー（シナリオの共有リンク用。手順書の 8.）', apiKey),
     h('div', { class: 'row' },
       connected()
         ? h('button', { type: 'button', class: 'btn', onclick: () => { disconnect(); status.textContent = '切りました。ドライブの世界は残っています。'; render(); } }, '切る')
@@ -211,3 +224,9 @@ export function settingsSection(ctx, el) {
   render();
 }
 export { conf as driveConf, appCtx };
+// 共有リンク：読むページ（share.html）に、ファイルの id と API キーを付ける
+export const shareUrl = fileId => `${new URL('share.html', location.href).href}#f=${encodeURIComponent(fileId)}&k=${encodeURIComponent(conf.get().apiKey || '')}`;
+export const hasApiKey = () => !!conf.get().apiKey;
+export const shareFile = (...a) => backend.share(...a);
+export const unshareFile = id => backend.unshare(id);
+

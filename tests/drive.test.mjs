@@ -102,3 +102,17 @@ test('typing during the upload itself is kept after merging the other device', a
   assert.equal(store.get().notes.c?.title, '保存中に作った付箋');
   assert.equal(store.get().notes.b.title, '乙（スマホで直した）');
 });
+
+test('sharing puts a public file that anyone with the key can read; update keeps the id; unshare removes it', async () => {
+  const srv = fakeDrive();
+  const A = createDriveBackend({ fetch: srv.fetch, token: async () => 'tA' });
+  const w = newWorld('世界');
+  await A.saveWorld(w);
+  const id = await A.share(w.id, '共有-シナリオ.json', '{"v":1}');
+  const read = async () => { const r = await srv.fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=K`); return r.ok ? r.text() : r.status; };
+  assert.equal(await read(), '{"v":1}');
+  assert.equal(await A.share(w.id, 'x', '{"v":2}', id), id);
+  assert.equal(await read(), '{"v":2}');
+  await A.unshare(id);
+  assert.equal(await read(), 404);
+});

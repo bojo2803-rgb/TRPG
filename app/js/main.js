@@ -218,13 +218,16 @@ function importDialog() {
   openDialog({
     title: '読み込む', ok: '新しい世界として開く',
     body: h('div', { class: 'fields' },
-      h('p', { class: 'note-text' }, '書き出したファイル（.json。時系列マップの試作品で書き出したものも）を選ぶか、書き出した文字を貼り付けてください。新しい世界として開きます（いまの世界はそのまま残ります）。'),
+      h('p', { class: 'note-text' }, '書き出したファイル（.json。時系列マップの試作品で書き出したものも）を選ぶか、書き出した文字を貼り付けてください。新しい世界として開きます（いまの世界はそのまま残ります）。シナリオ1つのファイルなら、いま開いている世界に取り込みます。'),
       h('input', { type: 'file', id: 'im_file', accept: '.json,application/json,text/plain', onchange: async e => { const f = e.target.files[0]; if (f) $('im_text').value = await f.text(); } }),
       h('textarea', { id: 'im_text', rows: 6, class: 'data', placeholder: 'ここに貼り付け', 'aria-label': '書き出した文字' }),
       h('div', { html: backendChoice() })),
     onSave: async () => {
       let d;
       try { d = JSON.parse($('im_text').value); } catch { throw '読めませんでした。書き出したファイルを選ぶか、書き出した文字をそのまま貼り付けてください'; }
+      // シナリオ1つのファイル：いま開いている世界に取り込む
+      const sh = await import('./ui/shareUI.js');
+      if (sh.isScenarioPackage(d)) { setTimeout(() => sh.confirmImport(ctx, d), 0); return; }
       try { migrateWorld(d); } catch (e) { throw `${e.message}。書き出したファイルを選んでください`; }
       await createWorld(chosenBackend(), d.name || null, d);
     },
@@ -296,4 +299,12 @@ async function start() {
     await createWorld('browser', idx[0].name, d);
   } catch { await createWorld('browser', '新しい世界'); }
 }
-start();
+// 共有ページの「自分のアプリに取り込む」で来たとき（…#import&f=…&k=…）：世界が開いてから取り込む
+async function checkImport() {
+  if (!/^#import/.test(location.hash)) return;
+  const hash = location.hash;
+  history.replaceState(null, '', location.pathname + location.search);
+  for (let i = 0; i < 240 && !persist.current(); i++) await new Promise(r => setTimeout(r, 500)); // ドライブにつなぐのを待つ
+  (await import('./ui/shareUI.js')).importFromLink(ctx, hash);
+}
+start().then(checkImport);
