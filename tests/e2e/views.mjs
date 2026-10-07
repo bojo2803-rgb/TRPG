@@ -20,7 +20,7 @@ ok(top['祖父'] < top['父'] && top['父'] < top['私'] && top['父'] === top['
 await p.screenshot({ path: '/tmp/claude-0/-home-user-TRPG/d9632758-4ca0-5713-8fd6-526324b6f925/scratchpad/app-family.png' });
 await p.locator('.fam-node', { hasText: '私' }).click(); await p.waitForTimeout(300);
 ok(await p.locator('.ne-title').inputValue() === '私', 'clicking node opens note');
-await p.click('.ne button[aria-label="閉じる"]');
+await p.click('#panel button[aria-label="閉じる"]');
 await p.click('nav button[data-id="graph"]'); await p.waitForTimeout(600);
 ok(await p.locator('.g-node').count() === 6, 'graph nodes: ' + await p.locator('.g-node').count());
 ok(await p.locator('.g-body').count() === 2 && await p.locator('.g-group').count() === 1, 'graph body/group edges');

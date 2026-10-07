@@ -54,7 +54,7 @@ function inline(text, resolveLink, imageUrl) {
   // 付箋へのリンク：[[名前]] / [[名前|表示]]
   s = s.replace(/\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]/g, (_, title, label) => {
     const t = title.trim(), n = resolveLink(unesc(t));
-    return n ? `<a href="#" class="nlink" data-note="${esc(n.id)}">${label || t}</a>` : `<a href="#" class="nlink missing" data-new="${t}" title="まだない付箋（クリックで作る）">${label || t}</a>`;
+    return n ? `<a href="#" class="nlink" data-note="${esc(n.id)}">${label || t}</a>` : `<a href="#" class="nlink missing" data-new="${t}" title="まだないカード（押すと、種類を選んで作る）">${label || t}</a>`;
   });
   // 外のページ：[文字](https://…)
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`);

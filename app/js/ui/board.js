@@ -56,7 +56,7 @@ export function mount(el, ctx, arg) {
       h('button', { type: 'button', class: 'btn icon', title: 'ボードのメニュー', 'aria-label': 'ボードのメニュー', onclick: e => ctx.menuAt(e.currentTarget, null, [
         ['＋ 新しいボード', () => { const nb = newBoard({ name: `ボード${Object.values(ctx.world.boards).filter(x => !x.owner).length + 1}` }); ctx.commit(w => { w.boards[nb.id] = nb; }, 'ボードを追加'); boardId = nb.id; remember(); render(true); }],
         ['名前を変える', () => ctx.openDialog({ title: 'ボードの名前', body: `<label>名前<input id="bd_name" value="${esc(board().name)}" autocomplete="off"></label>`, onSave: () => { const v = document.getElementById('bd_name').value.trim(); if (!v) throw '名前を入れてください'; ctx.commit(w => { w.boards[boardId].name = v; }, 'ボードの名前を変更'); } })],
-        ['このボードを削除', () => ctx.openDialog({ title: 'ボードを削除', ok: null, body: `<p>「${esc(label(board()))}」を削除します。貼ってある付箋そのものは消えません。</p>`, onDelete: () => {
+        ['このボードを削除', () => ctx.openDialog({ title: 'ボードを削除', ok: null, body: `<p>「${esc(label(board()))}」を削除します。貼ってあるカードそのものは消えません。</p>`, onDelete: () => {
           if (Object.keys(ctx.world.boards).length <= 1) throw '最後のボードは削除できません';
           ctx.commit(w => { delete w.boards[boardId]; }, 'ボードを削除'); boardId = lastBoard(ctx); render(true);
         } }), { danger: true }],
@@ -92,7 +92,7 @@ export function mount(el, ctx, arg) {
       n.tags.length ? h('div', { class: 'bcard-tags' }, n.tags.map(t => '#' + t).join(' ')) : null,
       body ? h('div', { class: 'bcard-b md', html: renderMarkdown(body, { resolveLink: () => null }) }) : null,
       kids.length ? h('button', { type: 'button', class: 'bcard-fold', title: collapsed ? 'まとめをひらく' : 'まとめをたたむ', 'aria-label': collapsed ? 'まとめをひらく' : 'まとめをたたむ', 'data-fold': n.id }, collapsed ? `▸ ${nh}枚` : '▾') : null,
-      h('span', { class: 'bcard-handle', title: '引っぱってほかの付箋につなぐ', 'data-handle': n.id }));
+      h('span', { class: 'bcard-handle', title: '引っぱってほかのカードにつなぐ', 'data-handle': n.id }));
   }
 
   function render(refit = false) {
@@ -106,7 +106,7 @@ export function mount(el, ctx, arg) {
     const ids = Object.keys(b.items).filter(id => w.notes[id] && !hidden.has(id));
     worldEl.querySelectorAll('.bcard').forEach(x => x.remove());
     for (const id of ids) worldEl.append(card(w.notes[id], b.items[id], hidden, b));
-    if (!ids.length) worldEl.append(h('div', { class: 'bcard empty-hint', style: { left: '40px', top: '40px', width: '320px' } }, 'このボードには、まだ付箋がありません。上の欄に書いて Enter で貼れます（今ある付箋は「＋ 貼る」）。付箋の右の● を引っぱると、ほかの付箋とつながります。'));
+    if (!ids.length) worldEl.append(h('div', { class: 'bcard empty-hint', style: { left: '40px', top: '40px', width: '320px' } }, 'このボードには、まだ何も貼っていません。上の欄に書いて Enter で付箋を貼れます（人物など、今あるカードは「＋ 貼る」）。カードの右の● を引っぱると、ほかのカードとつながります。'));
     if (!view) { fit(); views.set(boardId, view); }
     applyView();
     requestAnimationFrame(() => { sizes = new Map([...worldEl.querySelectorAll('.bcard[data-id]')].map(c => [c.dataset.id, { w: c.offsetWidth, h: c.offsetHeight }])); drawLinks(); });
@@ -182,7 +182,8 @@ export function mount(el, ctx, arg) {
     views.set(boardId, view);
   };
   // 要素のカード：その要素のボードへ（このボードの持ち主なら詳しい画面）
-  const openCard = id => isElement(ctx.world.notes[id]) && board().owner !== id ? ctx.openElement(id) : ctx.openNote(id);
+  // 押すと右の小窓に開く（ボードから離れない）。人物などのページへは、小窓の「ページで開く」か右クリックのメニューから
+  const openCard = id => ctx.openNote(id);
   stage.addEventListener('pointerup', end);
   stage.addEventListener('pointercancel', end);
   function zoomAt(f, cx, cy) {
@@ -199,9 +200,9 @@ export function mount(el, ctx, arg) {
     const id = c.dataset.id;
     ctx.showMenu(esc(ctx.world.notes[id].title || '名前なし'), [
       ['詳しく見る', () => ctx.openNote(id)],
-      ...(isElement(ctx.world.notes[id]) && board().owner !== id ? [['この要素のボードへ', () => ctx.openElement(id)]] : []),
-      ['このボードから外す（付箋は残る）', () => ctx.commit(w => { delete w.boards[boardId].items[id]; }, 'ボードから外す')],
-      ['付箋を削除', () => ctx.deleteNote(id), { danger: true }],
+      ...(isElement(ctx.world.notes[id]) && board().owner !== id ? [['ページで開く', () => ctx.openElement(id)], ['そのボードへ', () => ctx.openElement(id, { mode: 'board' })]] : []),
+      ['このボードから外す（カードは残る）', () => ctx.commit(w => { delete w.boards[boardId].items[id]; }, 'ボードから外す')],
+      ['このカードを削除', () => ctx.deleteNote(id), { danger: true }],
     ], e.clientX, e.clientY);
   });
   stage.addEventListener('keydown', e => {

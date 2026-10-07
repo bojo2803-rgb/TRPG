@@ -5,79 +5,127 @@ import { newWorld, migrateWorld, newNote, deleteNote, KINDS, kindOf } from './mo
 import { createPersistence, backendOf } from './persist/index.js';
 import { localAvailable } from './persist/local.js';
 import { initDialog, openDialog, showMenu, menuAt, toast } from './ui/dialog.js';
+import { parseRoute, formatRoute, pushRecent } from './route.js';
+import { inScenario } from './listing.js';
 
 const $ = id => document.getElementById(id);
 const PREF = 'trpg-app-last';
 const pref = { get() { try { return JSON.parse(localStorage.getItem(PREF)) || {}; } catch { return {}; } }, set(p) { try { localStorage.setItem(PREF, JSON.stringify({ ...pref.get(), ...p })); } catch { /* 保存できない環境 */ } } };
 
-// 画面の一覧（左の切り替え）。load は初めて開くときに読み込む
+// 画面の一覧（左の切り替え）。load は初めて開くときに読み込む。other：「ほかの見方」にまとめるもの
 const kindTab = k => () => import('./ui/kindView.js').then(m => m.tabs[k]);
 const VIEWS = [
-  { id: 'notes', label: '付箋', load: () => import('./ui/notesView.js') },
   { id: 'people', label: '人物', load: kindTab('person') },
   { id: 'scenarios', label: 'シナリオ', load: kindTab('scenario') },
-  { id: 'items', label: 'アイテム', load: kindTab('item') },
-  { id: 'groups', label: '集団', load: kindTab('group') },
   { id: 'places', label: 'ロケーション', load: kindTab('place') },
-  { id: 'board', label: 'ボード', load: () => import('./ui/board.js') },
-  { id: 'timemap', label: '時系列', load: () => import('./timemap/view.js') },
-  { id: 'graph', label: 'グラフ', load: () => import('./ui/graph.js') },
-  { id: 'templates', label: 'テンプレート', load: () => import('./ui/templates.js') },
+  { id: 'groups', label: '集団', load: kindTab('group') },
+  { id: 'items', label: 'アイテム', load: kindTab('item') },
+  { id: 'notes', label: '付箋', load: () => import('./ui/notesView.js') },
+  { id: 'board', label: 'ボード', other: true, load: () => import('./ui/board.js') },
+  { id: 'timemap', label: '時系列', other: true, load: () => import('./timemap/view.js') },
+  { id: 'graph', label: 'グラフ', other: true, load: () => import('./ui/graph.js') },
+  { id: 'templates', label: 'テンプレート', other: true, load: () => import('./ui/templates.js') },
 ];
+const KIND_VIEWS = new Set(Object.values(KINDS).map(k => k.tab));
 // 前の版の画面の名前（家系図は人物の中へ、地図はロケーションの中へ移った）
 const OLD_VIEWS = { family: ['people', { sub: 'family' }], map: ['places', { sub: 'maps' }] };
 
 const store = createStore(newWorld());
 const persist = createPersistence(store);
-let view = null, viewId = null, viewArg = null, editor = null;
-const trail = []; // 要素のボードへ移る前にいた所（「← 戻る」で帰る）
+let view = null, viewId = null, viewArg = null, peek = null;
+// ブラウザの履歴：このアプリで積んだ番号（0 から）。0 より大きければ「戻る」で前の画面へ戻れる
+let routeIdx = history.state?.i ?? 0;
+const bootHash = location.hash; // 共有の取り込み（#import&…）は、世界を開いてから使う
+// 最近開いたもの（この端末だけ、世界ごと）
+const RECENT = 'trpg-recent';
+const recentAll = () => { try { return JSON.parse(localStorage.getItem(RECENT)) || {}; } catch { return {}; } };
+const ROUTE_KEYS = ['open', 'mode', 'sub', 'board', 'map', 'focus'];
+const routeArg = r => { const a = {}; for (const k of ROUTE_KEYS) if (r?.[k]) a[k] = r[k]; return Object.keys(a).length ? a : null; };
 
 export const ctx = {
   store, persist,
   get world() { return store.get(); },
   commit: (fn, label) => store.commit(fn, label),
-  // 付箋を開く（右の編集画面）
+  // カードを右の小窓で開く（いま開いているものと入れ替える）
   async openNote(id, opts) {
-    if (!editor) editor = await import('./ui/noteEditor.js');
-    editor.open(ctx, id, opts);
+    if (!peek) peek = (await import('./ui/peek.js')).createPeek(ctx);
+    peek.open(id, opts);
   },
-  closeNote() { editor?.close(ctx); },
-  openedNote: () => editor?.current(),
+  // 小窓・ページの中の名前を押したとき：小窓に重ねて開く
+  openRelated(id, opts = {}) { if (id === ctx.currentPage() && !peek?.depth()) return; return ctx.openNote(id, { ...opts, push: true }); },
+  closeNote() { peek?.close(); },
+  openedNote: () => peek?.current() || null,
   // 新しい付箋を作って開く
   newNote(preset = {}, { open = true } = {}) {
     const n = newNote(preset);
-    store.commit(w => { w.notes[n.id] = n; }, '付箋を追加');
+    store.commit(w => { w.notes[n.id] = n; }, `${KINDS[kindOf(n)].label}を追加`);
     if (open) ctx.openNote(n.id, { focusTitle: true });
     return n.id;
   },
-  deleteNote(id) { store.commit(w => deleteNote(w, id), '付箋を削除'); },
+  deleteNote(id) { const k = kindOf(store.get().notes[id]); store.commit(w => deleteNote(w, id), `${KINDS[k].label}を削除`); },
   // 思いついたことを書き留める小さな窓。いまの画面がボードなら、そのボードに貼る
   async quickNote() { (await import('./ui/quickNote.js')).quickDialog(ctx, view?.placeNew); },
   setKind(id, kind) { store.commit(w => { w.notes[id].kind = kind; }, `${KINDS[kind].label}にする`); },
   go: (id, arg) => showView(id, arg),
-  // 要素を開く：その種類のタブで、要素のボードを出す（付箋なら編集画面を開くだけ）
-  openElement(id) {
+  // 人物などのページを開く（付箋・出来事はページがないので小窓）。mode：board・chart・map（なければ覚えている見せ方）
+  openElement(id, { mode } = {}) {
     const n = store.get().notes[id];
     if (!n) return;
     if (kindOf(n) === 'note') { ctx.openNote(id); return; }
-    trail.push({ id: viewId, arg: view?.state?.() ?? viewArg });
-    showView(KINDS[kindOf(n)].tab, { open: id });
+    peek?.close();
+    showView(KINDS[kindOf(n)].tab, { open: id, ...(mode && { mode }) });
   },
-  canBack: () => trail.length > 0,
-  back() { const t = trail.pop(); if (t) showView(t.id, t.arg); },
+  // いま真ん中に開いているページのカード
+  currentPage: () => KIND_VIEWS.has(viewId) ? viewArg?.open || null : null,
+  // いま開いているシナリオに出るもの（検索・リンクの候補で先に出す）
+  scope() { const id = ctx.currentPage(), w = store.get(); return id && kindOf(w.notes[id]) === 'scenario' ? inScenario(w, id) : null; },
+  canBack: () => routeIdx > 0,
+  back() { history.back(); },
+  // 画面の中で見せ方を変えたとき（家系図・ボードなど）：アドレスに書いて履歴に積む
+  setRoute(arg) { viewArg = arg; pushRoute(); },
   viewArg: () => viewArg,
+  recent: () => recentAll()[store.get().id] || [],
+  noteRecent(id) {
+    const all = recentAll(), w = store.get();
+    all[w.id] = pushRecent(all[w.id] || [], id);
+    try { localStorage.setItem(RECENT, JSON.stringify(all)); } catch { /* 保存できない環境 */ }
+    renderRecent();
+  },
+  // その場で作ったカードを知らせる。［書く］で小窓に開く
+  created(ids) {
+    const ns = ids.map(id => store.get().notes[id]).filter(Boolean);
+    if (!ns.length) return;
+    const n = ns[0];
+    toast(ns.length === 1 ? `「${n.title}」を${KINDS[kindOf(n)].label}として作りました` : `${ns.map(x => `「${x.title}」`).join('')}を作りました`, 8000, { label: '書く', onClick: () => ctx.openRelated(n.id) });
+  },
+  // 変更の中で新しく作られたカードを知らせる
+  commitNew(fn, label) {
+    const before = new Set(Object.keys(store.get().notes));
+    store.commit(fn, label);
+    ctx.created(Object.keys(store.get().notes).filter(id => !before.has(id)));
+  },
+  // まだない名前のリンクを押したとき：どの種類で作るかを選んで作り、小窓で開く
+  createAs(title, anchor) {
+    menuAt(anchor, `「${esc(title)}」をどの種類で作るか`, ['person', 'place', 'item', 'group', 'scenario', 'note'].map(k => [KINDS[k].label, () => {
+      const n = newNote({ kind: k, title });
+      store.commit(w => { w.notes[n.id] = n; }, `${KINDS[k].label}を追加`);
+      ctx.openRelated(n.id);
+    }]));
+  },
   toast, openDialog, showMenu, menuAt,
   imageUrl: id => persist.imageUrl(id),
-  query: () => $('search').value.trim(),
 };
 window.__app = ctx; // 自動確認用
 
-async function showView(id, arg = null) {
+// 画面を移る。push：ブラウザの履歴に積む（戻る・進むで来たときは積まない）
+async function showView(id, arg = null, { push = true } = {}) {
   if (OLD_VIEWS[id]) [id, arg] = [OLD_VIEWS[id][0], { ...OLD_VIEWS[id][1], ...arg }];
   const def = VIEWS.find(v => v.id === id) || VIEWS[0];
   view?.destroy?.(); view = null;
   viewId = def.id; viewArg = arg;
-  for (const b of $('views').children) b.setAttribute('aria-current', b.dataset.id === viewId ? 'page' : 'false');
+  pushRoute(!push);
+  if (arg?.open && store.get().notes[arg.open]) ctx.noteRecent(arg.open);
+  for (const b of $('views').querySelectorAll('[data-id]')) b.setAttribute('aria-current', b.dataset.id === viewId ? 'page' : 'false');
   const el = $('view');
   el.replaceChildren(h('p', { class: 'scroll note-text' }, '読み込んでいます…'));
   try {
@@ -92,6 +140,33 @@ async function showView(id, arg = null) {
   pref.set({ view: viewId });
 }
 
+// いまの画面をアドレスに書く（replace：履歴に積まずに書き換える）
+function pushRoute(replace = false) {
+  const hash = formatRoute(viewId, viewArg);
+  if (location.hash === hash) return;
+  if (replace) history.replaceState({ i: routeIdx }, '', hash);
+  else history.pushState({ i: ++routeIdx }, '', hash);
+}
+// 左の切り替え：主な6つ・ほかの見方・最近（スマホは主な6つと「…」）
+function renderNav() {
+  const btn = v => h('button', { type: 'button', class: v.other ? 'other' : '', 'data-id': v.id, 'aria-current': v.id === viewId ? 'page' : 'false', onclick: () => { peek?.close(); showView(v.id); } }, v.label);
+  $('views').replaceChildren(
+    ...VIEWS.filter(v => !v.other).map(btn),
+    h('div', { class: 'nav-h' }, 'ほかの見方'),
+    ...VIEWS.filter(v => v.other).map(btn),
+    h('button', { type: 'button', class: 'nav-more', 'aria-label': 'ほかの見方', onclick: e => menuAt(e.currentTarget, 'ほかの見方', VIEWS.filter(v => v.other).map(v => [v.label, () => { peek?.close(); showView(v.id); }])) }, '…'),
+    h('div', { class: 'nav-h nav-recent-h' }, '最近'),
+    h('div', { class: 'nav-recent', id: 'navRecent' }));
+  renderRecent();
+}
+function renderRecent() {
+  const el = $('navRecent');
+  if (!el) return;
+  const w = store.get(), ids = ctx.recent().filter(id => w.notes[id]);
+  el.replaceChildren(...(ids.length ? ids.map(id => { const n = w.notes[id], k = kindOf(n); return h('button', { type: 'button', class: 'recent', title: `${KINDS[k].label}：${n.title || '名前なし'}`, onclick: () => ctx.openElement(id) }, h('span', { class: `dot k-${k}`, 'aria-hidden': 'true' }), n.title || '（名前なし）'); })
+    : [h('p', { class: 'note-text' }, '開いたものがここに出ます')]));
+}
+
 function refreshChrome() {
   const w = store.get();
   $('worldName').textContent = w.name;
@@ -99,16 +174,17 @@ function refreshChrome() {
   $('undo').disabled = !store.canUndo();
   $('redo').disabled = !store.canRedo();
   $('undo').title = store.canUndo() ? `元に戻す：${store.undoLabel()}（Ctrl+Z）` : '元に戻す（Ctrl+Z）';
+  renderRecent();
 }
 
 store.subscribe(e => {
   refreshChrome();
   view?.update?.(e);
-  editor?.update?.(ctx, e);
+  peek?.update(e);
 });
 persist.onStatus(s => {
   if (s.state === 'conflict') {
-    toast(`もう一方の端末と同じ付箋を同時に直していたので、両方を残しました（${s.conflicts.length}件）。いらない方を消してください`, 12000);
+    toast(`もう一方の端末と同じカードを同時に直していたので、両方を残しました（${s.conflicts.length}件）。いらない方を消してください`, 12000);
     return;
   }
   $('saveStatus').textContent = s.text;
@@ -124,14 +200,16 @@ persist.onStatus(s => {
 });
 
 // ===== 世界の一覧・作成・入れ替え =====
-async function openWorld(backend, id) {
+// route：アドレスに書いてあった画面（読み込み直したとき）。なければ前に開いていた画面
+async function openWorld(backend, id, route = null) {
   persist.flush();
   const w = migrateWorld(await persist.open(backend, id));
   store.replace(w);
   pref.set({ backend, world: id });
   ctx.closeNote();
   refreshChrome();
-  showView(pref.get().view || 'notes');
+  if (route) showView(route.view, routeArg(route), { push: false });
+  else showView(pref.get().view || 'people', null, { push: false });
 }
 async function createWorld(backend, name, data = null) {
   persist.flush();
@@ -142,7 +220,7 @@ async function createWorld(backend, name, data = null) {
   pref.set({ backend, world: w.id });
   ctx.closeNote();
   refreshChrome();
-  showView(data ? 'timemap' : 'notes');
+  showView(data ? 'timemap' : 'people');
   return w;
 }
 ctx.openWorld = openWorld;
@@ -185,7 +263,7 @@ function deleteWorldDialog() {
   const w = store.get(), cur = persist.current();
   openDialog({
     title: '世界を削除', ok: null,
-    body: `<p>「${esc(w.name)}」を削除します。付箋・ボード・画像もすべて消え、元に戻せません。${cur?.backend === 'drive' ? 'Googleドライブのフォルダはゴミ箱に移ります（30日以内ならドライブから戻せます）。' : ''}</p><p class="note-text">消す前に「書き出す」でファイルにしておくと安心です。</p>`,
+    body: `<p>「${esc(w.name)}」を削除します。カード・ボード・画像もすべて消え、元に戻せません。${cur?.backend === 'drive' ? 'Googleドライブのフォルダはゴミ箱に移ります（30日以内ならドライブから戻せます）。' : ''}</p><p class="note-text">消す前に「書き出す」でファイルにしておくと安心です。</p>`,
     onDelete: async () => {
       await persist.remove(cur.backend, cur.id);
       const rest = await persist.listAll();
@@ -247,15 +325,23 @@ ctx.exampleMenu = exampleMenu;
 async function start() {
   (await import('./ui/settings.js')).applyTheme();
   initDialog();
-  $('views').replaceChildren(...VIEWS.map(v => h('button', { type: 'button', 'data-id': v.id, onclick: () => { trail.length = 0; showView(v.id); } }, v.label)));
+  renderNav();
+  (await import('./ui/searchBox.js')).initSearch(ctx);
+  // ブラウザの「戻る」「進む」：その画面を開き直す（小窓は閉じる）
+  addEventListener('popstate', e => {
+    const r = parseRoute(location.hash);
+    if (!r) return;
+    routeIdx = e.state?.i ?? 0;
+    peek?.close();
+    showView(r.view, routeArg(r), { push: false });
+  });
   $('worldBtn').onclick = worldMenu;
   $('undo').onclick = () => store.undo();
   $('redo').onclick = () => store.redo();
   $('newNote').onclick = () => ctx.quickNote();
   $('settingsBtn').onclick = async () => (await import('./ui/settings.js')).open(ctx);
-  $('search').addEventListener('input', () => view?.update?.({ type: 'search' }));
-  $('search').addEventListener('keydown', e => { if (e.key === 'Enter' && viewId !== 'notes') showView('notes'); });
   addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !$('dlg').open) { e.preventDefault(); $('search').focus(); return; }
     const typing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
     if ($('dlg').open || typing) return;
     const k = e.key.toLowerCase();
@@ -276,7 +362,7 @@ async function start() {
   const drive = await import('./persist/drive.js').catch(() => null);
   if (p.backend === 'drive' && drive?.wasConnected() && !list.some(x => x.backend === 'drive')) {
     const openDrive = () => openWorld('drive', p.world).catch(async () => { const l = await persist.listAll(); const d = l.find(x => x.backend === 'drive'); if (d) await openWorld('drive', d.id); });
-    store.replace(newWorld('（Googleドライブにつないでいます）')); refreshChrome(); showView('notes');
+    store.replace(newWorld('（Googleドライブにつないでいます）')); refreshChrome(); showView('people', null, { push: false });
     toast('画面のどこかを押すと、Googleドライブにつないで前の世界を開きます', 600000);
     drive.reconnectOnClick(() => { $('toast').hidden = true; openDrive(); }, () => {
       // 窓を開けなかったとき（ブラウザが止めた・閉じられた）：ボタンでつなぐ
@@ -290,7 +376,7 @@ async function start() {
   }
   const last = list.find(x => x.id === p.world && x.backend === p.backend) || list[0];
   if (last) {
-    try { await openWorld(last.backend, last.id); return; } catch (e) { console.error(e); toast(`前に開いていた世界を開けませんでした：${e.message}`); }
+    try { await openWorld(last.backend, last.id, parseRoute(bootHash)); return; } catch (e) { console.error(e); toast(`前に開いていた世界を開けませんでした：${e.message}`); }
   }
   // はじめて：見本の世界があればそれを、なければ白紙の世界を作る
   try {
@@ -301,9 +387,8 @@ async function start() {
 }
 // 共有ページの「自分のアプリに取り込む」で来たとき（…#import&f=…&k=…）：世界が開いてから取り込む
 async function checkImport() {
-  if (!/^#import/.test(location.hash)) return;
-  const hash = location.hash;
-  history.replaceState(null, '', location.pathname + location.search);
+  if (!/^#import/.test(bootHash)) return;
+  const hash = bootHash;
   for (let i = 0; i < 240 && !persist.current(); i++) await new Promise(r => setTimeout(r, 500)); // ドライブにつなぐのを待つ
   (await import('./ui/shareUI.js')).importFromLink(ctx, hash);
 }

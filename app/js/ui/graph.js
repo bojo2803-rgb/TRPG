@@ -1,10 +1,11 @@
-// グラフ：すべての付箋とつながりを網の目で見渡す（つながり・家族・まとめの親子・本文のリンク）。
+// グラフ：すべてのカードとつながりを網の目で見渡す（つながり・家族・まとめの親子・本文のリンク）。
 // arg.only（例：'group'）なら、その種類だけの相関図（つながりのラベルつき。集団タブの「相関図」）
 import { h, esc } from '../util.js';
 import { findByTitle, kindOf } from '../model.js';
 import { linkTitles } from './markdown.js';
 import { forceLayout } from './graphLayout.js';
 import { panZoom } from './panzoom.js';
+import { scopeIds, scopeGroupIds, scopeSelect, scopeChip } from './scope.js';
 
 const show = { links: true, family: true, parents: true, body: true, lonely: false };
 let focusId = null;
@@ -16,7 +17,7 @@ export function mount(el, ctx, arg) {
   stage.append(layer);
   el.append(bar, stage);
   const pz = panZoom(stage, layer, { onClick: el => { focusId = el.dataset.click; ctx.openNote(focusId); draw(); } });
-  let pos = {}, key = '', first = true, data = null;
+  let pos = {}, key = '', first = true, data = null, total = 0;
 
   function edgesOf(w) {
     const out = [];
@@ -36,12 +37,13 @@ export function mount(el, ctx, arg) {
     return out;
   }
   function compute() {
-    const w = ctx.world, q = ctx.query().toLowerCase();
+    const w = ctx.world, inSc = only === 'group' ? scopeGroupIds(w) : scopeIds(w);
     const edges = edgesOf(w);
     const deg = {};
     for (const e of edges) { deg[e.a] = (deg[e.a] || 0) + 1; deg[e.b] = (deg[e.b] || 0) + 1; }
     let ids = Object.keys(w.notes).filter(id => only ? kindOf(w.notes[id]) === only : show.lonely || deg[id]);
-    if (q) ids = ids.filter(id => { const n = w.notes[id]; return n.title.toLowerCase().includes(q) || n.tags.some(t => t.toLowerCase().includes(q)); });
+    total = ids.length;
+    if (inSc) ids = ids.filter(id => inSc.has(id));
     ids.sort();
     const set = new Set(ids), es = edges.filter(e => set.has(e.a) && set.has(e.b));
     const k = JSON.stringify([ids, es.map(e => e.a + e.b)]);
@@ -52,7 +54,7 @@ export function mount(el, ctx, arg) {
     const w = ctx.world, { ids, es, deg } = data;
     const near = new Set(focusId ? [focusId, ...es.filter(e => e.a === focusId || e.b === focusId).flatMap(e => [e.a, e.b])] : []);
     const dim = id => focusId && !near.has(id);
-    if (!ids.length) { layer.replaceChildren(h('div', { class: 'fam-empty' }, only ? 'まだ集団がありません' : 'つながりのある付箋がまだありません（「つながりのない付箋も出す」で全部出せます）')); pz.fit(0, 0, 400, 100); return; }
+    if (!ids.length) { layer.replaceChildren(h('div', { class: 'fam-empty' }, only ? 'まだ集団がありません' : 'つながりのあるカードがまだありません（「つながりのないものも出す」で全部出せます）')); pz.fit(0, 0, 400, 100); return; }
     const xs = ids.map(id => pos[id].x), ys = ids.map(id => pos[id].y), x0 = Math.min(...xs) - 60, y0 = Math.min(...ys) - 40;
     const X = id => pos[id].x - x0, Y = id => pos[id].y - y0;
     const CLS = { link: 'g-link', order: 'g-link', parent: 'g-fam', spouse: 'g-fam', ancestor: 'g-fam', group: 'g-group', body: 'g-body' };
@@ -68,13 +70,14 @@ export function mount(el, ctx, arg) {
     if (first) { pz.fit(0, 0, W, H, 1.5); first = false; if (focusId && pos[focusId]) pz.center(X(focusId), Y(focusId)); }
   }
   function renderBar() {
-    if (only) { bar.replaceChildren(h('h2', {}, '相関図'), h('span', { class: 'note-text' }, '集団どうしのつながり（同盟・敵対などは、つながりのラベル）'), h('span', { class: 'sp' }), h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; draw(); } }, '⤢')); return; }
+    const unit = only ? 'つ' : '件', sc = [scopeSelect(ctx, render), scopeChip(ctx, render, data?.ids.length ?? 0, total, unit)];
+    if (only) { bar.replaceChildren(...[h('h2', {}, '相関図'), h('span', { class: 'note-text' }, '集団どうしのつながり（同盟・敵対などは、つながりのラベル）'), ...sc, h('span', { class: 'sp' }), h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; draw(); } }, '⤢')].filter(Boolean)); return; }
     const opt = (k, label) => h('label', { class: 'cb' }, h('input', { type: 'checkbox', checked: show[k], onchange: e => { show[k] = e.target.checked; render(); } }), label);
-    bar.replaceChildren(...[h('h2', {}, 'グラフ'), opt('links', 'つながり'), opt('family', '家族'), opt('parents', 'まとめ'), opt('body', '本文のリンク'), opt('lonely', 'つながりのない付箋も出す'),
+    bar.replaceChildren(...[h('h2', {}, 'グラフ'), opt('links', 'つながり'), opt('family', '家族'), opt('parents', 'まとめ'), opt('body', '本文のリンク'), opt('lonely', 'つながりのないものも出す'), ...sc,
       h('span', { class: 'sp' }), focusId ? h('button', { type: 'button', class: 'btn small', onclick: () => { focusId = null; draw(); renderBar(); } }, '強調を消す') : null,
       h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; draw(); } }, '⤢')].filter(Boolean));
   }
-  const render = () => { renderBar(); compute(); draw(); };
+  const render = () => { compute(); renderBar(); draw(); };
   render();
   return { update: () => render() };
 }

@@ -51,14 +51,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .save { font-size: 12px; color: var(--muted); min-width: 0; }
 .save.err { color: var(--paradox); }
 .top-tools { margin-left: auto; display: flex; align-items: center; gap: 6px; min-width: 0; }
-#search { width: 200px; min-width: 0; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); }
+#search { width: 260px; min-width: 0; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); }
 .views { grid-area: nav; display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-right: 1px solid var(--line); background: var(--surface); }
 .views button { all: unset; box-sizing: border-box; cursor: pointer; padding: 7px 12px; border-radius: 6px; white-space: nowrap; font-size: 13px; }
 .views button:hover { background: var(--bg); }
 .views button[aria-current="page"] { background: var(--fg); color: var(--bg); font-weight: 600; }
 .views button:focus-visible { outline: 2px solid var(--accent); }
 .view { grid-area: view; min-width: 0; min-height: 0; position: relative; overflow: hidden; display: flex; flex-direction: column; }
-.panel { grid-area: panel; width: min(420px, 100vw); box-sizing: border-box; border-left: 1px solid var(--line); background: var(--surface); overflow: auto; min-height: 0; }
+.panel { grid-area: panel; width: min(440px, 100vw); box-sizing: border-box; border-left: 1px solid var(--line); background: var(--surface); overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
 /* 詳しい画面だけを大きく（スマホは、詳しい画面がもともと全体を覆う） */
 @media (min-width: 761px) {
   #app.wide-panel { grid-template: "top top" auto "nav panel" 1fr / auto 1fr; }
@@ -494,3 +494,121 @@ a.btn { text-decoration: none; color: inherit; display: inline-flex; align-items
   body.share-page { background: #fff; }
 }
 
+
+/* ===== 使いやすさの作り直し ===== */
+/* 左の切り替え：主な6つ・ほかの見方・最近 */
+.views { overflow-y: auto; }
+.views .nav-h { font-size: 11px; color: var(--muted); padding: 12px 12px 2px; letter-spacing: .06em; }
+.views button.other { font-size: 12px; color: var(--muted); padding: 5px 12px; }
+.views button.other[aria-current="page"] { color: var(--bg); }
+.views button.nav-more { display: none; }
+.nav-recent { display: grid; gap: 1px; width: 150px; }
+.views button.recent { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; overflow: hidden; text-overflow: ellipsis; }
+.nav-recent .note-text { padding: 2px 12px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--muted); }
+.dot.k-person { background: var(--c-c4); } .dot.k-scenario { background: var(--c-c5); } .dot.k-item { background: var(--c-c6); } .dot.k-group { background: var(--c-c3); } .dot.k-place { background: var(--c-c1); }
+.kind-badge.k-note { background: var(--muted); }
+
+/* 小窓（重ねて開く） */
+.peek-head { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.peek-crumbs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+.peek-crumbs .linkish, .peek-crumbs .crumb-cur { overflow: hidden; text-overflow: ellipsis; max-width: 11em; }
+.peek-crumbs .crumb-cur { color: var(--fg); font-weight: 600; }
+.peek-head .sp { display: none; }
+.peek-body { flex: 1; overflow: auto; min-height: 0; }
+
+/* ページ（開いたら情報） */
+.page-scroll { padding: 0; }
+.ne.page { max-width: 1200px; margin: 0 auto; border-top: 0; }
+.ne-head-row { align-items: flex-start; flex-wrap: nowrap; gap: 12px; }
+.ne-head-t { flex: 1; min-width: 0; display: grid; gap: 4px; justify-items: start; }
+.ne-head-t > .row { width: 100%; flex-wrap: nowrap; }
+.ne-head-t .ne-title { min-width: 0; width: 100%; }
+.ne-head.big { position: static; padding: 18px 20px 12px; border-bottom: 0; }
+.ne-head.big .ne-title { font-size: 26px; }
+.ne-hint { font-size: 12px; }
+/* 2段組は、ページの幅が広いときだけ（右の小窓を開いて狭くなったら1段） */
+.page-scroll { container-type: inline-size; }
+@container (min-width: 980px) {
+  .ne.page { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); grid-template-areas: "main side" "end side"; align-items: start; }
+  .ne.page .ne-main { grid-area: main; }
+  .ne.page .ne-side { grid-area: side; border-left: 1px solid var(--soft); min-height: 100%; }
+  .ne.page .ne-end { grid-area: end; }
+}
+.folded { gap: 4px; margin-top: 8px; }
+.btn.add-field { color: var(--muted); border-style: dashed; background: transparent; }
+
+/* 絵 */
+.pic { display: inline-grid; place-items: center; flex: none; overflow: hidden; border-radius: 50%; background: var(--paper, var(--raised)); border: 1px solid var(--line); font-family: var(--font-title); font-weight: 600; color: var(--muted); line-height: 1; }
+.pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pic-s { width: 28px; height: 28px; font-size: 13px; }
+.pic-small { width: 40px; height: 40px; font-size: 16px; }
+.pic-big { width: 96px; height: 96px; font-size: 36px; border-radius: 12px; }
+button.pic { cursor: pointer; padding: 0; }
+button.pic:hover, button.pic:focus-visible { border-color: var(--fg); }
+.pic-wrap { display: contents; }
+
+/* 一覧：表・カード・まとまり・選ぶ */
+input.list-q { flex: 0 1 200px; min-width: 110px; }
+.tbl { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--raised); border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+.tbl th { position: sticky; top: 0; z-index: 1; background: var(--surface); text-align: left; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line); padding: 0; }
+.th-sort { all: unset; box-sizing: border-box; display: block; cursor: pointer; padding: 7px 8px; white-space: nowrap; }
+.th-sort:hover, .th-sort:focus-visible { text-decoration: underline; }
+.tbl td { padding: 5px 8px; border-bottom: 1px solid var(--soft); vertical-align: middle; overflow-wrap: anywhere; }
+.tbl tbody tr { cursor: pointer; }
+.tbl tbody tr:hover { background: var(--bg); }
+.tbl tr.on, .tbl tr.on:hover { background: color-mix(in srgb, var(--accent) 12%, var(--raised)); }
+.tbl .tbl-sel, .tbl .tbl-pic { width: 1%; padding: 4px 6px; text-align: center; }
+.tbl-name { font-weight: 600; color: var(--fg) !important; }
+.cwrap { position: relative; display: grid; min-width: 0; }
+.cwrap .csel { position: absolute; top: 8px; right: 8px; z-index: 1; margin: 0; width: 16px; height: 16px; opacity: 0; cursor: pointer; }
+.cwrap:hover .csel, .cwrap.selecting .csel, .cwrap.on .csel, .cwrap .csel:focus-visible { opacity: 1; }
+.cwrap.on .ncard { outline: 2px solid var(--accent); }
+@media (hover: none) { .cwrap .csel { opacity: .7; } }
+.ncard-row { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 18px; }
+.bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 16px; background: var(--fg); color: var(--bg); }
+.bulk .btn { background: var(--surface); color: var(--fg); border-color: var(--surface); }
+.bulk .btn.danger { color: var(--paradox); }
+.bulk .sp { flex: 1; }
+
+/* シナリオで絞る */
+.scope-sel.on { border-color: var(--accent); font-weight: 600; }
+.scope-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 4px 2px 10px; border-radius: 999px; background: var(--raised); border: 1px solid var(--accent); }
+.scope-chip .x { border: 0; background: none; cursor: pointer; color: var(--muted); padding: 0 4px; font-size: 14px; }
+.scope-mark { font-size: 10px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--accent); color: var(--fg); white-space: nowrap; }
+
+/* どこからでも探す */
+.sr { position: fixed; z-index: 35; width: min(440px, calc(100vw - 16px)); box-sizing: border-box; max-height: 60vh; overflow: auto; padding: 6px; background: var(--raised); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); display: grid; gap: 1px; }
+.sr button { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "k t s" "k h h"; gap: 0 8px; align-items: center; padding: 6px 8px; border-radius: 6px; }
+.sr .kind-badge { grid-area: k; align-self: start; margin-top: 4px; }
+.sr-t { grid-area: t; font-weight: 600; overflow-wrap: anywhere; }
+.sr .scope-mark { grid-area: s; }
+.sr-hint { grid-area: h; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.sr button[aria-selected="true"], .sr button:hover { background: var(--bg); }
+.sr-h { font-size: 11px; color: var(--muted); padding: 2px 8px 4px; }
+.sr .note-text { padding: 6px 8px; }
+
+/* メモの [[ の候補 */
+.lsug-wrap { position: relative; }
+.lsug { position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 5; max-height: 280px; overflow: auto; padding: 4px; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); display: grid; gap: 1px; }
+.lsug button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: 13px; }
+.lsug button[aria-selected="true"], .lsug button:hover { background: var(--bg); }
+
+/* お知らせのボタン */
+.toast-act { margin-left: 6px; border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 6px; padding: 1px 10px; cursor: pointer; font-weight: 600; }
+
+/* 設定：暦のくわしい設定はたたむ */
+.st-cal summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 6px 0; }
+.st-cal[open] summary { margin-bottom: 8px; }
+.share-pic { float: right; width: 96px; height: 96px; object-fit: cover; border-radius: 10px; margin: 0 0 8px 12px; }
+.share-card { display: flow-root; }
+
+/* スマホ：下のタブは主な6つと「…」。最近は検索欄から */
+@media (max-width: 760px) {
+  .views .nav-h, .views button.other, .nav-recent { display: none; }
+  .views button.nav-more { display: inline-block; }
+  .views { gap: 0; padding-left: 4px; padding-right: 4px; }
+  .views button { flex: 1 0 auto; text-align: center; padding: 6px 5px; font-size: 12px; }
+  .tbl { min-width: 560px; }
+  .ne-head-row .pic-big { width: 64px; height: 64px; font-size: 26px; }
+}

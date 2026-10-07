@@ -13,11 +13,11 @@ await p.evaluate(() => __app.go('notes')); await p.waitForTimeout(400);
 await p.locator('.ncard').first().click(); await p.waitForTimeout(400);
 ok(await p.evaluate(() => { const r = document.getElementById('panel').getBoundingClientRect(); return r.width >= 380 && r.left <= 1; }), 'editor covers screen on phone');
 await p.screenshot({ path: `${SHOT}phone-editor.png` });
-await p.click('.ne button[aria-label="閉じる"]');
+await p.click('#panel button[aria-label="閉じる"]');
 ok(await p.evaluate(() => document.getElementById('panel').hidden), 'editor closes');
 // スマホ用のリンク：クライアント ID を覚えて、アドレスから消す
 await p.goto(p.url().split('#')[0] + '#drive=123-abc.apps.googleusercontent.com'); await p.reload(); await p.waitForTimeout(800);
 ok(await p.evaluate(() => JSON.parse(localStorage.getItem('trpg-drive') || '{}').clientId === '123-abc.apps.googleusercontent.com'), 'phone link stores client id');
-ok(!(await p.evaluate(() => location.hash)), 'phone link hash cleared');
+ok(!(await p.evaluate(() => location.hash)).includes('drive='), 'phone link hash cleared');
 ok(!errors.length, 'errors: ' + errors.join('\n'));
 await b.close(); done();

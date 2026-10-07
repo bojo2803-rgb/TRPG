@@ -1,67 +1,92 @@
-// 要素のタブ（人物・シナリオ・アイテム・集団・ロケーション）：一覧と、開いた要素のボード。
-// 人物は「一覧／家系図」、集団は「一覧／組織図／相関図」、ロケーションは「木／地図」を切り替える
+// 要素のタブ（人物・シナリオ・アイテム・集団・ロケーション）：一覧と、開いた要素のページ。
+// 一覧は「表／カード／まとまり」（ロケーションは木）。人物は「一覧／家系図」、集団は「一覧／組織図／相関図」、ロケーションは「木／地図」。
+// ページはいつも「情報」から。シナリオは「チャート」、ロケーションは「地図」、どれも「ボード」に切り替えられる（切り替えはアドレスに残り、戻るで戻れる）
 import { h, byTitle, collator } from '../util.js';
 import { KINDS, kindOf, newNote, placePath, placeParent, hereCounts, mapOf, movePlace } from '../model.js';
-import { ensureOwnBoard, summaryOf, linksOfKind, newPlaceDialog, putHere } from './elements.js';
+import { ensureOwnBoard, linksOfKind, newPlaceDialog, putHere } from './elements.js';
 import { closeDialog } from './dialog.js';
+import { createEditor } from './noteEditor.js';
+import { COLUMNS, GROUPS, sortRows, groupCards, hintOf, picOf } from '../listing.js';
+import { scopeIds, scopeSelect, scopeChip } from './scope.js';
+import { bulkBar, selBox } from './bulkBar.js';
 
 const SUBS = {
   person: [['list', '一覧'], ['family', '家系図']],
   group: [['list', '一覧'], ['org', '組織図'], ['rel', '相関図']],
   place: [['list', '木'], ['maps', '地図']],
 };
-const placeView = {}; // 要素ごとに、どの見せ方（地図・チャート・ボード）にしていたか
-// 開いたときの見せ方の切り替え：ロケーションは地図／ボード、シナリオはチャート／ボード
-const OPEN_MODES = { place: [['map', '地図'], ['board', 'ボード']], scenario: [['chart', 'チャート'], ['board', 'ボード']] };
+// 開いたときの見せ方
+const OPEN_MODES = {
+  person: [['info', '情報'], ['board', 'ボード']],
+  item: [['info', '情報'], ['board', 'ボード']],
+  group: [['info', '情報'], ['board', 'ボード']],
+  scenario: [['info', '情報'], ['chart', 'チャート'], ['board', 'ボード']],
+  place: [['info', '情報'], ['map', '地図'], ['board', 'ボード']],
+};
+// この端末に覚えておくもの：一覧の見せ方（種類ごと）
+const KEY = 'trpg-list-mode';
+const listPref = {
+  get: k => { try { return JSON.parse(localStorage.getItem(KEY))?.[k]; } catch { return undefined; } },
+  set: (k, v) => { try { localStorage.setItem(KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(KEY) || '{}'), [k]: v })); } catch { /* なし */ } },
+};
+const LIST_MODES = [['table', '表'], ['cards', 'カード'], ['grouped', 'まとまり']];
 const closed = new Set(); // 木でたたんだロケーション
 // 一覧の絞り込み：テンプレートの選ぶ欄（シナリオの状態・アイテムの区分）、人物は所属
 const FILTER = { scenario: '状態', item: '区分' };
 const state = {};
-const st = kind => (state[kind] ||= { sub: 'list', tags: new Set(), filter: '', sort: 'title' });
+const st = kind => (state[kind] ||= { sub: 'list', tags: new Set(), filter: '', sort: 'title', q: '', col: '名前', dir: 1, by: GROUPS[kind]?.[0], sel: new Set(), last: null });
 
 export const tabs = Object.fromEntries(Object.keys(KINDS).filter(k => k !== 'note').map(k => [k, { mount: (el, ctx, arg) => mount(k, el, ctx, arg) }]));
 
 function mount(kind, el, ctx, arg) {
   const s = st(kind);
-  if (arg?.sub) s.sub = arg.sub;
+  s.sub = arg?.sub || (arg?.open ? s.sub : 'list');
+  s.sel = new Set();
   const open = arg?.open && kindOf(ctx.world.notes[arg.open]) === kind ? arg.open : null;
-  return open ? openMode(kind, el, ctx, open) : listMode(kind, el, ctx, s, arg);
+  return open ? openMode(kind, el, ctx, open, arg) : listMode(kind, el, ctx, s, arg);
 }
 
-// ===== 開いた要素：大きくボード、横に詳しい画面 =====
-// ロケーションは「地図／ボード」を切り替える（地図があれば地図から）。上には道しるべ（日本 › 東京都 › …）
-function openMode(kind, el, ctx, id) {
-  const boardId = ensureOwnBoard(ctx, id);
+// ===== 開いた要素：情報（ページ）・ボード・チャート・地図 =====
+function openMode(kind, el, ctx, id, arg) {
   const head = h('div', { class: 'bar el-head' }), body = h('div', { class: 'el-board' });
   el.append(head, body);
-  const isPlace = kind === 'place';
   const modes = OPEN_MODES[kind];
-  let mode = placeView[id] || (isPlace ? (mapOf(ctx.world, id) ? 'map' : 'board') : kind === 'scenario' ? 'chart' : 'board');
+  let mode = modes.some(([k]) => k === arg?.mode) ? arg.mode : 'info';
   const renderHead = () => {
-    const w = ctx.world, n = w.notes[id], path = isPlace ? placePath(w, id).slice(0, -1) : [];
+    const w = ctx.world, n = w.notes[id], path = kind === 'place' ? placePath(w, id).slice(0, -1) : [];
     head.replaceChildren(...[
       h('button', { type: 'button', class: 'btn small', onclick: () => ctx.canBack() ? ctx.back() : ctx.go(KINDS[kind].tab) }, ctx.canBack() ? '← 戻る' : `← ${KINDS[kind].label}の一覧`),
       h('span', { class: `kind-badge k-${kind}` }, KINDS[kind].label),
       path.length ? h('nav', { class: 'crumbs', 'aria-label': '上のロケーション' }, ...path.flatMap(p => [h('button', { type: 'button', class: 'linkish', onclick: () => ctx.openElement(p) }, w.notes[p].title || '名前なし'), h('span', { 'aria-hidden': 'true' }, '›')])) : null,
-      h('h2', {}, n.title || '（名前なし）'),
+      mode === 'info' ? null : h('h2', {}, n.title || '（名前なし）'),
       h('span', { class: 'sp' }),
-      modes ? h('div', { class: 'seg', role: 'group', 'aria-label': '見せ方' }, ...modes.map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(mode === k), onclick: () => { if (mode !== k) { mode = placeView[id] = k; show(); renderHead(); } } }, v))) : null,
-      h('button', { type: 'button', class: 'btn', onclick: () => ctx.openNote(id) }, '詳しく'),
+      h('div', { class: 'seg', role: 'group', 'aria-label': '見せ方' }, ...modes.map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(mode === k), onclick: () => {
+        if (mode === k) return;
+        mode = k;
+        ctx.setRoute({ open: id, ...(k !== 'info' && { mode: k }) });
+        show(); renderHead();
+      } }, v))),
     ].filter(Boolean));
   };
   let inner = null, gone = false, seq = 0;
   const show = () => {
     inner?.destroy?.(); inner = null; body.replaceChildren();
     const my = ++seq;
+    if (mode === 'info') {
+      const box = h('div', { class: 'scroll page-scroll' });
+      body.append(box);
+      const ed = createEditor(ctx, box, { layout: 'page' });
+      ed.open(id);
+      inner = { update: e => ed.update(e) };
+      return;
+    }
     const load = mode === 'map' ? import('./mapView.js').then(m => m.mount(body, ctx, { owner: id, embedded: true }))
       : mode === 'chart' ? import('./chartView.js').then(m => m.mount(body, ctx, { scenario: id }))
-      : import('./board.js').then(m => m.mount(body, ctx, { board: boardId, embedded: true }));
+      : import('./board.js').then(m => m.mount(body, ctx, { board: ensureOwnBoard(ctx, id), embedded: true }));
     load.then(v => { if (gone || my !== seq) v?.destroy?.(); else inner = v; });
   };
   renderHead(); show();
-  if (innerWidth > 760) ctx.openNote(id);
   return {
-    state: () => ({ open: id }),
     update: e => {
       if (!ctx.world.notes[id]) { gone = true; ctx.go(KINDS[kind].tab); return; }
       renderHead(); inner?.update?.(e);
@@ -84,19 +109,23 @@ function listMode(kind, el, ctx, s, arg) {
     add.value = '';
     ctx.openNote(n.id);
   });
+  // この一覧を絞る欄（上の検索欄は、世界のすべてを探す）
+  const q = h('input', { type: 'search', class: 'list-q', value: s.q, placeholder: kind === 'place' ? '木を絞る' : 'この一覧を絞る', 'aria-label': kind === 'place' ? '木を絞る' : 'この一覧を絞る', autocomplete: 'off' });
+  q.addEventListener('input', () => { s.q = q.value; render(); });
   const bar = h('div', { class: 'bar' }), main = h('div', { class: 'el-main' });
   el.append(bar, main);
   let sub = null, subId = null;
   const render = e => {
-    const w = ctx.world, subs = SUBS[kind];
+    const subs = SUBS[kind];
+    const mode = subs ? s.sub : 'list';
     bar.replaceChildren(...[
       h('h2', {}, label),
-      subs ? h('div', { class: 'seg', role: 'group', 'aria-label': '見せ方' }, ...subs.map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(s.sub === k), onclick: () => { s.sub = k; render(); } }, v))) : null,
+      subs ? h('div', { class: 'seg', role: 'group', 'aria-label': '見せ方' }, ...subs.map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(s.sub === k), onclick: () => { if (s.sub === k) return; s.sub = k; ctx.setRoute(k === 'list' ? null : { sub: k }); render(); } }, v))) : null,
+      mode === 'list' ? q : null,
       h('span', { class: 'sp' }),
       kind === 'person' ? h('button', { type: 'button', class: 'btn', title: '名前・能力値・メモまで、でたらめなキャラクターを作る（発想のきっかけ）', onclick: async () => (await import('./random.js')).open(ctx) }, '🎲 ランダム') : null,
       add,
     ].filter(Boolean));
-    const mode = subs ? s.sub : 'list';
     if (mode !== 'list') {
       if (subId !== mode) {
         sub?.destroy?.(); main.replaceChildren(); subId = mode;
@@ -109,7 +138,7 @@ function listMode(kind, el, ctx, s, arg) {
       return;
     }
     if (subId !== 'list') { sub?.destroy?.(); sub = null; subId = 'list'; main.replaceChildren(); }
-    if (kind === 'place') renderTree(main, ctx, render); else renderList(kind, main, ctx, s, render);
+    if (kind === 'place') renderTree(main, ctx, s, render); else renderList(kind, main, ctx, s, render);
   };
   render();
   return { update: render, destroy: () => sub?.destroy?.(), get placeNew() { return sub?.placeNew; } };
@@ -121,8 +150,8 @@ let sel = null; // 選んでいるロケーション（null は一番上）
 const DRAG = 'application/x-trpg-card';
 const LOOSE = ['person', 'item', 'group', 'scenario']; // 一番上に「場所が決まっていないもの」として出す種類
 
-function renderTree(main, ctx, rerender) {
-  const w = ctx.world, q = ctx.query().toLowerCase();
+function renderTree(main, ctx, s, rerender) {
+  const w = ctx.world, q = s.q.trim().toLowerCase();
   // 選ぶ：中身を出し、一番右の詳しい画面もそのロケーションにする（スマホは画面を覆うので開かない）
   const pick = id => { sel = id; rerender(); if (id && innerWidth > 760) ctx.openNote(id); };
   if (sel && kindOf(w.notes[sel]) !== 'place') sel = null;
@@ -176,7 +205,7 @@ function renderTree(main, ctx, rerender) {
       h('h3', {}, here ? here.title || '（名前なし）' : 'ロケーション'),
       here?.fields?.['種類'] ? h('span', { class: 'note-text' }, here.fields['種類']) : null,
       h('span', { class: 'sp' }),
-      here ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(sel) }, mapOf(w, sel) ? '開く（地図）' : '開く') : null,
+      here ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(sel, { mode: mapOf(w, sel) ? 'map' : undefined }) }, mapOf(w, sel) ? '開く（地図）' : '開く') : null,
       here ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openNote(sel) }, '詳しく') : null,
       here ? moveBtn(sel) : null,
       here ? h('button', { type: 'button', class: 'btn small', title: '人物・アイテム・集団・シナリオの場所を、ここにする', onclick: () => putHere(ctx, sel) }, '＋ ここに置く') : null,
@@ -232,14 +261,27 @@ function moveDialog(ctx, id) {
   });
 }
 
+// ===== 一覧：表・カード・まとまり。チェックで選んで、まとめて操作 =====
+// 絵（なければ名前の最初の1文字）
+export const picEl = (ctx, n, cls = 'pic-s') => {
+  const id = picOf(ctx.world, n);
+  return h('span', { class: `pic ${cls} p-${n.color ?? 0}`, 'aria-hidden': 'true' }, id ? h('img', { alt: '', 'data-img': id, loading: 'lazy' }) : (n.title || '？').trim().slice(0, 1));
+};
+export async function fillPics(ctx, root) {
+  for (const img of root.querySelectorAll('img[data-img]:not([src])')) { const u = await ctx.imageUrl(img.dataset.img).catch(() => null); if (u) img.src = u; }
+}
+
 function renderList(kind, main, ctx, s, rerender) {
-  const w = ctx.world, q = ctx.query().toLowerCase();
-  const all = Object.values(w.notes).filter(n => kindOf(n) === kind);
+  const w = ctx.world, q = s.q.trim().toLowerCase();
+  const every = Object.values(w.notes).filter(n => kindOf(n) === kind);
+  const inSc = scopeIds(w), all = inSc ? every.filter(n => inSc.has(n.id)) : every;
   const tags = [...new Set(all.flatMap(n => n.tags))].sort(collator.compare);
   // 絞り込みの選択肢
   let options = [];
   if (FILTER[kind]) options = Object.values(w.templates).flatMap(t => t.fields).find(f => f.key === FILTER[kind] && f.type === 'select')?.options || [];
   if (kind === 'person') options = Object.values(w.notes).filter(n => kindOf(n) === 'group').sort(byTitle).map(g => [g.id, g.title || '名前なし']);
+  const optVal = o => Array.isArray(o) ? o[0] : o, optText = o => Array.isArray(o) ? o[1] : o;
+  if (s.filter && !options.some(o => optVal(o) === s.filter)) s.filter = '';
   const pass = n => {
     if (s.filter) {
       if (kind === 'person') { if (!linksOfKind(w, 'member', 'a', n.id).some(l => l.b === s.filter)) return false; }
@@ -248,26 +290,52 @@ function renderList(kind, main, ctx, s, rerender) {
     if (s.tags.size && ![...s.tags].every(t => n.tags.includes(t))) return false;
     return !q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q) || n.tags.some(t => t.toLowerCase().includes(q)) || Object.values(n.fields).some(v => String(v).toLowerCase().includes(q));
   };
-  const list = all.filter(pass);
-  if (s.sort === 'title') list.sort(byTitle); else list.reverse();
+  for (const id of [...s.sel]) if (!w.notes[id]) s.sel.delete(id);
+  const lm = listPref.get(kind) || (kind === 'person' ? 'table' : 'cards');
+  let list = all.filter(pass);
+  if (lm === 'table') list = sortRows(w, list, kind, s.col, s.dir);
+  else if (s.sort === 'title') list.sort(byTitle); else list.reverse();
+  const order = list.map(n => n.id), unit = kind === 'person' ? '人' : '件';
+  const open = id => ctx.openElement(id);
   const boardCount = id => { const b = Object.values(w.boards).find(b => b.owner === id); return b ? Object.keys(b.items).filter(x => x !== id && w.notes[x]).length : 0; };
   const card = n => {
-    const sum = summaryOf(w, n), c = boardCount(n.id);
-    return h('button', { type: 'button', class: `ncard el p-${n.color ?? 0}`, 'data-id': n.id, onclick: () => ctx.openElement(n.id) },
-      h('span', { class: 'ncard-t' }, n.title || '（名前なし）'),
-      sum ? h('span', { class: 'ncard-b' }, sum) : null,
-      n.tags.length ? h('span', { class: 'ncard-tags' }, n.tags.join('・')) : null,
-      h('span', { class: 'ncard-where' }, c ? `ボードに${c}枚` : 'ボードはまだ空'));
+    const hint = hintOf(w, n), c = boardCount(n.id);
+    return h('div', { class: `cwrap${s.sel.has(n.id) ? ' on' : ''}${s.sel.size ? ' selecting' : ''}` }, selBox(s, n.id, order, rerender),
+      h('button', { type: 'button', class: `ncard el p-${n.color ?? 0} k-${kind}`, 'data-id': n.id, onclick: () => open(n.id) },
+        h('span', { class: 'ncard-row' }, picEl(ctx, n), h('span', { class: 'ncard-t' }, n.title || '（名前なし）')),
+        hint ? h('span', { class: 'ncard-b' }, hint) : null,
+        n.tags.length ? h('span', { class: 'ncard-tags' }, n.tags.join('・')) : null,
+        c ? h('span', { class: 'ncard-where' }, `ボードに${c}枚`) : null));
   };
-  const optVal = o => Array.isArray(o) ? o[0] : o, optText = o => Array.isArray(o) ? o[1] : o;
-  if (s.filter && !options.some(o => optVal(o) === s.filter)) s.filter = '';
-  main.replaceChildren(
-    h('div', { class: 'row el-tools' },
-      h('span', { class: 'note-text' }, `${list.length}${list.length === all.length ? '' : ` / ${all.length}`}`),
-      options.length ? h('select', { 'aria-label': kind === 'person' ? '所属で絞る' : `${FILTER[kind]}で絞る`, onchange: e => { s.filter = e.target.value; rerender(); } },
-        h('option', { value: '' }, kind === 'person' ? '所属：すべて' : `${FILTER[kind]}：すべて`), ...options.map(o => h('option', { value: optVal(o), selected: optVal(o) === s.filter }, optText(o)))) : null,
-      h('select', { 'aria-label': '並べ方', onchange: e => { s.sort = e.target.value; rerender(); } }, h('option', { value: 'title', selected: s.sort === 'title' }, '名前順'), h('option', { value: 'recent', selected: s.sort === 'recent' }, '作った順')),
-      ...tags.map(t => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(s.tags.has(t)), onclick: () => { s.tags.has(t) ? s.tags.delete(t) : s.tags.add(t); rerender(); } }, t))),
-    h('div', { class: 'scroll' }, list.length ? h('div', { class: 'ngrid' }, ...list.map(card))
-      : h('p', { class: 'note-text' }, all.length ? '当てはまるものがありません' : `まだ${KINDS[kind].label}が${kind === 'person' ? 'いません' : 'ありません'}。上の欄に名前を入れて Enter で作れます。開くと、その${KINDS[kind].label}のボードに付箋を貼れます。`)));
+  const allOn = order.length > 0 && order.every(id => s.sel.has(id));
+  const table = () => h('table', { class: 'tbl' },
+    h('thead', {}, h('tr', {},
+      h('th', { class: 'tbl-sel' }, h('input', { type: 'checkbox', checked: allOn, 'aria-label': 'いま出ているものを全部選ぶ', onclick: () => { for (const id of order) allOn ? s.sel.delete(id) : s.sel.add(id); rerender(); } })),
+      h('th', { class: 'tbl-pic' }),
+      ...COLUMNS[kind].map(c => h('th', { 'aria-sort': s.col === c.key ? (s.dir > 0 ? 'ascending' : 'descending') : 'none' },
+        h('button', { type: 'button', class: 'th-sort', title: `${c.label}で並べ替え`, onclick: () => { if (s.col === c.key) s.dir = -s.dir; else { s.col = c.key; s.dir = 1; } rerender(); } }, c.label, s.col === c.key ? (s.dir > 0 ? ' ▲' : ' ▼') : ''))))),
+    h('tbody', {}, ...list.map(n => h('tr', { class: s.sel.has(n.id) ? 'on' : '', 'data-id': n.id, onclick: e => { if (!e.target.closest('input, button, a')) open(n.id); } },
+      h('td', { class: 'tbl-sel' }, selBox(s, n.id, order, rerender)),
+      h('td', { class: 'tbl-pic' }, picEl(ctx, n)),
+      ...COLUMNS[kind].map((c, i) => h('td', {}, i ? c.value(w, n) : h('button', { type: 'button', class: 'linkish tbl-name', onclick: () => open(n.id) }, n.title || '（名前なし）')))))));
+  const body = !list.length ? h('p', { class: 'note-text' }, all.length ? '当てはまるものがありません' : inSc ? `このシナリオに出る${label(kind)}はまだありません` : `まだ${KINDS[kind].label}が${kind === 'person' ? 'いません' : 'ありません'}。上の欄に名前を入れて Enter で作れます。`)
+    : lm === 'table' ? table()
+    : lm === 'grouped' ? h('div', {}, ...groupCards(w, list, s.by).map(g => h('section', { class: 'ngroup' }, h('h3', {}, g.label, h('span', { class: 'note-text' }, ` ${g.items.length}`)), h('div', { class: 'ngrid' }, ...g.items.map(card)))))
+    : h('div', { class: 'ngrid' }, ...list.map(card));
+  const tools = h('div', { class: 'row el-tools' },
+    h('span', { class: 'note-text' }, `${list.length}${list.length === every.length ? '' : ` / ${every.length}`}${unit}`),
+    kind === 'scenario' ? null : scopeSelect(ctx, rerender),
+    options.length ? h('select', { 'aria-label': kind === 'person' ? '所属で絞る' : `${FILTER[kind]}で絞る`, onchange: e => { s.filter = e.target.value; rerender(); } },
+      h('option', { value: '' }, kind === 'person' ? '所属：すべて' : `${FILTER[kind]}：すべて`), ...options.map(o => h('option', { value: optVal(o), selected: optVal(o) === s.filter }, optText(o)))) : null,
+    h('div', { class: 'seg', role: 'group', 'aria-label': '一覧の見せ方' }, ...LIST_MODES.map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(lm === k), onclick: () => { listPref.set(kind, k); rerender(); } }, v))),
+    lm === 'cards' ? h('select', { 'aria-label': '並べ方', onchange: e => { s.sort = e.target.value; rerender(); } }, h('option', { value: 'title', selected: s.sort === 'title' }, '名前順'), h('option', { value: 'recent', selected: s.sort === 'recent' }, '作った順')) : null,
+    lm === 'grouped' ? h('select', { 'aria-label': '何でまとめるか', onchange: e => { s.by = e.target.value; rerender(); } }, ...GROUPS[kind].map(g => h('option', { value: g, selected: g === s.by }, `${g}でまとめる`))) : null,
+    ...tags.map(t => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(s.tags.has(t)), onclick: () => { s.tags.has(t) ? s.tags.delete(t) : s.tags.add(t); rerender(); } }, t)),
+    scopeChip(ctx, rerender, all.length, every.length, unit));
+  const scroller = h('div', { class: 'scroll' }, body);
+  const keep = main.querySelector('.scroll')?.scrollTop || 0;
+  main.replaceChildren(...[tools, scroller, s.sel.size ? bulkBar(ctx, [...s.sel], () => { s.sel.clear(); rerender(); }) : null].filter(Boolean));
+  scroller.scrollTop = keep;
+  fillPics(ctx, scroller);
 }
+const label = kind => KINDS[kind].label;

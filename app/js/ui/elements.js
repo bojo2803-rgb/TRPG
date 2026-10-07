@@ -33,7 +33,7 @@ const chip = (ctx, id, extra, onRemove) => {
   const o = ctx.world.notes[id];
   if (!o) return null;
   return h('span', { class: `chip p-${o.color ?? 0}` },
-    h('a', { href: '#', onclick: e => { e.preventDefault(); ctx.openNote(id); } }, o.title || '（名前なし）'), extra ? h('span', { class: 'note-text' }, ' ' + extra) : null,
+    h('a', { href: '#', onclick: e => { e.preventDefault(); ctx.openRelated(id); } }, o.title || '（名前なし）'), extra ? h('span', { class: 'note-text' }, ' ' + extra) : null,
     onRemove ? h('button', { type: 'button', class: 'x', 'aria-label': '外す', onclick: onRemove }, '×') : null);
 };
 const row = (label, ...kids) => h('div', { class: 'row' }, h('span', { class: 'lbl' }, label), ...kids);
@@ -80,7 +80,7 @@ export async function memberDialog(ctx, { person = null, group = null, linkId = 
     body: h('div', { class: 'fields' }, person && !l ? null : P.el, group && !l ? null : G.el, h('label', {}, '役職', role), A.el, B.el),
     onSave: () => {
       const from = A.read(), to = B.read();
-      ctx.commit(w => {
+      ctx.commitNew(w => {
         const a = person && !l ? person : P.resolve(w), b = group && !l ? group : G.resolve(w);
         const x = l ? w.links[l.id] : newLink(a, b, { kind: 'member', style: 'dashed' });
         Object.assign(x, { a, b, label: role.value.trim(), from, to });
@@ -106,7 +106,7 @@ export async function holderDialog(ctx, item, linkId = null) {
       l ? null : h('p', { class: 'note-text' }, 'いまの持ち主の期間は、ここで終わります。')),
     onSave: () => {
       const from = A.read(), to = B ? B.read() : null;
-      ctx.commit(w => {
+      ctx.commitNew(w => {
         const a = who.resolve(w);
         if (l) { Object.assign(w.links[l.id], { a, label: how.value.trim(), from, to }); if (to) delete w.links[l.id].done; return; }
         for (const o of linksOfKind(w, 'holds', 'b', item)) if (!o.to && !o.done) { if (from) o.to = from; else o.done = true; }
@@ -165,7 +165,7 @@ export function contentsSec(ctx, w, n) {
   return h('div', { class: 'fields' },
     h('div', { class: 'fields' }, h('span', { class: 'lbl' }, '出来事'),
       ...events.map(e => h('div', { class: 'row link-row' }, h('span', { class: 'data dir' }, fmtWhen(w, e.when)), chip(ctx, e.id, null, out(e.id)))),
-      h('div', { class: 'row' }, add('＋ 出来事を入れる', put('入れる出来事（時系列にある付箋）', ['note'], 'note', o => !!o.when)))),
+      h('div', { class: 'row' }, add('＋ 出来事を入れる', put('入れる出来事（時系列にあるもの）', ['note'], 'note', o => !!o.when)))),
     row('登場', ...cast.map(c => chip(ctx, c.id, [KINDS[kindOf(c)].label, kindOf(c) === 'person' ? ageIn(w, c, n) : ''].filter(Boolean).join('・'), out(c.id))), add('＋', put('登場させる人物・アイテム・集団', ['person', 'item', 'group'], 'person'))),
     rest.length ? row('付箋', ...rest.map(c => chip(ctx, c.id, null, out(c.id)))) : null);
 }
@@ -252,7 +252,7 @@ export function atSec(ctx, w, n) {
   const set = id => ctx.commit(w => { w.notes[n.id].at = id; }, '場所を変える');
   const pick = () => pickNote(ctx, { title: AT_LABEL[kindOf(n)] || '場所', kinds: ['place'], newKind: 'place', exclude: [n.id], onPick: set });
   return h('div', { class: 'row' },
-    n.at && w.notes[n.at] ? h('span', { class: 'chip p-0' }, h('a', { href: '#', onclick: e => { e.preventDefault(); ctx.openElement(n.at); } }, pathText(w, n.at)),
+    n.at && w.notes[n.at] ? h('span', { class: 'chip p-0' }, h('a', { href: '#', onclick: e => { e.preventDefault(); ctx.openRelated(n.at); } }, pathText(w, n.at)),
       h('button', { type: 'button', class: 'x', 'aria-label': '場所を外す', onclick: () => ctx.commit(w => { delete w.notes[n.id].at; }, '場所を外す') }, '×')) : h('span', { class: 'note-text' }, 'まだ決めていません'),
     add(n.at ? '変える' : '＋ 決める', pick));
 }
@@ -299,15 +299,4 @@ export function hereSec(ctx, w, n) {
     `${s.title || '名前なし'} › ${p.title || '題名なし'}${p.place !== n.id ? `（${w.notes[p.place].title}）` : ''}`))) : null);
 }
 
-// 一覧のカードに出す短い説明
-export function summaryOf(w, n) {
-  const f = k => n.fields?.[k];
-  switch (kindOf(n)) {
-    case 'person': return [f('職業'), f('年齢'), ...linksOfKind(w, 'member', 'a', n.id).filter(l => !l.to && !l.done).map(l => w.notes[l.b].title + (l.label ? `（${l.label}）` : ''))].filter(Boolean).join('・');
-    case 'scenario': return [f('状態'), f('概要')].filter(Boolean).join('・');
-    case 'item': { const c = currentHolder(w, n.id); return [f('区分'), c ? `持ち主：${w.notes[c].title}` : '', f('効果')].filter(Boolean).join('・'); }
-    case 'group': { const m = linksOfKind(w, 'member', 'b', n.id).filter(l => !l.to && !l.done).length; return [f('種類'), m ? `${m}人` : '', f('目的')].filter(Boolean).join('・'); }
-    default: return '';
-  }
-}
 export { esc };

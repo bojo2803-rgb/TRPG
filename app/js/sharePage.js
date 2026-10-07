@@ -45,6 +45,7 @@ function render(pkg) {
   };
   const path = id => placePath(w, id).map(x => w.notes[x].title || '名前なし').join(' › ');
   const card = n => h('article', { class: `share-card k-${kindOf(n)}`, id: 'card-' + n.id },
+    n.pic && pkg.images?.[n.pic]?.data ? h('img', { class: 'share-pic', src: pkg.images[n.pic].data, alt: '' }) : null,
     h('h3', {}, n.title || '（名前なし）', kindOf(n) === 'person' && ageIn(w, n, sc) ? h('span', { class: 'note-text' }, `（${ageIn(w, n, sc)}）`) : null),
     kindOf(n) === 'person' && bornOf(w, n) ? h('p', { class: 'note-text' }, `生年月日：${when(bornOf(w, n))}`) : null,
     n.at && w.notes[n.at] ? h('p', { class: 'note-text' }, `場所：${path(n.at)}`) : null,

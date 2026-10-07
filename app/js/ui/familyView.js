@@ -1,10 +1,11 @@
-// 家系図：付箋の「家族」（親子・夫婦・遠い先祖）のつながりから、自動で家系図の形に並べる。位置を手で直す必要はない。
+// 家系図：人物の「家族」（親子・夫婦・遠い先祖）のつながりから、自動で家系図の形に並べる。位置を手で直す必要はない。
 // 結婚していない2人に子がいれば、2人を隣に並べて点線で結ぶ。遠い先祖は、その代の数だけ段を離して点線で結ぶ
 import { h, esc, byTitle } from '../util.js';
 import { newLink } from '../model.js';
 import { layoutFamily, coParents, NODE_W, NODE_H, ROW } from './familyLayout.js';
 import { panZoom } from './panzoom.js';
 import { pickNote } from './picker.js';
+import { scopeIds, scopeSelect, scopeChip } from './scope.js';
 
 let focusId = '';
 
@@ -29,11 +30,12 @@ export function mount(el, ctx, arg) {
       h('h2', {}, '家系図'),
       h('select', { 'aria-label': '見る人物', onchange: e => { focusId = e.target.value; first = true; render(); } },
         h('option', { value: '' }, `全員（${all.length}人）`), ...all.map(n => h('option', { value: n.id, selected: n.id === focusId }, `${n.title || '名前なし'}の家族`))),
+      scopeSelect(ctx, () => { first = true; render(); }),
       h('span', { class: 'sp' }),
-      h('span', { class: 'note-text' }, '付箋の「家族」で親子・夫婦をつなぐと、ここに並びます'),
+      h('span', { class: 'note-text' }, '人物の「家族」で親子・夫婦をつなぐと、ここに並びます'),
       h('button', { type: 'button', class: 'btn', onclick: () => addRelation() }, '＋ 家族をつなぐ'),
       h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; render(); } }, '⤢'),
-    ]);
+    ].filter(Boolean));
     // 見る範囲：選んだ人物とつながっている人（親子・夫婦をたどる）
     let show = [...ids];
     if (focusId) {
@@ -41,12 +43,18 @@ export function mount(el, ctx, arg) {
       while (st.length) { const x = st.pop(); for (const l of L) { const o = l.a === x ? l.b : l.b === x ? l.a : null; if (o && ids.has(o) && !seen.has(o)) { seen.add(o); st.push(o); } } }
       show = [...seen];
     }
+    // シナリオで絞る：そのシナリオに出る人物だけ
+    const inSc = scopeIds(w), before = show.length;
+    if (inSc) show = show.filter(id => inSc.has(id));
+    bar.querySelector('.scope-chip')?.remove();
+    const chip = scopeChip(ctx, () => { first = true; render(); }, show.length, before, '人');
+    if (chip) bar.insertBefore(chip, bar.querySelector('.sp'));
     show.sort((a, b) => byTitle(w.notes[a], w.notes[b]));
     const parents = L.filter(l => l.kind === 'parent'), spouses = L.filter(l => l.kind === 'spouse'), ancestors = L.filter(l => l.kind === 'ancestor');
     const partners = coParents(parents, spouses);
     const { pos } = layoutFamily(show, [...parents, ...ancestors.map(l => ({ a: l.a, b: l.b, gen: l.gen ?? null }))], [...spouses, ...partners]);
     if (!show.length) {
-      layer.replaceChildren(h('div', { class: 'fam-empty' }, 'まだ家族のつながりがありません。人物の付箋を開いて「家族」の＋で親・子・配偶者をつなぐか、「＋ 家族をつなぐ」を押してください。'));
+      layer.replaceChildren(h('div', { class: 'fam-empty' }, inSc ? 'このシナリオに出る人物には、家族のつながりがありません。' : 'まだ家族のつながりがありません。人物を開いて「家族」の＋で親・子・配偶者をつなぐか、「＋ 家族をつなぐ」を押してください。'));
       pz.fit(0, 0, 400, 100); return;
     }
     // 線：夫婦は横の二重線。子へは、親（夫婦なら2人の真ん中）から下ろして横に渡す

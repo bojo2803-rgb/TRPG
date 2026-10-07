@@ -25,8 +25,10 @@ await p.click('.md-tools button:has-text("表示")');
 ok(await p.locator('.md h3').textContent() === '正体', 'markdown heading');
 ok(await p.locator('.md a.nlink.missing').count() === 1, 'missing link shown');
 await p.click('.md a.nlink.missing');
+await p.click('#menu button:has-text("付箋")'); // どの種類で作るかを選ぶ
 await p.waitForTimeout(200);
-ok(await p.evaluate(() => Object.values(__app.world.notes).some(n => n.title === 'アーカム')), 'clicking missing link creates note');
+ok(await p.evaluate(() => Object.values(__app.world.notes).some(n => n.title === 'アーカム' && n.kind === 'note')), 'clicking missing link creates a card of the chosen kind');
+ok((await p.locator('.peek-crumbs').textContent()).includes('アーカム'), 'the new card opens on top in the side window');
 await p.waitForTimeout(1600);
 await p.reload(); await p.waitForFunction(() => window.__app && document.getElementById('worldName').textContent !== '…'); await p.waitForTimeout(300);
 const titles = await p.evaluate(() => Object.values(__app.world.notes).map(n => n.title).sort().join());

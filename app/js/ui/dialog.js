@@ -66,9 +66,11 @@ export function showMenu(head, items, x, y) {
 export const hideMenu = () => { $('menu').hidden = true; };
 export function menuAt(el, head, items) { const r = el.getBoundingClientRect(); showMenu(head, items, r.left, r.bottom + 4); }
 
-export function toast(msg, ms = 5000) {
+// action：{ label, onClick }（お知らせの中のボタン。例：作ったカードを［書く］）
+export function toast(msg, ms = 5000, action = null) {
   const t = $('toast');
-  t.textContent = msg; t.hidden = false;
+  t.replaceChildren(msg, ...(action ? [' ', h('button', { type: 'button', class: 'toast-act', onclick: () => { t.hidden = true; action.onClick(); } }, action.label)] : []));
+  t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, ms);
 }
 export { esc };

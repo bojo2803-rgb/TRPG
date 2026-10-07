@@ -25,14 +25,14 @@ await p.fill('#dlgBody input[type="search"]', 'アーミテッジ'); await p.loc
 ok(await p.evaluate(() => __app.world.notes.pc.at) === 'c39', 'put a person here');
 ok(await p.locator('.explorer-main .tile:has-text("アーミテッジ")').count() === 1, 'listed in ここにあるもの');
 // 詳しい画面だけを大きく → 戻す。開き直しても覚えている
-await p.click('.ne button:has-text("大きく")'); await p.waitForTimeout(200);
+await p.click('.peek-head button:has-text("大きく")'); await p.waitForTimeout(200);
 ok(await p.locator('#view').isHidden() && (await p.locator('#panel').boundingBox()).width > 900, 'details take the whole width');
 await p.evaluate(() => { __app.closeNote(); __app.openNote('j'); }); await p.waitForTimeout(200);
 ok(await p.locator('#view').isHidden(), 'stays wide when another card opens');
 await p.evaluate(() => __app.closeNote()); await p.waitForTimeout(100);
 ok(await p.locator('#view').isVisible(), 'closing the details shows the view again');
 await p.evaluate(() => __app.openNote('j')); await p.waitForTimeout(200);
-await p.click('.ne button:has-text("戻す")'); await p.waitForTimeout(200);
+await p.click('.peek-head button:has-text("戻す")'); await p.waitForTimeout(200);
 ok(await p.locator('#view').isVisible(), 'back to normal size');
 ok(!errors.length, 'errors: ' + errors.join('\n'));
 await b.close(); done();

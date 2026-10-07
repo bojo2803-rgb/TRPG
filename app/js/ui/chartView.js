@@ -2,7 +2,7 @@
 // drawChart は共有の読むページでも使う（readOnly）
 import { h, esc } from '../util.js';
 import { NODE_TYPES, CHART_W, layoutChart, clueList, emptyChart, newChartNode, newChartEdge, scenesByPlace } from '../chart.js';
-import { KINDS, newNote, kindOf, placePath } from '../model.js';
+import { KINDS, newNote, kindOf, placePath, childrenOf } from '../model.js';
 import { panZoom } from './panzoom.js';
 import { pickNote } from './picker.js';
 
@@ -111,29 +111,34 @@ export function mount(el, ctx, arg) {
       },
     };
   }
-  // いくつも入れる欄（登場・アイテム）：名前を入れて Enter で1つ足す。×で外す
-  function namesField(label, ids, kinds, newKind, ph) {
+  // いくつも入れる欄（登場・アイテム）：名前を入れて Enter で1つ足す。×で外す。
+  // cast（シナリオの登場）があれば、候補はその中だけ。「ほかから選ぶ」で世界の全員から選べ、選んだ人はシナリオの登場にも入る
+  function namesField(label, ids, kinds, newKind, ph, cast = null) {
     const list = 'cn-' + newKind, w = ctx.world, cur = ids.filter(x => w.notes[x]).map(x => ({ id: x }));
+    let wide = !cast;
     const input = h('input', { list, autocomplete: 'off', placeholder: `${ph}（Enter で足す）` });
-    const chipsEl = h('span', { class: 'names-chips' });
-    const draw = () => chipsEl.replaceChildren(...cur.map((x, i) => h('span', { class: 'chip' }, x.id ? w.notes[x.id].title || '名前なし' : `${x.name}（新しく作る）`, h('button', { type: 'button', class: 'x', 'aria-label': '外す', onclick: () => { cur.splice(i, 1); draw(); } }, '×'))));
+    const chipsEl = h('span', { class: 'names-chips' }), dl = h('datalist', { id: list });
+    const fill = () => dl.replaceChildren(...Object.values(w.notes).filter(x => kinds.includes(kindOf(x)) && (wide || cast.has(x.id))).map(x => h('option', { value: x.title })));
+    const draw = () => chipsEl.replaceChildren(...cur.map((x, i) => h('span', { class: 'chip' }, x.id ? w.notes[x.id].title || '名前なし' : `${x.name}（新しく作る）`, x.join ? h('span', { class: 'note-text' }, '（登場に入れる）') : null, h('button', { type: 'button', class: 'x', 'aria-label': '外す', onclick: () => { cur.splice(i, 1); draw(); } }, '×'))));
     const add = () => {
       const t = input.value.trim();
       if (!t) return;
-      const hit = Object.values(w.notes).find(x => x.title === t && kinds.includes(kindOf(x)));
-      if (!cur.some(x => (hit ? x.id === hit.id : x.name === t))) cur.push(hit ? { id: hit.id } : { name: t });
+      // 同じ名前の人がいれば、登場の外の人でもその人を使う（同じ名前の人を新しく作らない）
+      const hit = Object.values(w.notes).find(x => x.title === t && kinds.includes(kindOf(x)) && (!cast || cast.has(x.id))) || Object.values(w.notes).find(x => x.title === t && kinds.includes(kindOf(x)));
+      if (!cur.some(x => (hit ? x.id === hit.id : x.name === t))) cur.push(hit ? { id: hit.id, join: !!cast && !cast.has(hit.id) } : { name: t });
       input.value = ''; draw();
     };
+    const widen = cast ? h('button', { type: 'button', class: 'btn small', title: 'このシナリオの登場人物でない人も候補に出す（選ぶと登場に入ります）', onclick: e => { wide = !wide; fill(); e.currentTarget.textContent = wide ? '登場人物だけにする' : 'ほかから選ぶ'; input.focus(); } }, 'ほかから選ぶ') : null;
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); add(); } });
     input.addEventListener('input', e => { if (e.inputType === 'insertReplacementText') add(); }); // 候補から選んだとき
     input.addEventListener('change', add);
-    draw();
+    draw(); fill();
     return {
-      el: h('div', { class: 'fields' }, h('span', {}, label), h('div', { class: 'row names' }, chipsEl, input), h('datalist', { id: list }, ...Object.values(w.notes).filter(x => kinds.includes(kindOf(x))).map(x => h('option', { value: x.title })))),
+      el: h('div', { class: 'fields' }, h('span', {}, label), h('div', { class: 'row names' }, chipsEl, input, widen), dl),
       resolve(w) {
         if (input.value.trim()) add();
         return cur.map(x => {
-          if (x.id) return x.id;
+          if (x.id) { if (x.join && !w.notes[x.id].parents.includes(sid)) w.notes[x.id].parents.push(sid); return x.id; }
           const nn = newNote({ kind: newKind, title: x.name, parents: [sid] }); // 新しい人物・アイテムは、このシナリオの登場に入れる
           w.notes[nn.id] = nn;
           return nn.id;
@@ -145,7 +150,7 @@ export function mount(el, ctx, arg) {
   // 場所・登場・アイテムは名前で入れる（候補から選ぶ。ない名前なら、そのカードを作る。登場・アイテムはシナリオに入る）
   function editNode(id, from = null) {
     const n = id ? chart().nodes[id] : null, prev = from ? chart().nodes[from] : null;
-    const place = placeField(n?.place ?? prev?.place), cast = namesField('登場（人物・集団）', n?.cast || [], ['person', 'group'], 'person', '例：アーミテッジ'), items = namesField('アイテム（手に入る・使う）', n?.items || [], ['item'], 'item', '例：古い鍵');
+    const place = placeField(n?.place ?? prev?.place), cast = namesField('登場（人物・集団）', n?.cast || [], ['person', 'group'], 'person', '例：アーミテッジ', new Set(childrenOf(ctx.world, sid).filter(x => ['person', 'group'].includes(kindOf(x))).map(x => x.id))), items = namesField('アイテム（手に入る・使う）', n?.items || [], ['item'], 'item', '例：古い鍵');
     const typeEl = h('select', { id: 'cn_type' }, ...Object.entries(NODE_TYPES).map(([k, t]) => h('option', { value: k, selected: k === (n?.type || 'event') }, `${t.icon} ${t.label}`)));
     ctx.openDialog({
       title: n ? '点を直す' : prev ? `「${prev.title || '題名なし'}」の次の点` : '点を作る', ok: n ? '保存' : '作る', wide: true,
@@ -160,7 +165,7 @@ export function mount(el, ctx, arg) {
         const title = v('cn_title').trim(), type = v('cn_type'), body = v('cn_body'), time = v('cn_time').trim();
         if (!title) throw '題名を入れてください';
         const label = v('cn_label').trim(), nid = n ? id : newChartNode().id;
-        ctx.commit(w => {
+        ctx.commitNew(w => {
           const sc = w.notes[sid]; sc.chart ||= emptyChart();
           const fields = { title, type, body, place: place.resolve(w), cast: cast.resolve(w), items: items.resolve(w) };
           if (time) fields.time = time;
@@ -254,7 +259,7 @@ export function mount(el, ctx, arg) {
     ].filter(Boolean));
     stage.classList.toggle('placing', !!linking);
     if (empty) { layer.replaceChildren(h('div', { class: 'fam-empty' }, h('p', {}, 'まだ点がありません。導入の出来事などを「＋ 点」で作り、点の「＋ 次へ」で、PLの行動ごとに次の点をつなげていきます。'), h('button', { type: 'button', class: 'btn primary', onclick: () => editNode(null) }, '＋ 最初の点'))); pz.fit(0, 0, 420, 140); return; }
-    cur = drawChart(layer, c, { linking, cardTitle: r => ctx.world.notes[r]?.title || '（消えたカード）', placeLabel: r => ctx.world.notes[r] ? pathOf(r) : '（消えた場所）', onRef: r => ctx.world.notes[r] && ctx.openNote(r) });
+    cur = drawChart(layer, c, { linking, cardTitle: r => ctx.world.notes[r]?.title || '（消えたカード）', placeLabel: r => ctx.world.notes[r] ? pathOf(r) : '（消えた場所）', onRef: r => ctx.world.notes[r] && ctx.openRelated(r) });
     const size = cur.drawEdges();
     if (first) { pz.fit(-30, -30, size.w + 90, size.h + 30, 1); first = false; }
   }

@@ -49,7 +49,7 @@ export function randomCharacter(world) {
 export function open(ctx) {
   let c = randomCharacter(ctx.world);
   const show = () => h('div', { class: 'fields rnd' },
-    h('p', { class: 'note-text' }, '名前・能力値・メモまで、すべてでたらめです（発想のきっかけ用）。気に入ったら付箋にできます。'),
+    h('p', { class: 'note-text' }, '名前・能力値・メモまで、すべてでたらめです（発想のきっかけ用）。気に入ったら人物として作れます。'),
     h('h3', { class: 'rnd-name' }, c.name),
     h('div', { class: 'tpl-grid' }, ...Object.entries(c.fields).map(([k, v]) => h('label', {}, h('span', {}, k), h('b', { class: 'data' }, String(v))))),
     h('p', {}, c.memo || '（メモの材料が足りませんでした）'),

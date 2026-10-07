@@ -33,7 +33,7 @@ export function scenarioPackage(w, sid, { sessions = false } = {}) {
   return {
     format: PKG, version: 1, title: sc.title, sharedAt: new Date().toISOString(), scenario: sid,
     settings: clone(w.settings), tracks: clone(w.tracks), calendars: clone(w.calendars || {}), templates: clone(w.templates),
-    notes, links, imageIds: [...new Set(Object.values(notes).flatMap(n => imageIds(n.body || '')))], images: {},
+    notes, links, imageIds: [...new Set(Object.values(notes).flatMap(n => [...imageIds(n.body || ''), ...(n.pic ? [n.pic] : [])]))], images: {},
   };
 }
 

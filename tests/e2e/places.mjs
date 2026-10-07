@@ -26,7 +26,7 @@ ok(await p.locator('.el-board .map-sheet').count() === 1, '東京都 has a blank
 ok(await p.locator('.unplaced button:has-text("新宿")').count() === 1, '新宿 waits to be placed');
 // 道しるべで日本へ。日本の地図を作り、東京都を置く
 await p.click('.el-head .crumbs button:has-text("日本")'); await wait(600);
-ok(await p.locator('.el-head h2').textContent() === '日本', 'breadcrumb opens 日本');
+ok(await p.locator('.ne.page .ne-title').inputValue() === '日本', 'breadcrumb opens 日本');
 await p.click('.el-head .seg button:has-text("地図")'); await wait(400);
 await p.click('button:has-text("画像なし（方眼の紙）で作る")'); await wait(200);
 await p.click('#dlgOk'); await wait(500);

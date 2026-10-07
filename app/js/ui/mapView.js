@@ -61,7 +61,7 @@ export function mount(el, ctx, arg) {
   function enter(id) {
     const w = ctx.world, inner = kindOf(w.notes[id]) === 'place' && mapOf(w, id);
     if (!inner) { ctx.openNote(id); return; }
-    if (owner) { ctx.openElement(id); return; }
+    if (owner) { ctx.openElement(id, { mode: 'map' }); return; }
     mid = inner.id; first = true; placing = linking = null; render();
   }
   function addLine(a, b) {

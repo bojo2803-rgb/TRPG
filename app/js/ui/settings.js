@@ -29,19 +29,21 @@ export function open(ctx) {
   const theme = applyTheme();
   const sel = (id, opts, cur) => h('select', { id }, ...opts.map(([v, label], i) => h('option', { value: v, selected: v === cur }, label + (i === 0 ? '（初期設定）' : ''))));
   const tzIn = h('input', { id: 'st_tz', list: 'st_tzl', value: w.settings.tz || 'Asia/Tokyo' });
+  // よく使うもの（Googleドライブ・見た目）を上に。暦のくわしい設定は、たたんでおく（押すと開く）
   const body = h('div', { class: 'fields settings' },
+    h('h3', {}, 'Googleドライブ'),
+    h('div', { id: 'st_drive' }, h('p', { class: 'note-text' }, '読み込んでいます…')),
     h('h3', {}, '見た目（この端末だけ）'),
     h('label', {}, '明るさ', sel('st_theme', [['auto', '端末に合わせる'], ['light', '明るい'], ['dark', '暗い']], theme)),
-    h('h3', {}, 'この世界の暦'),
-    h('label', {}, '標準のタイムゾーン（日時を入れるときの初期値）', tzIn, h('datalist', { id: 'st_tzl' }, ...[...COMMON_TZ, ...allTimeZones().filter(z => !COMMON_TZ.includes(z))].map(z => h('option', { value: z }, tzLabel(z))))),
-    ...GROUPS.map(([title, key, items]) => h('fieldset', { class: 'st-group' }, h('legend', {}, title),
-      ...items.map(([k, label, opts]) => h('label', {}, label, sel(`st_${key}_${k}`, opts, cal[key]?.[k] ?? DEFAULT_SETTINGS().cal[key][k]))))),
-    h('p', { class: 'note-text' }, '流派はよく使われる順に並べています。ヒジュラ暦のトルコ・MABIMS は天文計算による目安で、公式の発表と1日ずれることがあります。各国の実際の目視記録はまとまったデータがないため選べません。和暦の旧暦の日付は445年から出せます（それより前は皇紀と干支だけ）。'),
+    h('details', { class: 'st-cal' }, h('summary', {}, '暦のくわしい設定（タイムゾーン・西暦・和暦・旧暦・ヒジュラ暦）'),
+      h('div', { class: 'fields' },
+        h('label', {}, '標準のタイムゾーン（日時を入れるときの初期値）', tzIn, h('datalist', { id: 'st_tzl' }, ...[...COMMON_TZ, ...allTimeZones().filter(z => !COMMON_TZ.includes(z))].map(z => h('option', { value: z }, tzLabel(z))))),
+        ...GROUPS.map(([title, key, items]) => h('fieldset', { class: 'st-group' }, h('legend', {}, title),
+          ...items.map(([k, label, opts]) => h('label', {}, label, sel(`st_${key}_${k}`, opts, cal[key]?.[k] ?? DEFAULT_SETTINGS().cal[key][k]))))),
+        h('p', { class: 'note-text' }, '流派はよく使われる順に並べています。ヒジュラ暦のトルコ・MABIMS は天文計算による目安で、公式の発表と1日ずれることがあります。各国の実際の目視記録はまとまったデータがないため選べません。和暦の旧暦の日付は445年から出せます（それより前は皇紀と干支だけ）。'))),
     h('h3', {}, '架空の暦'),
     h('div', { class: 'row' }, ...Object.values(w.calendars).map(c => h('button', { type: 'button', class: 'chip', onclick: () => calendarDialog(ctx, c.id) }, c.name)),
       h('button', { type: 'button', class: 'btn small', onclick: () => calendarDialog(ctx, null) }, '＋ 架空の暦')),
-    h('h3', {}, 'Googleドライブ'),
-    h('div', { id: 'st_drive' }, h('p', { class: 'note-text' }, '読み込んでいます…')),
   );
   ctx.openDialog({
     title: '設定', wide: true, body,

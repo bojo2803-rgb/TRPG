@@ -20,8 +20,11 @@ await p.click('#dlgOk'); await p.waitForTimeout(300);
 const uni = await byTitle('ミスカトニック大学');
 ok(uni?.kind === 'group', 'group created from the member dialog');
 ok(Object.values((await W()).links).some(l => l.kind === 'member' && l.b === uni.id && l.label === '図書館長'), 'member link with role');
-// 開くとボード。書き留めた付箋はその人物のボードに貼られる
-await p.click('.ncard:has-text("アーミテッジ")'); await p.waitForTimeout(500);
+// 開くと、まず情報のページ。ボードに切り替えると、書き留めた付箋はその人物のボードに貼られる
+await p.click('.tbl-name:has-text("アーミテッジ")'); await p.waitForTimeout(500);
+ok(await p.locator('.ne.page .ne-title').inputValue() === 'アーミテッジ', 'opening a person shows their information first');
+ok(await p.locator('#panel').isHidden(), 'no side window for the same card');
+await p.click('.el-head .seg button:has-text("ボード")'); await p.waitForTimeout(500);
 ok(await p.locator('.el-head h2').textContent() === 'アーミテッジ', 'element header');
 ok(await p.locator('.bcard.owner').count() === 1, 'element card on its own board');
 await p.fill('.el-board .quick', '禁書庫の鍵を持っている'); await p.locator('.el-board .quick').press('Enter'); await p.waitForTimeout(300);
@@ -30,7 +33,9 @@ const pb = Object.values((await W()).boards).find(x => x.owner === armId);
 ok(pb && keyId && pb.items[keyId], 'quick note lands on the element board');
 await p.screenshot({ path: SHOT + 'el-board.png' });
 await p.click('.el-head button >> nth=0'); await p.waitForTimeout(300);
-ok(await p.locator('.ncard.el').count() === 1, 'back to people list');
+ok(await p.locator('.el-head .seg button[aria-pressed="true"]').textContent() === '情報', 'back goes to the information page first');
+await p.click('.el-head button >> nth=0'); await p.waitForTimeout(300);
+ok(await p.locator('.tbl-name').count() === 1, 'back to people list');
 
 // アイテム：持ち主を変える → 持ち主の期間と、時系列の出来事
 await tab('items');
@@ -61,13 +66,15 @@ ok((await byTitle('アーミテッジ')).parents.includes((await byTitle('ダン
 await p.click('.ne [data-sec="sessions"] button:has-text("記録を足す")'); await p.waitForTimeout(200);
 ok((await byTitle('ダンウィッチの怪')).sessions?.length === 1, 'session record added');
 
-// 要素のカードを押すと、その要素のボードへ。戻ると元のボード
+// ボードの要素のカードを押すと、右の小窓に開く（ボードから離れない）。「ページで開く」でそのページへ。戻ると元のボード
 await tab('people');
-await p.click('.ncard:has-text("アーミテッジ")'); await p.waitForTimeout(500);
+await p.evaluate(id => __app.openElement(id, { mode: 'board' }), arm.id); await p.waitForTimeout(500);
 await p.evaluate(id => { const w = __app.world; const b = Object.values(w.boards).find(x => x.owner === id); __app.commit(w => { w.boards[b.id].items[Object.values(w.notes).find(n => n.title === 'ネクロノミコン').id] = { x: 400, y: 60 }; }); }, arm.id);
 await p.waitForTimeout(300);
 await p.click('.bcard.el:not(.owner):has-text("ネクロノミコン")'); await p.waitForTimeout(500);
-ok(await p.locator('.el-head h2').textContent() === 'ネクロノミコン' && await p.locator('nav button[data-id="items"]').getAttribute('aria-current') === 'page', 'element card opens its board in its tab');
+ok((await p.locator('.peek-crumbs').textContent()).includes('ネクロノミコン') && await p.locator('.el-head h2').textContent() === 'アーミテッジ', 'element card opens in the side window, board stays');
+await p.click('.peek-head button:has-text("ページで開く")'); await p.waitForTimeout(500);
+ok(await p.locator('.ne.page .ne-title').inputValue() === 'ネクロノミコン' && await p.locator('nav button[data-id="items"]').getAttribute('aria-current') === 'page' && await p.locator('#panel').isHidden(), 'open as page moves to its tab');
 await p.click('.el-head button:has-text("戻る")'); await p.waitForTimeout(500);
 ok(await p.locator('.el-head h2').textContent() === 'アーミテッジ', 'back returns to the previous element');
 // 付箋を人物に変える

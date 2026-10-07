@@ -6,7 +6,8 @@ const { p, errors } = await openApp(b);
 const wait = ms => p.waitForTimeout(ms);
 const sid = await p.evaluate(() => __app.newNote({ kind: 'scenario', title: 'ダンウィッチの怪' }, { open: false }));
 await p.evaluate(id => __app.openElement(id), sid); await wait(700);
-ok(await p.locator('.el-head .seg button[aria-pressed="true"]').textContent() === 'チャート', 'scenario opens on the chart');
+ok(await p.locator('.el-head .seg button[aria-pressed="true"]').textContent() === '情報', 'scenario opens on its information first');
+await p.click('.el-head .seg button:has-text("チャート")'); await wait(500);
 const chart = () => p.evaluate(id => __app.world.notes[id].chart, sid);
 const node = t => p.locator(`.cnode:has(.cnode-t:text-is("${t}"))`);
 const fill = async (title, { type, label, body } = {}) => {
