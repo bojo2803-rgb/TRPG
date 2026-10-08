@@ -163,9 +163,9 @@ export function mount(el, ctx, arg) {
     if (!m && owner) {
       layer.replaceChildren(h('div', { class: 'fam-empty' }, h('p', {}, `「${w.notes[owner]?.title || '名前なし'}」の地図はまだありません。作ると、中のロケーションをピンで置けます。`),
         h('div', { class: 'row' }, h('button', { type: 'button', class: 'btn', onclick: () => newMap(owner, false) }, '画像を読み込んで作る'), h('button', { type: 'button', class: 'btn', onclick: () => newMap(owner, true) }, '画像なし（方眼の紙）で作る'))));
-      pz.fit(0, 0, 420, 120); return;
+      pz.fit(-24, -24, 444, 144); return;
     }
-    if (!m) { layer.replaceChildren(h('div', { class: 'fam-empty' }, '地図がまだありません。「＋ 地図」で、画像を読み込むか、画像なしの方眼の紙で作れます。カードをピンで留め、ピンどうしを線で結べます。ロケーションの地図は、ロケーションを開いて作れます。')); pz.fit(0, 0, 400, 100); return; }
+    if (!m) { layer.replaceChildren(h('div', { class: 'fam-empty' }, '地図がまだありません。「＋ 地図」で、画像を読み込むか、画像なしの方眼の紙で作れます。カードをピンで留め、ピンどうしを線で結べます。ロケーションの地図は、ロケーションを開いて作れます。')); pz.fit(-24, -24, 424, 124); return; }
     if (m.image && imgFor !== m.image) { imgUrl = await ctx.imageUrl(m.image); imgFor = m.image; }
     const s = scale(), W = m.w * s, H = m.h * s, count = hereCounts(w);
     const sheet = m.image ? h('img', { src: imgUrl || '', alt: m.name, 'data-click': 'sheet', draggable: false, style: { width: W + 'px', height: H + 'px' } })

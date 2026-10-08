@@ -48,7 +48,7 @@ export function mount(el, ctx) {
   bar.append(h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; render(); } }, '⤢'));
   function render() {
     const w = ctx.world, groups = Object.values(w.notes).filter(n => kindOf(n) === 'group').sort(byTitle);
-    if (!groups.length) { layer.replaceChildren(h('div', { class: 'fam-empty' }, 'まだ集団がありません。「一覧」で名前を入れて作れます。')); pz.fit(0, 0, 400, 100); return; }
+    if (!groups.length) { layer.replaceChildren(h('div', { class: 'fam-empty' }, 'まだ集団がありません。「一覧」で名前を入れて作れます。')); pz.fit(-24, -24, 424, 124); return; }
     const members = id => linksOfKind(w, 'member', 'b', id).filter(l => !l.to && !l.done).sort((a, b) => (a.label ? 0 : 1) - (b.label ? 0 : 1));
     const { pos, kids, extra } = layoutOrg(groups, members);
     let svg = '';
@@ -65,7 +65,7 @@ export function mount(el, ctx) {
           ...ms.slice(0, MAXM).map(l => h('span', {}, `${l.label ? l.label + '：' : ''}${w.notes[l.a].title}`)),
           ms.length > MAXM ? h('span', { class: 'note-text' }, `ほか${ms.length - MAXM}人`) : null);
       }));
-    if (first) { pz.fit(-30, -30, maxX + 30, maxY + 30); first = false; }
+    if (first) { pz.fit(-30, -30, maxX + 30, maxY + 30, 1.2, 0.6); first = false; }
   }
   render();
   return { update: e => { if (e?.type !== 'search') render(); } };

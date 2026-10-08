@@ -55,7 +55,7 @@ export function mount(el, ctx, arg) {
     const { pos } = layoutFamily(show, [...parents, ...ancestors.map(l => ({ a: l.a, b: l.b, gen: l.gen ?? null }))], [...spouses, ...partners]);
     if (!show.length) {
       layer.replaceChildren(h('div', { class: 'fam-empty' }, inSc ? 'このシナリオに出る人物には、家族のつながりがありません。' : 'まだ家族のつながりがありません。人物を開いて「家族」の＋で親・子・配偶者をつなぐか、「＋ 家族をつなぐ」を押してください。'));
-      pz.fit(0, 0, 400, 100); return;
+      pz.fit(-24, -24, 424, 124); return;
     }
     // 線：夫婦は横の二重線。子へは、親（夫婦なら2人の真ん中）から下ろして横に渡す
     let svg = '';
@@ -87,7 +87,7 @@ export function mount(el, ctx, arg) {
       h('div', { class: 'fam-lines', html: `<svg width="${maxX + 20}" height="${maxY + 20}">${svg}</svg>` }),
       ...show.map(id => { const n = w.notes[id]; return h('div', { class: `fam-node p-${n.color ?? 0}${id === focusId ? ' focus' : ''}`, 'data-click': id, style: { left: pos[id].x + 'px', top: pos[id].y + 'px', width: NODE_W + 'px', height: NODE_H + 'px' }, role: 'button', tabindex: '0' },
         h('b', {}, n.title || '名前なし'), h('span', {}, [n.fields?.['生年月日'], n.fields?.['職業']].filter(Boolean).join('・'))); }));
-    if (first) { pz.fit(-30, -30, maxX + 30, maxY + 30); first = false; }
+    if (first) { pz.fit(-30, -30, maxX + 30, maxY + 30, 1.2, 0.6); first = false; }
   }
   function addRelation() {
     pickNote(ctx, { title: '1人目', onPick: a => {

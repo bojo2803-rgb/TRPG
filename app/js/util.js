@@ -34,4 +34,6 @@ export function emitter() {
 
 // 日本語の並び順（あいうえお順）
 export const collator = new Intl.Collator('ja');
-export const byTitle = (a, b) => collator.compare(a.title || '', b.title || '');
+// 名前の並びは、よみがあればよみで（漢字の名前が、あいうえお順に並ぶ）
+export const nameKey = n => n?.fields?.['よみ'] || n?.title || '';
+export const byTitle = (a, b) => collator.compare(nameKey(a), nameKey(b));

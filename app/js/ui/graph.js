@@ -54,7 +54,7 @@ export function mount(el, ctx, arg) {
     const w = ctx.world, { ids, es, deg } = data;
     const near = new Set(focusId ? [focusId, ...es.filter(e => e.a === focusId || e.b === focusId).flatMap(e => [e.a, e.b])] : []);
     const dim = id => focusId && !near.has(id);
-    if (!ids.length) { layer.replaceChildren(h('div', { class: 'fam-empty' }, only ? 'まだ集団がありません' : 'つながりのあるカードがまだありません（「つながりのないものも出す」で全部出せます）')); pz.fit(0, 0, 400, 100); return; }
+    if (!ids.length) { layer.replaceChildren(h('div', { class: 'fam-empty' }, only ? 'まだ集団がありません' : 'つながりのあるカードがまだありません（「つながりのないものも出す」で全部出せます）')); pz.fit(-24, -24, 424, 124); return; }
     const xs = ids.map(id => pos[id].x), ys = ids.map(id => pos[id].y), x0 = Math.min(...xs) - 60, y0 = Math.min(...ys) - 40;
     const X = id => pos[id].x - x0, Y = id => pos[id].y - y0;
     const CLS = { link: 'g-link', order: 'g-link', parent: 'g-fam', spouse: 'g-fam', ancestor: 'g-fam', group: 'g-group', body: 'g-body' };

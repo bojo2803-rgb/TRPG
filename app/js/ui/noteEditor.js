@@ -285,12 +285,17 @@ export function createEditor(ctx, root, { layout = 'peek' } = {}) {
       ctx.commit(w => { w.links[l.id] = l; }, '家族のつながりを追加');
     } });
     const row = (label, list, other, addFn) => h('div', { class: 'row' }, h('span', { class: 'lbl' }, label), ...list.map(l => noteChip(other(l), rm(l))), h('button', { type: 'button', class: 'btn small', onclick: addFn }, '＋'));
+    // つないである続き柄だけ行を出す。足すのは「＋ 家族をつなぐ」から続き柄を選ぶ（空の行を5つ並べない）
+    const kinds = [['親', add('parent', true)], ['子', add('parent', false)], ['配偶者', add('spouse')], ['遠い先祖', addFar(true)], ['遠い子孫', addFar(false)]];
+    const any = parents.length + children.length + spouses.length + ancestors.length + descendants.length;
     return h('div', { class: 'fields' },
-      row('親', parents, l => l.a, add('parent', true)),
-      row('子', children, l => l.b, add('parent', false)),
-      row('配偶者', spouses, l => l.a === n.id ? l.b : l.a, add('spouse')),
-      farRow('遠い先祖', ancestors, l => l.a, addFar(true)),
-      farRow('遠い子孫', descendants, l => l.b, addFar(false)));
+      parents.length ? row('親', parents, l => l.a, add('parent', true)) : null,
+      children.length ? row('子', children, l => l.b, add('parent', false)) : null,
+      spouses.length ? row('配偶者', spouses, l => l.a === n.id ? l.b : l.a, add('spouse')) : null,
+      ancestors.length ? farRow('遠い先祖', ancestors, l => l.a, addFar(true)) : null,
+      descendants.length ? farRow('遠い子孫', descendants, l => l.b, addFar(false)) : null,
+      h('div', { class: 'row' }, any ? null : h('span', { class: 'note-text' }, 'まだつないでいません'),
+        h('button', { type: 'button', class: 'btn small', onclick: e => ctx.menuAt(e.currentTarget, 'どの続き柄でつなぐか', kinds.map(([label, fn]) => [label, fn])) }, '＋ 家族をつなぐ')));
   }
 
   // つながり：ラベル・色・線の種類・矢印を付けられる線（ボードとグラフに出る）

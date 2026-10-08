@@ -97,7 +97,8 @@ test('sorting keeps blanks last in both directions', () => {
   const C = new Intl.Collator('ja').compare, jobs = ['探偵', '店主'].sort(C);
   assert.deepEqual(sortRows(w, people, 'person', '職業', 1).map(n => n.fields.職業 || ''), [...jobs, '']);
   assert.deepEqual(sortRows(w, people, 'person', '職業', -1).map(n => n.fields.職業 || ''), [...jobs.reverse(), '']);
-  assert.deepEqual(sortRows(w, people, 'person', '名前', 1).map(n => n.title), ['店主 葛城', '探偵 九条', '記者 三浦'].sort(C));
+  // 名前は、よみのある人はよみ（九条＝くじょう）で並ぶ
+  assert.deepEqual(sortRows(w, people, 'person', '名前', 1).map(n => n.title), [['店主 葛城', '店主 葛城'], ['くじょう', '探偵 九条'], ['記者 三浦', '記者 三浦']].sort((a, b) => C(a[0], b[0])).map(x => x[1]));
 });
 
 test('grouping puts a card in every group it belongs to, and none last', () => {
@@ -143,4 +144,13 @@ test('bulk actions change many cards at once and skip what is already done', () 
   assert.equal(deleteMany(w, ['kat', 'mur']), 2);
   assert.ok(!w.notes.kat && !Object.values(w.links).some(l => l.a === 'kat' || l.a === 'mur'));
   assert.deepEqual(w.notes.sc.chart.nodes.p1.cast, [], 'deleted cast leaves the chart');
+});
+
+test('names sort by their reading (よみ) when one is written', async () => {
+  const { byTitle } = await import('../app/js/util.js');
+  const P = (id, title, よみ) => ({ id, kind: 'person', title, parents: [], tags: [], fields: よみ ? { よみ } : {} });
+  const people = [P('a', '店主 葛城', 'かつらぎ'), P('b', '記者 三浦', 'みうら'), P('c', '刑事 鬼塚', 'おにづか')];
+  const w = { notes: Object.fromEntries(people.map(p => [p.id, p])), links: {} };
+  assert.deepEqual(sortRows(w, people, 'person', '名前', 1).map(n => n.id), ['c', 'a', 'b']);
+  assert.deepEqual([...people].sort(byTitle).map(n => n.id), ['c', 'a', 'b']);
 });

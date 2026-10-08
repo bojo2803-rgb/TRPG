@@ -10,7 +10,8 @@ const ids = await p.evaluate(() => {
 });
 // 遠い先祖は、子の画面の家族の欄から足す
 await p.evaluate(id => __app.openNote(id), ids.子); await p.waitForTimeout(300);
-await p.click('.ne [data-sec="family"] .row:has-text("遠い先祖") button'); await p.waitForTimeout(200);
+await p.click('.ne [data-sec="family"] button:has-text("家族をつなぐ")'); await p.waitForTimeout(200);
+await p.click('#menu button:has-text("遠い先祖")'); await p.waitForTimeout(200);
 await p.fill('#dlgBody input[type="search"]', '始祖'); await p.locator('#dlgBody input[type="search"]').press('Enter'); await p.waitForTimeout(300);
 await p.fill('#anc_gen', '5'); await p.click('#dlgOk'); await p.waitForTimeout(300);
 ok(await p.evaluate(() => Object.values(__app.world.links).some(l => l.kind === 'ancestor' && l.gen === 5)), 'ancestor link with 5 generations');

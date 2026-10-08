@@ -106,7 +106,7 @@ export function mount(el, ctx, arg) {
     const ids = Object.keys(b.items).filter(id => w.notes[id] && !hidden.has(id));
     worldEl.querySelectorAll('.bcard').forEach(x => x.remove());
     for (const id of ids) worldEl.append(card(w.notes[id], b.items[id], hidden, b));
-    if (!ids.length) worldEl.append(h('div', { class: 'bcard empty-hint', style: { left: '40px', top: '40px', width: '320px' } }, 'このボードには、まだ何も貼っていません。上の欄に書いて Enter で付箋を貼れます（人物など、今あるカードは「＋ 貼る」）。カードの右の● を引っぱると、ほかのカードとつながります。'));
+    if (!ids.length) worldEl.append(h('div', { class: 'bcard empty-hint', style: { left: '40px', top: '40px', width: 'min(320px, 70vw)' } }, 'このボードには、まだ何も貼っていません。上の欄に書いて Enter で付箋を貼れます（人物など、今あるカードは「＋ 貼る」）。カードの右の● を引っぱると、ほかのカードとつながります。'));
     if (!view) { fit(); views.set(boardId, view); }
     applyView();
     requestAnimationFrame(() => { sizes = new Map([...worldEl.querySelectorAll('.bcard[data-id]')].map(c => [c.dataset.id, { w: c.offsetWidth, h: c.offsetHeight }])); drawLinks(); });

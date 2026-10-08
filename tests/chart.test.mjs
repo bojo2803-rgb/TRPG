@@ -56,3 +56,20 @@ test('a tall point pushes the next row down so they do not overlap', () => {
   assert.ok(p.B.y >= 300 + 40, 'row below the tall point clears it');
   assert.equal(p.C.y - p.B.y, CHART_ROW, 'normal rows keep the usual spacing');
 });
+
+test('adding a point never moves the points already there', () => {
+  const base = [['導入'], ['図書館'], ['屋敷'], ['対決']], arrows = [['導入', '図書館'], ['導入', '屋敷'], ['図書館', '対決'], ['屋敷', '対決']];
+  const before = layoutChart(chart(base, arrows));
+  // 分かれ道を1本増やす・下の点に次の点を足す・一番下に分かれ道を足す
+  for (const [extra, edges] of [[['酒場'], [['導入', '酒場']]], [['後日談'], [['対決', '後日談']]], [['逃げる'], [['対決', '逃げる']]]]) {
+    const after = layoutChart(chart([...base, extra], [...arrows, ...edges]));
+    for (const [id] of base) assert.deepEqual(after[id], before[id], `${id} stays put when ${extra[0]} is added`);
+  }
+});
+
+test('the first next point sits right under its point; more go to the right', () => {
+  const c = chart([['A'], ['B'], ['C'], ['D']], [['A', 'B'], ['A', 'C'], ['A', 'D']]);
+  const p = layoutChart(c);
+  assert.equal(p.B.x, p.A.x, 'first child directly below');
+  assert.ok(p.C.x >= p.B.x + CHART_W && p.D.x >= p.C.x + CHART_W, 'later ones to the right, in the order they were made');
+});

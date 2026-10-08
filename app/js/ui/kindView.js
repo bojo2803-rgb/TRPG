@@ -58,7 +58,7 @@ function openMode(kind, el, ctx, id, arg) {
       h('button', { type: 'button', class: 'btn small', onclick: () => ctx.canBack() ? ctx.back() : ctx.go(KINDS[kind].tab) }, ctx.canBack() ? '← 戻る' : `← ${KINDS[kind].label}の一覧`),
       h('span', { class: `kind-badge k-${kind}` }, KINDS[kind].label),
       path.length ? h('nav', { class: 'crumbs', 'aria-label': '上のロケーション' }, ...path.flatMap(p => [h('button', { type: 'button', class: 'linkish', onclick: () => ctx.openElement(p) }, w.notes[p].title || '名前なし'), h('span', { 'aria-hidden': 'true' }, '›')])) : null,
-      mode === 'info' ? null : h('h2', {}, n.title || '（名前なし）'),
+      h('h2', {}, n.title || '（名前なし）'), // どの見せ方でも同じ場所に名前（切り替えても上の段が変わらない）
       h('span', { class: 'sp' }),
       h('div', { class: 'seg', role: 'group', 'aria-label': '見せ方' }, ...modes.map(([k, v]) => h('button', { type: 'button', 'aria-pressed': String(mode === k), onclick: () => {
         if (mode === k) return;
@@ -81,7 +81,7 @@ function openMode(kind, el, ctx, id, arg) {
       return;
     }
     const load = mode === 'map' ? import('./mapView.js').then(m => m.mount(body, ctx, { owner: id, embedded: true }))
-      : mode === 'chart' ? import('./chartView.js').then(m => m.mount(body, ctx, { scenario: id }))
+      : mode === 'chart' ? import('./chartView.js').then(m => m.mount(body, ctx, { scenario: id, focus: arg?.focus }))
       : import('./board.js').then(m => m.mount(body, ctx, { board: ensureOwnBoard(ctx, id), embedded: true }));
     load.then(v => { if (gone || my !== seq) v?.destroy?.(); else inner = v; });
   };
@@ -186,8 +186,8 @@ function renderTree(main, ctx, s, rerender) {
       ks.length ? h('button', { type: 'button', class: 'tree-fold', 'aria-label': fold ? 'ひらく' : 'たたむ', 'aria-expanded': String(!fold), onclick: () => { fold ? closed.delete(n.id) : closed.add(n.id); rerender(); } }, fold ? '▸' : '▾') : h('span', { class: 'tree-fold' }),
       h('button', { type: 'button', class: 'tree-name', title: `${n.title || '（名前なし）'}（押すと中身を出す。ダブルクリックで開く）`, onclick: () => pick(n.id), ondblclick: () => ctx.openElement(n.id) }, n.title || '（名前なし）'),
       mapOf(w, n.id) ? h('span', { class: 'note-text', title: '地図あり' }, '🗺') : null,
-      count[n.id] ? h('span', { class: 'note-text', title: 'ここ（中も含む）を場所にしているカード' }, `${count[n.id]}`) : null,
       h('span', { class: 'sp' }),
+      h('span', { class: 'note-text tree-n', title: 'ここ（中も含む）を場所にしているカード' }, count[n.id] ? `${count[n.id]}` : ''), // 数は右にそろえる
       h('button', { type: 'button', class: 'btn small', title: 'この中にロケーションを作る', 'aria-label': `「${n.title}」の中に作る`, onclick: () => newPlaceDialog(ctx, n.id) }, '＋')), n.id), n.id));
     if (!fold) for (const k of ks) walk(k, depth + 1);
   };
@@ -291,7 +291,8 @@ function renderList(kind, main, ctx, s, rerender) {
     return !q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q) || n.tags.some(t => t.toLowerCase().includes(q)) || Object.values(n.fields).some(v => String(v).toLowerCase().includes(q));
   };
   for (const id of [...s.sel]) if (!w.notes[id]) s.sel.delete(id);
-  const lm = listPref.get(kind) || (kind === 'person' ? 'table' : 'cards');
+  // はじめは、人物は表（スマホは横に入りきらないのでカード）、ほかはカード
+  const lm = listPref.get(kind) || (kind === 'person' && !matchMedia('(max-width: 760px)').matches ? 'table' : 'cards');
   let list = all.filter(pass);
   if (lm === 'table') list = sortRows(w, list, kind, s.col, s.dir);
   else if (s.sort === 'title') list.sort(byTitle); else list.reverse();

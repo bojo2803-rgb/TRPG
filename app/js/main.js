@@ -68,12 +68,13 @@ export const ctx = {
   setKind(id, kind) { store.commit(w => { w.notes[id].kind = kind; }, `${KINDS[kind].label}にする`); },
   go: (id, arg) => showView(id, arg),
   // 人物などのページを開く（付箋・出来事はページがないので小窓）。mode：board・chart・map（なければ覚えている見せ方）
-  openElement(id, { mode } = {}) {
+  // focus：チャートで最初にえらぶ点
+  openElement(id, { mode, focus } = {}) {
     const n = store.get().notes[id];
     if (!n) return;
     if (kindOf(n) === 'note') { ctx.openNote(id); return; }
     peek?.close();
-    showView(KINDS[kindOf(n)].tab, { open: id, ...(mode && { mode }) });
+    showView(KINDS[kindOf(n)].tab, { open: id, ...(mode && { mode }), ...(focus && { focus }) });
   },
   // いま真ん中に開いているページのカード
   currentPage: () => KIND_VIEWS.has(viewId) ? viewArg?.open || null : null,

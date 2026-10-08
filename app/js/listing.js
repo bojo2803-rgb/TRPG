@@ -1,6 +1,6 @@
 // 一覧の表・まとまり・見分ける手がかり・絵・シナリオに出るもの（画面を持たない決まり）
 import { kindOf, placePath, childrenOf } from './model.js';
-import { collator } from './util.js';
+import { collator, nameKey } from './util.js';
 import { nodeCards } from './chart.js';
 import { imageIds } from './ui/markdown.js';
 
@@ -54,7 +54,8 @@ const numeric = new Intl.Collator('ja', { numeric: true });
 export function sortRows(w, list, kind, key, dir = 1) {
   const col = COLUMNS[kind]?.find(c => c.key === key) || COLUMNS[kind]?.[0];
   if (!col) return [...list];
-  return list.map(n => [n, col.value(w, n)]).sort(([a, x], [b, y]) => (!x) - (!y) || dir * numeric.compare(x, y) || collator.compare(a.title || '', b.title || '')).map(p => p[0]);
+  const val = col.key === '名前' ? n => nameKey(n) : n => col.value(w, n);
+  return list.map(n => [n, val(n)]).sort(([a, x], [b, y]) => (!x) - (!y) || dir * numeric.compare(x, y) || collator.compare(nameKey(a), nameKey(b))).map(p => p[0]);
 }
 
 // まとまり：何でまとめるか（種類ごと）

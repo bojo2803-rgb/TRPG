@@ -93,18 +93,17 @@ ok((await p.locator('#toast').textContent()).includes('「ミスカトニック�
 
 // チャートの登場：候補はシナリオの登場人物だけ。「ほかから選ぶ」で選んだ人は登場に入る
 await p.evaluate(id => __app.openElement(id, { mode: 'chart' }), ids.sc); await wait(600);
-await p.click('button:has-text("＋ 最初の点")'); await wait(200);
-await p.fill('#cn_title', '導入');
+await p.click('button:has-text("＋ 最初の点")'); await wait(300);
+await p.keyboard.type('導入');
 const opts = await p.locator('#cn-person option').evaluateAll(os => os.map(o => o.value));
 ok(opts.includes('店主 葛城') && !opts.includes('記者 三浦'), 'cast choices are the scenario cast: ' + opts);
-await p.click('#dlgBody button:has-text("ほかから選ぶ")');
+await p.click('.ce-panel button:has-text("ほかから選ぶ")');
 ok((await p.locator('#cn-person option').evaluateAll(os => os.map(o => o.value))).includes('記者 三浦'), 'widened to everyone');
-const castIn = p.locator('#dlgBody input[placeholder*="アーミテッジ"]');
-await castIn.fill('記者 三浦'); await castIn.press('Enter');
-ok((await p.locator('#dlgBody .names').first().textContent()).includes('登場に入れる'), 'outside pick is marked');
-await p.click('#dlgOk'); await wait(300);
+const castIn = p.locator('.ce-panel input[placeholder*="アーミテッジ"]');
+await castIn.fill('記者 三浦'); await castIn.press('Enter'); await wait(400);
 ok((await byTitle('記者 三浦')).parents.includes(ids.sc), 'outside pick joins the scenario cast');
 ok(await p.evaluate(() => Object.values(__app.world.notes).filter(n => n.title === '記者 三浦').length) === 1, 'no duplicate person made');
+ok(await p.evaluate(id => Object.values(__app.world.notes[id].chart.nodes)[0].title, ids.sc) === '導入', 'title typed in the panel is kept');
 
 // 読み込み直しても、アドレスの画面が開く
 await wait(1200);

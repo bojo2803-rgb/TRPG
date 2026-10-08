@@ -41,11 +41,14 @@ export function panZoom(stage, layer, { onClick, onChange, min = 0.1, max = 4, o
   stage.addEventListener('wheel', e => { e.preventDefault(); if (e.ctrlKey || Math.abs(e.deltaY) >= Math.abs(e.deltaX)) zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX, e.clientY); else { v.x -= e.deltaX; apply(); } }, { passive: false });
   return {
     view: v, apply, zoomAt,
-    // 範囲 [x0,y0,x1,y1]（中身の座標）を画面に収める
-    fit(x0, y0, x1, y1, maxZ = 1.2) {
-      const r = stage.getBoundingClientRect();
-      const z = Math.max(min, Math.min(maxZ, Math.min(r.width / Math.max(1, x1 - x0), r.height / Math.max(1, y1 - y0))));
-      v.z = z; v.x = (r.width - (x1 - x0) * z) / 2 - x0 * z; v.y = (r.height - (y1 - y0) * z) / 2 - y0 * z; apply();
+    // 範囲 [x0,y0,x1,y1]（中身の座標）を画面に収める。minZ より小さくしないと収まらないときは、minZ のまま上（はみ出す向きは左）から見せる
+    fit(x0, y0, x1, y1, maxZ = 1.2, minZ = min) {
+      const r = stage.getBoundingClientRect(), w = Math.max(1, x1 - x0), hh = Math.max(1, y1 - y0);
+      const z = Math.max(minZ, Math.min(maxZ, Math.min(r.width / w, r.height / hh)));
+      v.z = z;
+      v.x = w * z <= r.width ? (r.width - w * z) / 2 - x0 * z : -x0 * z;
+      v.y = hh * z <= r.height ? (r.height - hh * z) / 2 - y0 * z : -y0 * z;
+      apply();
     },
     center(x, y) { const r = stage.getBoundingClientRect(); v.x = r.width / 2 - x * v.z; v.y = r.height / 2 - y * v.z; apply(); },
   };

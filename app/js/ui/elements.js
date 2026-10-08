@@ -92,9 +92,10 @@ export async function memberDialog(ctx, { person = null, group = null, linkId = 
 }
 
 // ===== 持ち主（a 持ち主 → b アイテム。どうやって・いつから・いつまで） =====
-export async function holderDialog(ctx, item, linkId = null) {
+// holder：新しい持ち主を先に入れておく（人物の画面の「＋ 持たせる」から）
+export async function holderDialog(ctx, item, linkId = null, holder = null) {
   const w0 = ctx.world, l = linkId ? w0.links[linkId] : null, itemTitle = w0.notes[item]?.title || '名前なし';
-  const who = nameField(ctx, l ? '持ち主' : '新しい持ち主', ['person', 'group', 'note', 'scenario'], l?.a, 'person');
+  const who = nameField(ctx, l ? '持ち主' : '新しい持ち主', ['person', 'group', 'note', 'scenario'], l?.a ?? holder, 'person');
   const how = h('input', { value: l?.label || '', placeholder: '例：盗んだ・譲られた・発掘した', autocomplete: 'off' });
   const A = await whenField(ctx, l ? 'いつからがわかる' : 'いつ渡ったかがわかる', l?.from);
   const B = l ? await whenField(ctx, 'いつまでがわかる', l.to) : null;
@@ -145,7 +146,8 @@ export function holdersSec(ctx, w, n) {
 export function holdingsSec(ctx, w, n) {
   const ls = linksOfKind(w, 'holds', 'a', n.id).sort(byFrom);
   return h('div', { class: 'fields' },
-    ls.length ? h('div', { class: 'row' }, ...ls.map(l => chip(ctx, l.b, [periodText(w, l), !l.to && !l.done ? 'いま' : ''].filter(Boolean).join('・')))) : h('p', { class: 'note-text' }, '持ち物はありません（アイテムの画面の「持ち主を変える」で持たせます）'));
+    ls.length ? h('div', { class: 'row' }, ...ls.map(l => chip(ctx, l.b, [periodText(w, l), !l.to && !l.done ? 'いま' : ''].filter(Boolean).join('・')))) : h('p', { class: 'note-text' }, '持ち物はありません'),
+    h('div', { class: 'row' }, add('＋ 持たせる', () => pickNote(ctx, { title: '持たせるアイテム', kinds: ['item'], newKind: 'item', exclude: ls.map(l => l.b), onPick: id => setTimeout(() => holderDialog(ctx, id, null, n.id), 0) }))));
 }
 // 入っているシナリオ（人物・アイテム・集団・出来事の画面）
 export function scenariosSec(ctx, w, n) {
@@ -166,7 +168,9 @@ export function contentsSec(ctx, w, n) {
     h('div', { class: 'fields' }, h('span', { class: 'lbl' }, '出来事'),
       ...events.map(e => h('div', { class: 'row link-row' }, h('span', { class: 'data dir' }, fmtWhen(w, e.when)), chip(ctx, e.id, null, out(e.id)))),
       h('div', { class: 'row' }, add('＋ 出来事を入れる', put('入れる出来事（時系列にあるもの）', ['note'], 'note', o => !!o.when)))),
-    row('登場', ...cast.map(c => chip(ctx, c.id, [KINDS[kindOf(c)].label, kindOf(c) === 'person' ? ageIn(w, c, n) : ''].filter(Boolean).join('・'), out(c.id))), add('＋', put('登場させる人物・アイテム・集団', ['person', 'item', 'group'], 'person'))),
+    // 登場は種類ごとの行に分ける（人物・集団・アイテム）。行ごとの「＋」で、その種類を入れる
+    ...['person', 'group', 'item'].map(k => row(k === 'person' ? '登場人物' : KINDS[k].label, ...cast.filter(c => kindOf(c) === k).map(c => chip(ctx, c.id, k === 'person' ? ageIn(w, c, n) : null, out(c.id))),
+      add('＋', put(`登場させる${KINDS[k].label}`, [k], k)))),
     rest.length ? row('付箋', ...rest.map(c => chip(ctx, c.id, null, out(c.id)))) : null);
 }
 // 遊んだ記録（シナリオ）：日付・参加者・メモを何回分でも
@@ -295,8 +299,8 @@ export function hereSec(ctx, w, n) {
   return h('div', { class: 'fields' }, btn, ...['person', 'group', 'item', 'scenario', 'note'].map(k => {
     const xs = here.filter(o => kindOf(o) === k);
     return xs.length ? row(k === 'note' ? '出来事など' : KINDS[k].label, ...xs.map(o => chip(ctx, o.id, o.at !== n.id ? `（${w.notes[o.at].title}）` : null))) : null;
-  }), scenes.length ? row('ここで起きること（チャート）', ...scenes.map(([s, p]) => h('button', { type: 'button', class: 'chip', title: 'シナリオのチャートを開く', onclick: () => ctx.openElement(s.id) },
-    `${s.title || '名前なし'} › ${p.title || '題名なし'}${p.place !== n.id ? `（${w.notes[p.place].title}）` : ''}`))) : null);
+  }), scenes.length ? row('ここで起きること（チャート）', ...scenes.map(([s, p]) => h('span', { class: 'chip' }, h('a', { href: '#', title: 'シナリオのチャートで、この点を開く', onclick: e => { e.preventDefault(); ctx.openElement(s.id, { mode: 'chart', focus: p.id }); } },
+    `${s.title || '名前なし'} › ${p.title || '題名なし'}`), p.place !== n.id ? h('span', { class: 'note-text' }, `（${w.notes[p.place].title}）`) : null))) : null);
 }
 
 export { esc };

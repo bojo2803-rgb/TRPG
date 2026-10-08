@@ -19,7 +19,8 @@ export const newChartNode = (p = {}) => ({ id: uid('cn'), title: '', body: '', t
 export const newChartEdge = (from, to, label = '') => ({ id: uid('ce'), from, to, label });
 
 // 自動の並び：入ってくる矢印のない点を一番上に、上→下の段へ。輪になる矢印（前の場面へ戻る）は段の計算に使わない。
-// 段の中は、上の点の真ん中の平均で並べ、重ならないよう詰めてから、段全体を上の点の真ん中に寄せる。
+// 段の中：最初に作った次の点は上の点の真下、2つめからは右へ並べる（合流する点は上の点たちの真ん中）。重なれば右へずらすだけで、
+// 段全体を寄せ直さない。こうすると、点を足しても、もうある点は動かない。
 // 段の高さは、その段の一番背の高い点に合わせる（heightOf(id)：描いた点の高さ。わからなければ 0 で CHART_ROW ずつ）。
 // 手で置いた点（pos）はそのまま。戻り値：点の id → 左上の { x, y }
 export function layoutChart(chart, heightOf = () => 0) {
@@ -50,13 +51,14 @@ export function layoutChart(chart, heightOf = () => 0) {
   for (let L = 0; L <= maxL; L++) {
     const row = nodes.filter(n => !n.pos && layer.get(n.id) === L).map((n, i) => {
       const ps = parents(n.id).filter(p => p in cx);
-      return { id: n.id, i, want: ps.length ? ps.reduce((s, p) => s + cx[p], 0) / ps.length : null };
+      if (ps.length !== 1) return { id: n.id, i, want: ps.length ? ps.reduce((s, p) => s + cx[p], 0) / ps.length : null };
+      const sibs = fwd.filter(e => e.from === ps[0] && !chart.nodes[e.to].pos && layer.get(e.to) === L && parents(e.to).length === 1).map(e => e.to);
+      return { id: n.id, i, want: cx[ps[0]] + Math.max(0, sibs.indexOf(n.id)) * (CHART_W + CHART_GAP) };
     });
     row.sort((a, b) => (a.want ?? Infinity) - (b.want ?? Infinity) || a.i - b.i);
     let prev = -Infinity;
-    for (const r of row) { r.x = Math.max(r.want ?? (prev === -Infinity ? 0 : prev + CHART_W + CHART_GAP), prev + CHART_W + CHART_GAP); prev = r.x; }
-    const wants = row.filter(r => r.want != null), shift = wants.length ? wants.reduce((s, r) => s + r.want - r.x, 0) / wants.length : 0;
-    for (const r of row) { cx[r.id] = r.x + shift; pos[r.id] = { x: Math.round(cx[r.id] - CHART_W / 2), y }; }
+    for (const r of row) { r.x = Math.max(r.want ?? (prev === -Infinity ? CHART_W / 2 : prev + CHART_W + CHART_GAP), prev + CHART_W + CHART_GAP); prev = r.x; }
+    for (const r of row) { cx[r.id] = r.x; pos[r.id] = { x: Math.round(cx[r.id] - CHART_W / 2), y }; }
     y += Math.max(CHART_ROW, Math.max(0, ...row.map(r => heightOf(r.id))) + CHART_ROW - 80); // 80：ふつうの点の高さ。残りは矢印とラベルの間
   }
   return pos;
