@@ -163,7 +163,7 @@ function renderRecent() {
   const el = $('navRecent');
   if (!el) return;
   const w = store.get(), ids = ctx.recent().filter(id => w.notes[id]);
-  el.replaceChildren(...(ids.length ? ids.map(id => { const n = w.notes[id], k = kindOf(n); return h('button', { type: 'button', class: 'recent', title: `${KINDS[k].label}：${n.title || '名前なし'}`, onclick: () => ctx.openElement(id) }, h('span', { class: `dot k-${k}`, 'aria-hidden': 'true' }), n.title || '（名前なし）'); })
+  el.replaceChildren(...(ids.length ? ids.map(id => { const n = w.notes[id], k = kindOf(n); return h('button', { type: 'button', class: 'recent', title: `${KINDS[k].label}：${n.title || '名前なし'}`, onclick: () => ctx.openElement(id) }, h('span', { class: `dot k-${k}`, 'aria-hidden': 'true' }), h('span', { class: 'rt' }, n.title || '（名前なし）')); })
     : [h('p', { class: 'note-text' }, '開いたものがここに出ます')]));
 }
 

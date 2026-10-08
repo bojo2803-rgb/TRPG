@@ -35,6 +35,7 @@ let c = await chart();
 ok(Object.keys(c.nodes).length === 5 && Object.keys(c.edges).length === 5, 'five points, five arrows');
 ok(Object.values(c.edges).some(e => e.label === '夜まで待つ'), 'arrow label saved');
 const top = async t => parseFloat(await node(t).evaluate(el => el.style.top));
+ok(await p.locator('.chart-stage').evaluate(el => getComputedStyle(el).userSelect === 'none'), 'dragging the chart never selects text');
 ok(await top('対決') > await top('図書館') && await top('対決') > await top('屋敷') && await top('図書館') === await top('屋敷'), 'merge sits below both branches');
 ok(await p.locator('.cedge-l:text-is("図書館を調べる")').count() === 1, 'arrow label drawn');
 await p.screenshot({ path: SHOT + 'chart.png' });

@@ -44,6 +44,9 @@ ok(/share\.html#f=.+&k=AIzaTEST/.test(url), 'link points at the reading page wit
 await p.goto(url); await p.waitForSelector('.share h1'); await wait(500);
 ok(await p.locator('.share h1').textContent() === 'ダンウィッチの怪', 'reading page shows the scenario');
 ok(await p.locator('.share .cnode').count() === 2 && await p.locator('.share .cedge-l').textContent() === '調べに行く', 'chart drawn read-only');
+ok(await p.locator('.share .cpoint').count() === 2 && (await p.locator('.share .cpoint >> nth=1').textContent()).includes('「導入」から（調べに行く）'), 'every chart point is listed in full with its arrows');
+await p.locator('.share .cnode >> nth=1').click(); await wait(400);
+ok(await p.locator('.share .cpoint.flash').count() === 1, 'clicking a point shows its details below');
 ok((await p.locator('.share .cnode').nth(1).textContent()).includes('📍 ダンウィッチ村') && (await p.locator('.share').textContent()).includes('🕒 2日目・昼'), 'chart points show place and time');
 ok((await p.locator('.share-sec:has(h2:text-is("場所ごとのシーン"))').textContent()).includes('📍 ダンウィッチ村図書館（2日目・昼）'), 'scenes by place listed');
 ok((await p.locator('.share').textContent()).includes('アーミテッジ（39歳）'), 'person with age at the scenario time (born 1889-04-01, scenario 1928-06-05)');

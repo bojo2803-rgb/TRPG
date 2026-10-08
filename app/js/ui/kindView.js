@@ -182,9 +182,9 @@ function renderTree(main, ctx, s, rerender) {
     if (seen.has(n.id) || (shown && !shown.has(n.id))) return;
     seen.add(n.id);
     const ks = kids.get(n.id).filter(k => !seen.has(k.id)), fold = closed.has(n.id) && !shown;
-    rows.push(drop(drag(h('div', { class: 'tree-row', style: { paddingLeft: 8 + (depth + 1) * 18 + 'px' }, 'data-id': n.id, 'aria-current': String(sel === n.id) },
+    rows.push(drop(drag(h('div', { class: 'tree-row', style: { paddingLeft: 6 + (depth + 1) * 14 + 'px' }, 'data-id': n.id, 'aria-current': String(sel === n.id) },
       ks.length ? h('button', { type: 'button', class: 'tree-fold', 'aria-label': fold ? 'ひらく' : 'たたむ', 'aria-expanded': String(!fold), onclick: () => { fold ? closed.delete(n.id) : closed.add(n.id); rerender(); } }, fold ? '▸' : '▾') : h('span', { class: 'tree-fold' }),
-      h('button', { type: 'button', class: 'tree-name', title: '押すと中身を出す。ダブルクリックで開く', onclick: () => pick(n.id), ondblclick: () => ctx.openElement(n.id) }, n.title || '（名前なし）'),
+      h('button', { type: 'button', class: 'tree-name', title: `${n.title || '（名前なし）'}（押すと中身を出す。ダブルクリックで開く）`, onclick: () => pick(n.id), ondblclick: () => ctx.openElement(n.id) }, n.title || '（名前なし）'),
       mapOf(w, n.id) ? h('span', { class: 'note-text', title: '地図あり' }, '🗺') : null,
       count[n.id] ? h('span', { class: 'note-text', title: 'ここ（中も含む）を場所にしているカード' }, `${count[n.id]}`) : null,
       h('span', { class: 'sp' }),

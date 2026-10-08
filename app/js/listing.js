@@ -8,7 +8,7 @@ const f = (n, k) => { const v = n.fields?.[k]; return v == null ? '' : String(v)
 const live = l => !l.to && !l.done;
 const t0 = l => l.from ? l.from.t.d * 86400 + l.from.t.s : -Infinity;
 const links = (w, kind, side, id) => Object.values(w.links).filter(l => l.kind === kind && l[side] === id && w.notes[l.a] && w.notes[l.b]);
-const titles = (w, ids) => ids.map(id => w.notes[id]?.title || '名前なし').join('・');
+const titles = (w, ids, sep = '・') => ids.map(id => w.notes[id]?.title || '名前なし').join(sep);
 // 道すじの最後の k 段（新宿 › 喫茶「黄昏」）
 export const pathTail = (w, id, k = 2) => id && w.notes[id] ? placePath(w, id).slice(-k).map(x => w.notes[x].title || '名前なし').join(' › ') : '';
 // いま入っている集団・いまのメンバー・いまの持ち主
@@ -23,9 +23,9 @@ export const COLUMNS = {
     { key: '名前', value: (w, n) => n.title || '' },
     { key: '職業', value: (w, n) => f(n, '職業') },
     { key: '年齢', value: (w, n) => f(n, '年齢') },
-    { key: '所属', value: (w, n) => titles(w, groupsOf(w, n.id)) },
+    { key: '所属', value: (w, n) => titles(w, groupsOf(w, n.id), '\n') }, // いくつかあれば1つずつ行を分ける
     { key: 'いる所', value: (w, n) => pathTail(w, n.at) },
-    { key: 'シナリオ', value: (w, n) => titles(w, scenariosOf(w, n)) },
+    { key: 'シナリオ', value: (w, n) => titles(w, scenariosOf(w, n), '\n') },
   ],
   scenario: [
     { key: '名前', value: (w, n) => n.title || '' },

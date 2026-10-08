@@ -21,6 +21,7 @@ const ids = await p.evaluate(() => {
 });
 await p.evaluate(() => __app.go('people')); await wait(500);
 ok(await p.locator('.tbl tbody tr').count() === 100, 'people open as a table of 100');
+ok(await p.locator('.tbl tbody td >> nth=3').evaluate(el => getComputedStyle(el).whiteSpace === 'pre'), 'table cells never wrap in the middle');
 
 // 並べ替え：職業の見出し。空は最後（どちらの向きでも）
 await p.click('.th-sort:has-text("職業")'); await wait(200);

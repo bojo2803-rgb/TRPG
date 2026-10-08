@@ -8,7 +8,8 @@ const wait = ms => p.waitForTimeout(ms);
 await p.click('nav button[data-id="places"]'); await wait(400);
 await p.fill('input.add-name', '日本'); await p.locator('input.add-name').press('Enter'); await wait(300);
 ok((await byTitle('日本'))?.kind === 'place', 'place created');
-const addIn = async (parent, name) => { await p.click(`.tree-row:has(.tree-name:text-is("${parent}")) button[aria-label$="の中に作る"]`); await wait(200); await p.fill('#dlgBody input', name); await p.click('#dlgOk'); await wait(300); };
+// 木の「＋」は、マウスを乗せた行に出る
+const addIn = async (parent, name) => { const row = p.locator(`.tree-row:has(.tree-name:text-is("${parent}"))`); await row.hover(); await row.locator('button[aria-label$="の中に作る"]').click(); await wait(200); await p.fill('#dlgBody input', name); await p.click('#dlgOk'); await wait(300); };
 await addIn('日本', '東京都'); await addIn('東京都', '新宿');
 ok((await p.locator('.tree-row:not(.root)').count()) === 3, 'tree shows three places');
 ok((await byTitle('新宿')).parents[0] === (await byTitle('東京都')).id, 'nested under 東京都');

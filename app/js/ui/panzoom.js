@@ -1,4 +1,4 @@
-// 引っぱって動かす・ホイールやピンチで拡大縮小（家系図・グラフ・地図で共通）。
+// 引っぱって動かす・ホイールやピンチで拡大縮小（家系図・グラフ・地図・ストーリーチャートで共通）。
 // data-click の付いた要素は、動かさずに離すとクリック（onClick(要素, イベント)）
 export function panZoom(stage, layer, { onClick, onChange, min = 0.1, max = 4, onDragItem } = {}) {
   const v = { x: 0, y: 0, z: 1 };
@@ -11,6 +11,7 @@ export function panZoom(stage, layer, { onClick, onChange, min = 0.1, max = 4, o
   };
   stage.addEventListener('pointerdown', e => {
     if (e.button > 0 || e.target.closest('button, a, input, select')) return; // 中のボタンは、ふつうに押せるように（つかむとクリックが届かない）
+    e.preventDefault(); // 引っぱっている間に文字が選ばれないように（Safari など）
     stage.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) }; drag = null; return; }
