@@ -7,7 +7,8 @@ import { kindOf, templatesFor, placePath, KINDS } from './model.js';
 import { drawChart } from './ui/chartView.js';
 import { bornOf, periodOf, ageIn } from './ui/elements.js';
 import { PKG } from './share.js';
-import { scenesByPlace, layoutChart, NODE_TYPES } from './chart.js';
+import { scenesByPlace, layoutChart, NODE_TYPES, CHART_W } from './chart.js';
+import { panZoom } from './ui/panzoom.js';
 
 const root = document.getElementById('share');
 const q = new URLSearchParams(location.hash.slice(1)), f = q.get('f'), k = q.get('k');
@@ -44,58 +45,110 @@ function render(pkg) {
     return rows.length ? h('div', { class: 'share-fields' }, ...rows) : null;
   };
   const path = id => placePath(w, id).map(x => w.notes[x].title || '名前なし').join(' › ');
-  const card = n => h('article', { class: `share-card k-${kindOf(n)}`, id: 'card-' + n.id },
+  const cardOf = (n, anchor = true) => h('article', { class: `share-card k-${kindOf(n)}`, id: anchor ? 'card-' + n.id : null },
     n.pic && pkg.images?.[n.pic]?.data ? h('img', { class: 'share-pic', src: pkg.images[n.pic].data, alt: '' }) : null,
     h('h3', {}, n.title || '（名前なし）', kindOf(n) === 'person' && ageIn(w, n, sc) ? h('span', { class: 'note-text' }, `（${ageIn(w, n, sc)}）`) : null),
     kindOf(n) === 'person' && bornOf(w, n) ? h('p', { class: 'note-text' }, `生年月日：${when(bornOf(w, n))}`) : null,
     n.at && w.notes[n.at] ? h('p', { class: 'note-text' }, `場所：${path(n.at)}`) : null,
     kindOf(n) === 'place' && placePath(w, n.id).length > 1 ? h('p', { class: 'note-text' }, path(n.id)) : null,
     fields(n), n.body ? md(n.body) : null);
+  const card = n => cardOf(n);
   const events = Object.values(w.notes).filter(n => n.when && n.id !== sc.id).sort((a, b) => a.when.t.d - b.when.t.d || a.when.t.s - b.when.t.s);
   const group = kind => Object.values(w.notes).filter(n => n.id !== sc.id && kindOf(n) === kind).sort(byTitle);
   const others = Object.values(w.notes).filter(n => n.id !== sc.id && kindOf(n) === 'note' && !n.when).sort(byTitle);
   const section = (title, list) => list.length ? h('section', { class: 'share-sec' }, h('h2', {}, title), ...list) : null;
-  // チャート（見るだけ）。点を押すと、下の「チャートの点」でその点のメモを全部読める
-  let chartBox = null, pointsBox = null;
-  const flash = el => { if (!el) return; el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); };
+  // ストーリーチャート：左に全体（引っぱって動かす・拡大縮小）、右にえらんだ点を全部読める欄。
+  // 点を押すと右の欄が変わる（ページは動かない）。「このあと」で PL の行動をたどって次の点へ。登場人物などの名前は、右の欄の中で開く。
+  // スマホは、点を押すと下から読む欄が出る。印刷では、すべての点を順に並べる
+  let chartBox = null, allBox = null, selectPoint = null;
   if (Object.keys(sc.chart?.nodes || {}).length) {
-    const layer = h('div', { class: 'share-chart-layer' });
-    layer.addEventListener('click', e => { const nd = e.target.closest('[data-node]'); if (nd && !e.target.closest('button')) flash(document.getElementById('pt-' + nd.dataset.node)); });
-    chartBox = h('section', { class: 'share-sec' }, h('h2', {}, 'ストーリーチャート'), h('p', { class: 'note-text' }, '点を押すと、その点のメモを下の「チャートの点」で全部読めます。'), h('div', { class: 'share-chart' }, layer));
-    requestAnimationFrame(() => {
-      const r = drawChart(layer, sc.chart, { readOnly: true, cardTitle: id => w.notes[id]?.title || '', placeLabel: id => w.notes[id] ? path(id) : '', onRef: id => flash(document.getElementById('card-' + id)) });
-      const size = r.drawEdges();
-      Object.assign(layer.style, { width: size.w + 100 + 'px', height: size.h + 30 + 'px' });
-    });
-    // チャートの点：上から下、左から右の順に、メモを全部と、つながる点（PLの行動）
-    const C = sc.chart, pos = layoutChart(C), edges = Object.values(C.edges);
-    const order = Object.values(C.nodes).sort((a, b) => pos[a.id].y - pos[b.id].y || pos[a.id].x - pos[b.id].x);
-    const ptLink = id => h('a', { href: '#', onclick: e => { e.preventDefault(); flash(document.getElementById('pt-' + id)); } }, C.nodes[id]?.title || '（題名なし）');
-    const cardLink = id => w.notes[id] ? h('a', { href: '#', onclick: e => { e.preventDefault(); flash(document.getElementById('card-' + id)); } }, w.notes[id].title || '（名前なし）') : null;
-    const names = ids => (ids || []).filter(id => w.notes[id]).flatMap((id, i) => [i ? '・' : '', cardLink(id)]);
-    const meta = (icon, label, ...kids) => kids.length ? h('p', { class: 'cpoint-m' }, h('span', { class: 'lbl' }, `${icon} ${label}`), ...kids) : null;
-    pointsBox = section('チャートの点', order.map(n => {
-      const t = NODE_TYPES[n.type] || NODE_TYPES.memo;
-      const ins = edges.filter(e => e.to === n.id && C.nodes[e.from]), outs = edges.filter(e => e.from === n.id && C.nodes[e.to]);
-      return h('article', { class: `share-card cpoint t-${n.type}`, id: 'pt-' + n.id },
-        h('div', { class: 'row' }, h('span', { class: 'note-text' }, `${t.icon} ${t.label}`), h('span', { class: 'sp' }),
-          h('button', { type: 'button', class: 'btn small', onclick: () => flash(layer.querySelector(`[data-node="${n.id}"]`)) }, '↑ チャートで見る')),
-        h('h3', {}, n.title || '（題名なし）'),
-        n.time ? meta('🕒', 'いつ', n.time) : null,
-        n.place && w.notes[n.place] ? meta('📍', '場所', h('a', { href: '#', onclick: e => { e.preventDefault(); flash(document.getElementById('card-' + n.place)); } }, path(n.place))) : null,
-        n.cast?.some(id => w.notes[id]) ? meta('👤', '登場', ...names(n.cast)) : null,
-        n.items?.some(id => w.notes[id]) ? meta('🎁', 'アイテム', ...names(n.items)) : null,
-        n.refs?.some(id => w.notes[id]) ? meta('🔗', '結び付け', ...names(n.refs)) : null,
-        n.body ? md(n.body) : null,
-        ins.length ? meta('←', 'ここへ', ...ins.flatMap((e, i) => [i ? '／' : '', '「', ptLink(e.from), '」から', e.label ? `（${e.label}）` : ''])) : null,
-        outs.length ? meta('→', 'ここから', ...outs.flatMap((e, i) => [i ? '／' : '', e.label ? `${e.label} → ` : '', '「', ptLink(e.to), '」'])) : null);
-    }));
+    const C = sc.chart, edges = Object.values(C.edges), pos0 = layoutChart(C);
+    const order = Object.values(C.nodes).sort((a, b) => pos0[a.id].y - pos0[b.id].y || pos0[a.id].x - pos0[b.id].x);
+    const ins = id => edges.filter(e => e.to === id && C.nodes[e.from]), outs = id => edges.filter(e => e.from === id && C.nodes[e.to]);
+    const stage = h('div', { class: 'rd-stage', 'aria-label': 'ストーリーチャート（引っぱって動かす・ホイールやピンチで拡大）' }), layer = h('div', { class: 'share-chart-layer' });
+    stage.append(layer);
+    const panel = h('aside', { class: 'rd-panel', 'aria-label': 'えらんだ点', 'aria-live': 'polite' });
+    let sel = order[0].id, card = null, cur = null;
+    const phone = () => matchMedia('(max-width: 760px)').matches;
+    const pz = panZoom(stage, layer, { onClick: el => { if (el.dataset.node) choose(el.dataset.node); } });
+    const draw = () => {
+      cur = drawChart(layer, C, { readOnly: true, selected: sel, cardTitle: id => w.notes[id]?.title || '', placeLabel: id => w.notes[id] ? path(id) : '' });
+      const size = cur.drawEdges();
+      Object.assign(layer.style, { width: size.w + 60 + 'px', height: size.h + 30 + 'px' }); // 印刷のときの大きさ
+      return size;
+    };
+    const fit = () => { const size = draw(); pz.fit(-24, -24, size.w + 48, size.h + 24, 1); };
+    // えらんだ点が見えていなければ、真ん中へ動かす（自分で押した点は動かさない）
+    const reveal = id => {
+      const el = layer.querySelector(`[data-node="${id}"]`), r = el?.getBoundingClientRect(), s0 = stage.getBoundingClientRect();
+      if (!r || (r.left >= s0.left && r.right <= s0.right && r.top >= s0.top && r.bottom <= s0.bottom)) return;
+      pz.center(cur.pos[id].x + cur.off.x + CHART_W / 2, cur.pos[id].y + cur.off.y + r.height / pz.view.z / 2);
+    };
+    const openSheet = () => { if (phone()) panel.classList.add('open'); };
+    function choose(id, { follow = false } = {}) {
+      sel = id; card = null;
+      draw(); renderPanel(); openSheet();
+      if (follow) reveal(id);
+    }
+    selectPoint = id => { stage.scrollIntoView({ behavior: 'smooth', block: 'center' }); choose(id, { follow: true }); };
+    const nameBtns = ids => (ids || []).filter(id => w.notes[id]).map(id => h('button', { type: 'button', class: 'rd-name', onclick: () => { card = id; renderPanel(); } }, w.notes[id].title || '（名前なし）'));
+    const row = (label, ...vals) => vals.length ? [h('dt', {}, label), h('dd', {}, ...vals)] : [];
+    function renderPanel() {
+      const close = h('button', { type: 'button', class: 'btn icon rd-close', 'aria-label': '閉じる', onclick: () => panel.classList.remove('open') }, '×');
+      if (card && w.notes[card]) {
+        const back = C.nodes[sel];
+        // このカードが出てくる点（場所・登場・アイテム・関係）。押すとその点へ
+        const at = order.filter(x => [x.place, ...(x.cast || []), ...(x.items || []), ...(x.refs || [])].includes(card));
+        panel.replaceChildren(...[close, h('button', { type: 'button', class: 'linkish rd-back', onclick: () => { card = null; renderPanel(); } }, `← 「${back.title || '題名なし'}」に戻る`), cardOf(w.notes[card], false),
+          at.length ? h('section', { class: 'rd-prev' }, h('h4', {}, 'チャートでの出番'), ...at.map(x => h('button', { type: 'button', class: 'rd-back-to', onclick: () => choose(x.id, { follow: true }) }, `「${x.title || '題名なし'}」${x.place === card ? 'の場所' : ''}`))) : null].filter(Boolean));
+        panel.scrollTop = 0; return;
+      }
+      const n = C.nodes[sel], t = NODE_TYPES[n.type] || NODE_TYPES.memo, nx = outs(n.id), pv = ins(n.id);
+      panel.replaceChildren(...[
+        close,
+        h('div', { class: 'rd-title-row' }, h('h3', { class: 'rd-title' }, n.title || '（題名なし）'), h('span', { class: `rd-type t-${n.type}` }, t.label)),
+        h('dl', { class: 'rd-meta' },
+          ...row('いつ', ...(n.time ? [n.time] : [])),
+          ...row('場所', ...(n.place && w.notes[n.place] ? [h('button', { type: 'button', class: 'rd-name', onclick: () => { card = n.place; renderPanel(); } }, path(n.place))] : [])),
+          ...row('登場', ...nameBtns(n.cast)),
+          ...row('アイテム', ...nameBtns(n.items)),
+          ...row('関係', ...nameBtns(n.refs))),
+        n.body ? md(n.body) : h('p', { class: 'note-text' }, 'メモはありません。'),
+        h('section', { class: 'rd-next' }, h('h4', {}, 'このあと'),
+          ...(nx.length ? nx.map(e => h('button', { type: 'button', class: 'rd-go', onclick: () => choose(e.to, { follow: true }) },
+            h('span', { class: 'rd-act' }, e.label || 'そのまま進む'), h('span', { class: 'rd-to' }, `→ ${C.nodes[e.to].title || '題名なし'}`)))
+            : [h('p', { class: 'note-text' }, 'この先の点はありません。')])),
+        pv.length ? h('section', { class: 'rd-prev' }, h('h4', {}, 'ここに来るまで'),
+          ...pv.map(e => h('button', { type: 'button', class: 'rd-back-to', onclick: () => choose(e.from, { follow: true }) }, `「${C.nodes[e.from].title || '題名なし'}」${e.label ? `で ${e.label}` : 'から'}`))) : null,
+      ].filter(Boolean));
+      panel.scrollTop = 0;
+    }
+    chartBox = h('section', { class: 'share-sec rd' },
+      h('div', { class: 'rd-head' }, h('h2', {}, 'ストーリーチャート'),
+        h('span', { class: 'note-text' }, `点を押すと${phone() ? '下' : '右'}に全部出ます。引っぱって動かせます`),
+        h('button', { type: 'button', class: 'btn small', onclick: fit }, '全体を見る')),
+      h('div', { class: 'rd-wrap' }, stage, panel));
+    requestAnimationFrame(() => { fit(); renderPanel(); });
+    addEventListener('resize', () => { if (!phone()) panel.classList.remove('open'); });
+    // すべての点を順に（読み物として・印刷用）。ふだんはたたんでおく
+    allBox = h('details', { class: 'share-sec rd-all' }, h('summary', {}, `すべての点を順に読む（${order.length}）`),
+      ...order.map(n => {
+        const t = NODE_TYPES[n.type] || NODE_TYPES.memo, names = ids => (ids || []).map(id => w.notes[id]?.title).filter(Boolean).join('・');
+        const meta = (label, v) => v ? h('p', { class: 'cpoint-m' }, h('span', { class: 'lbl' }, label), v) : null;
+        return h('article', { class: `share-card cpoint t-${n.type}` },
+          h('div', { class: 'rd-title-row' }, h('h3', {}, n.title || '（題名なし）'), h('span', { class: `rd-type t-${n.type}` }, t.label),
+            h('button', { type: 'button', class: 'btn small rd-show', onclick: () => selectPoint(n.id) }, 'チャートで見る')),
+          meta('いつ', n.time), meta('場所', n.place && w.notes[n.place] ? path(n.place) : ''), meta('登場', names(n.cast)), meta('アイテム', names(n.items)),
+          n.body ? md(n.body) : null,
+          meta('このあと', outs(n.id).map(e => `${e.label ? `${e.label} ` : ''}→ 「${C.nodes[e.to].title || '題名なし'}」`).join('／')));
+      }));
+    addEventListener('beforeprint', () => { allBox.open = true; });
   }
   // 場所ごとのシーン（チャートの点に場所があるときだけ）
   const byPlace = Object.values(sc.chart?.nodes || {}).some(x => x.place && w.notes[x.place]) ? scenesByPlace(sc.chart, w) : [];
   const tt = n => w.notes[n]?.title || '';
   const sceneCard = g => h('article', { class: 'share-card' }, h('h3', {}, g.place ? `📍 ${g.label}` : g.label),
-    h('ul', {}, ...g.nodes.map(x => h('li', {}, h('b', {}, x.title || '（題名なし）'), x.time ? `（${x.time}）` : '',
+    h('ul', {}, ...g.nodes.map(x => h('li', {}, h('button', { type: 'button', class: 'rd-name', title: 'チャートで見る', onclick: () => selectPoint?.(x.id) }, x.title || '（題名なし）'), x.time ? `（${x.time}）` : '',
       x.cast?.length ? ` 👤 ${x.cast.map(tt).filter(Boolean).join('・')}` : '', x.items?.length ? ` 🎁 ${x.items.map(tt).filter(Boolean).join('・')}` : ''))));
   const period = periodOf(w, sc);
   root.replaceChildren(...[
@@ -109,7 +162,7 @@ function render(pkg) {
     fields(sc) ? h('section', { class: 'share-sec' }, fields(sc)) : null,
     sc.body ? h('section', { class: 'share-sec' }, h('h2', {}, 'メモ'), md(sc.body)) : null,
     chartBox,
-    pointsBox,
+    allBox,
     section('場所ごとのシーン', byPlace.map(sceneCard)),
     section('出来事', events.map(n => h('article', { class: 'share-card', id: 'card-' + n.id }, h('p', { class: 'data' }, when(n.when)), h('h3', {}, n.title || '（名前なし）'), n.body ? md(n.body) : null))),
     ...['person', 'item', 'group', 'place'].map(kd => section(kd === 'person' ? '登場人物' : KINDS[kd].label, group(kd).map(card))),

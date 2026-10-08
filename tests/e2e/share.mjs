@@ -44,9 +44,21 @@ ok(/share\.html#f=.+&k=AIzaTEST/.test(url), 'link points at the reading page wit
 await p.goto(url); await p.waitForSelector('.share h1'); await wait(500);
 ok(await p.locator('.share h1').textContent() === 'ダンウィッチの怪', 'reading page shows the scenario');
 ok(await p.locator('.share .cnode').count() === 2 && await p.locator('.share .cedge-l').textContent() === '調べに行く', 'chart drawn read-only');
-ok(await p.locator('.share .cpoint').count() === 2 && (await p.locator('.share .cpoint >> nth=1').textContent()).includes('「導入」から（調べに行く）'), 'every chart point is listed in full with its arrows');
+ok(await p.locator('.share .rd-panel .rd-title').textContent() === '導入', 'the first point is open in the side panel');
+ok(await p.locator('.share details.rd-all .cpoint').count() === 2 && (await p.locator('.share .cpoint >> nth=1').textContent()).includes('2日目・昼'), 'every point can be read in order (folded)');
+// 点を押す：ページは動かず、右に全部出る。「このあと」で次へ、「ここに来るまで」で戻る
+const y0 = await p.evaluate(() => scrollY);
 await p.locator('.share .cnode >> nth=1').click(); await wait(400);
-ok(await p.locator('.share .cpoint.flash').count() === 1, 'clicking a point shows its details below');
+ok(await p.locator('.share .rd-panel .rd-title').textContent() === '図書館' && (await p.locator('.share .rd-meta').textContent()).includes('2日目・昼'), 'clicking a point shows all of it beside the chart');
+ok(await p.evaluate(() => scrollY) === y0, 'the page does not jump');
+ok(await p.locator('.share .cnode.sel').count() === 1 && await p.locator('.share .cedge.on').count() === 1, 'the chosen point and its arrows stand out');
+await p.click('.share .rd-back-to:has-text("導入")'); await wait(400);
+ok(await p.locator('.share .rd-panel .rd-title').textContent() === '導入', 'back to where you came from');
+await p.click('.share .rd-go:has-text("調べに行く")'); await wait(400);
+ok(await p.locator('.share .rd-panel .rd-title').textContent() === '図書館', '"このあと" follows the arrow');
+await p.click('.share .rd-meta .rd-name:has-text("ダンウィッチ村")'); await wait(300);
+ok((await p.locator('.share .rd-panel').textContent()).includes('「図書館」に戻る'), 'names open inside the panel');
+await p.click('.share .rd-back'); await wait(200);
 ok((await p.locator('.share .cnode').nth(1).textContent()).includes('📍 ダンウィッチ村') && (await p.locator('.share').textContent()).includes('🕒 2日目・昼'), 'chart points show place and time');
 ok((await p.locator('.share-sec:has(h2:text-is("場所ごとのシーン"))').textContent()).includes('📍 ダンウィッチ村図書館（2日目・昼）'), 'scenes by place listed');
 ok((await p.locator('.share').textContent()).includes('アーミテッジ（39歳）'), 'person with age at the scenario time (born 1889-04-01, scenario 1928-06-05)');
@@ -67,6 +79,10 @@ ok(await page2.locator('.share h1').textContent() === 'ダンウィッチの怪�
 const ph = await ctx.newPage(); await ph.setViewportSize({ width: 390, height: 780 });
 await ph.goto(url); await ph.waitForSelector('.share h1'); await ph.waitForTimeout(300);
 ok(await ph.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 0, 'reading page fits a phone');
+await ph.locator('.share .cnode >> nth=1').click(); await ph.waitForTimeout(500);
+ok(await ph.locator('.share .rd-panel.open .rd-title').textContent() === '図書館', 'phone: tapping a point slides the details up from the bottom');
+await ph.click('.share .rd-close'); await ph.waitForTimeout(400);
+ok(await ph.locator('.share .rd-panel.open').count() === 0, 'phone: × puts it away');
 await ph.screenshot({ path: SHOT + 'share-phone.png', fullPage: true }); await ph.close();
 // やめる → 読めない
 await p.click('.ne [data-sec="share"] button:has-text("共有をやめる")'); await wait(1000);

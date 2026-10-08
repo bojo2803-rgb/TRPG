@@ -6,18 +6,20 @@ import { KINDS, newNote, kindOf, placePath, childrenOf } from '../model.js';
 import { panZoom } from './panzoom.js';
 import { pickNote } from './picker.js';
 
-// 点と矢印を描く。onRef(id)：結び付けたカードを押したとき。placeLabel(id)：場所の道すじ
-export function drawChart(layer, chart, { readOnly = false, linking = null, cardTitle = id => id, placeLabel = cardTitle, onRef = null, moved = {} } = {}) {
+// 点と矢印を描く。onRef(id)：結び付けたカードを押したとき。placeLabel(id)：場所の道すじ。
+// selected：えらんでいる点（その点と、そこに出入りする矢印を目立たせ、ほかの矢印は薄くする）
+export function drawChart(layer, chart, { readOnly = false, linking = null, selected = null, cardTitle = id => id, placeLabel = cardTitle, onRef = null, moved = {} } = {}) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.classList.add('chart-edges');
   const nodes = Object.values(chart.nodes).map(n => {
     const t = NODE_TYPES[n.type] || NODE_TYPES.memo, preview = (n.body || '').split('\n').filter(Boolean).slice(0, 2).join(' ');
-    const chips = (ids, icon) => ids?.length ? h('div', { class: 'cnode-refs' }, h('span', { class: 'cnode-ic', 'aria-hidden': 'true' }, icon), ...ids.map(r => h('button', { type: 'button', class: 'chip', onclick: e => { e.stopPropagation(); onRef?.(r); } }, cardTitle(r)))) : null;
-    return h('div', { class: `cnode t-${n.type}${linking === n.id ? ' linking' : ''}${n.pos ? ' placed' : ''}`, 'data-node': n.id, 'data-click': 'node', 'data-drag': readOnly ? null : '1', style: { width: CHART_W + 'px' } },
+    // onRef がなければ（共有ページ）、名前はただの字（押すと点がえらばれる）
+    const chips = (ids, icon) => ids?.length ? h('div', { class: 'cnode-refs' }, h('span', { class: 'cnode-ic', 'aria-hidden': 'true' }, icon), ...ids.map(r => onRef ? h('button', { type: 'button', class: 'chip', onclick: e => { e.stopPropagation(); onRef(r); } }, cardTitle(r)) : h('span', { class: 'chip' }, cardTitle(r)))) : null;
+    return h('div', { class: `cnode t-${n.type}${linking === n.id ? ' linking' : ''}${selected === n.id ? ' sel' : ''}${n.pos ? ' placed' : ''}`, 'aria-current': selected === n.id ? 'true' : null, 'data-node': n.id, 'data-click': 'node', 'data-drag': readOnly ? null : '1', style: { width: CHART_W + 'px' } },
       h('div', { class: 'cnode-type' }, `${t.icon} ${t.label}`),
       h('div', { class: 'cnode-t' }, n.title || '（題名なし）'),
       n.time ? h('div', { class: 'cnode-m' }, `🕒 ${n.time}`) : null,
-      n.place ? h('button', { type: 'button', class: 'cnode-m cnode-place', title: '場所', onclick: e => { e.stopPropagation(); onRef?.(n.place); } }, `📍 ${placeLabel(n.place)}`) : null,
+      n.place ? (onRef ? h('button', { type: 'button', class: 'cnode-m cnode-place', title: '場所', onclick: e => { e.stopPropagation(); onRef(n.place); } }, `📍 ${placeLabel(n.place)}`) : h('div', { class: 'cnode-m cnode-place' }, `📍 ${placeLabel(n.place)}`)) : null,
       preview ? h('div', { class: 'cnode-b' }, preview) : null,
       chips(n.cast, '👤'), chips(n.items, '🎁'), chips(n.refs, '🔗'),
       readOnly ? null : h('div', { class: 'cnode-acts' },
@@ -49,7 +51,7 @@ export function drawChart(layer, chart, { readOnly = false, linking = null, card
         const x1 = A.x + A.w, y1 = A.y + A.h / 2, x2 = B.x + B.w + 2, y2 = B.y + B.h / 2, cx = Math.max(x1, x2) + 60;
         d = `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`; lx = cx - 10; ly = (y1 + y2) / 2;
       }
-      out += `<g class="cedge"><path d="${d}" class="cedge-line" marker-end="url(#carr)"/>` + (readOnly ? '' : `<path d="${d}" class="cedge-hit" data-click="edge" data-edge="${e.id}"/>`) +
+      out += `<g class="cedge${selected ? (e.from === selected || e.to === selected ? ' on' : ' dim') : ''}"><path d="${d}" class="cedge-line" marker-end="url(#carr)"/>` + (readOnly ? '' : `<path d="${d}" class="cedge-hit" data-click="edge" data-edge="${e.id}"/>`) +
         (e.label ? `<text x="${lx}" y="${ly}" class="cedge-l" text-anchor="middle"${readOnly ? '' : ` data-click="edge" data-edge="${e.id}"`}>${esc(e.label)}</text>` : '') + '</g>';
     }
     svg.setAttribute('width', maxX + 120); svg.setAttribute('height', maxY + 40);
