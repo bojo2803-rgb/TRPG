@@ -486,6 +486,15 @@ a.btn { text-decoration: none; color: inherit; display: inline-flex; align-items
 .sf { display: grid; grid-template-columns: 9em 1fr; gap: 8px; align-items: start; }
 .sf .lbl { color: var(--muted); font-size: 13px; }
 .share-foot { margin-top: 32px; }
+/* たためる項目：見出しの左に ▸、開いていれば下向き */
+.fold > summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; cursor: pointer; list-style: none; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 2px solid var(--line); }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: '▸'; color: var(--muted); font-size: 14px; transition: transform .15s; }
+.fold[open] > summary::before { transform: rotate(90deg); }
+.fold:not([open]) > summary { margin-bottom: 0; }
+.share .fold > summary h2 { margin: 0; padding: 0; border: 0; }
+.fold > summary:hover h2, .fold > summary:focus-visible h2 { text-decoration: underline; text-underline-offset: 4px; }
+.fold-n { color: var(--muted); font-size: 13px; }
 @media (max-width: 560px) { .sf { grid-template-columns: 1fr; gap: 0; } }
 @media print {
   .share-tools { display: none; }
@@ -619,8 +628,6 @@ input.list-q { flex: 0 1 200px; min-width: 110px; }
 
 /* 共有ページ：ストーリーチャートを読む。左に全体、右にえらんだ点（スマホは下から出る）。ページは動かさない */
 .share-sec.rd { --rd-out: clamp(0px, (100vw - 920px) / 2, 176px); margin-left: calc(-1 * var(--rd-out)); margin-right: calc(-1 * var(--rd-out)); }
-.rd-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--line); }
-.share .rd-head h2 { margin: 0; padding: 0; border: 0; }
 .rd-head .note-text { flex: 1; }
 .rd-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); gap: 14px; height: clamp(440px, 74vh, 800px); }
 .rd-stage { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
@@ -657,8 +664,7 @@ input.list-q { flex: 0 1 200px; min-width: 110px; }
 .rd-back-to:hover, .rd-back-to:focus-visible { color: var(--fg); text-decoration: underline; }
 .rd-back { display: inline-block; margin-bottom: 12px; font-size: 13px; }
 .rd-panel .share-card { margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
-.rd-all > summary { cursor: pointer; font-family: var(--font-title); font-size: 17px; padding: 8px 0; border-bottom: 2px solid var(--line); }
-.rd-all .rd-show { margin-left: auto; }
+.cpoint .rd-show { margin-left: auto; }
 .cpoint .md { margin-top: 8px; }
 .cpoint-m { margin: 3px 0; font-size: 13px; overflow-wrap: break-word; }
 .cpoint-m .lbl { display: inline-block; min-width: 5.5em; color: var(--muted); font-size: 12px; }
@@ -677,7 +683,7 @@ input.list-q { flex: 0 1 200px; min-width: 110px; }
 @media print {
   .share-sec.rd { margin-left: 0; margin-right: 0; }
   .rd-wrap { display: block; height: auto; }
-  .rd-panel, .rd-head .btn, .rd-show { display: none; }
+  .rd-panel, .rd-head .btn, .rd-show, .fold > summary::before { display: none; }
   .rd-stage { height: auto; overflow: visible; border: 0; }
   .rd-stage .share-chart-layer { position: static; transform: none !important; }
   .cedge.dim { opacity: 1; }

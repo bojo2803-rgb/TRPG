@@ -45,7 +45,22 @@ await p.goto(url); await p.waitForSelector('.share h1'); await wait(500);
 ok(await p.locator('.share h1').textContent() === 'ダンウィッチの怪', 'reading page shows the scenario');
 ok(await p.locator('.share .cnode').count() === 2 && await p.locator('.share .cedge-l').textContent() === '調べに行く', 'chart drawn read-only');
 ok(await p.locator('.share .rd-panel .rd-title').textContent() === '導入', 'the first point is open in the side panel');
-ok(await p.locator('.share details.rd-all .cpoint').count() === 2 && (await p.locator('.share .cpoint >> nth=1').textContent()).includes('2日目・昼'), 'every point can be read in order (folded)');
+const allPts = p.locator('.share details.fold:has(h2:text-is("すべての点を順に読む"))');
+ok(await allPts.locator('.cpoint').count() === 2 && !(await allPts.getAttribute('open') !== null) && (await p.locator('.share .cpoint >> nth=1').textContent()).includes('2日目・昼'), 'every point can be read in order (folded)');
+// どの項目も見出しを押すとたためる。印刷では全部開いて、終わると元に戻る
+const people = p.locator('.share details.fold:has(h2:text-is("登場人物"))');
+await people.locator('summary').click(); await wait(200);
+ok(!(await people.locator('h3:text("アーミテッジ")').isVisible()), 'a section folds when its heading is clicked');
+await p.evaluate(() => dispatchEvent(new Event('beforeprint')));
+ok(await p.locator('.share details.fold:not([open])').count() === 0, 'printing opens every section');
+await p.evaluate(() => dispatchEvent(new Event('afterprint')));
+ok(await people.getAttribute('open') === null && await allPts.getAttribute('open') === null, 'after printing the folds come back');
+await people.locator('summary').click(); await wait(200);
+ok(await people.locator('h3:text("アーミテッジ")').isVisible(), 'and opens again');
+await p.locator('.share details.rd summary h2').click(); await wait(200);
+ok(!(await p.locator('.share .rd-stage').isVisible()), 'the chart folds too');
+await p.locator('.share details.rd summary h2').click(); await wait(300);
+ok(await p.locator('.share .rd-stage .cnode').first().isVisible(), 'and comes back drawn');
 // 点を押す：ページは動かず、右に全部出る。「このあと」で次へ、「ここに来るまで」で戻る
 const y0 = await p.evaluate(() => scrollY);
 await p.locator('.share .cnode >> nth=1').click(); await wait(400);
@@ -83,6 +98,9 @@ await ph.locator('.share .cnode >> nth=1').click(); await ph.waitForTimeout(500)
 ok(await ph.locator('.share .rd-panel.open .rd-title').textContent() === '図書館', 'phone: tapping a point slides the details up from the bottom');
 await ph.click('.share .rd-close'); await ph.waitForTimeout(400);
 ok(await ph.locator('.share .rd-panel.open').count() === 0, 'phone: × puts it away');
+await ph.locator('.share .cnode >> nth=1').click(); await ph.waitForTimeout(400);
+await ph.locator('.share-foot').scrollIntoViewIfNeeded(); await ph.waitForTimeout(400);
+ok(await ph.locator('.share .rd-panel.open').count() === 0, 'phone: scrolling away from the chart puts it away');
 await ph.screenshot({ path: SHOT + 'share-phone.png', fullPage: true }); await ph.close();
 // やめる → 読めない
 await p.click('.ne [data-sec="share"] button:has-text("共有をやめる")'); await wait(1000);

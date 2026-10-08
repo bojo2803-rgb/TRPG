@@ -56,7 +56,9 @@ function render(pkg) {
   const events = Object.values(w.notes).filter(n => n.when && n.id !== sc.id).sort((a, b) => a.when.t.d - b.when.t.d || a.when.t.s - b.when.t.s);
   const group = kind => Object.values(w.notes).filter(n => n.id !== sc.id && kindOf(n) === kind).sort(byTitle);
   const others = Object.values(w.notes).filter(n => n.id !== sc.id && kindOf(n) === 'note' && !n.when).sort(byTitle);
-  const section = (title, list) => list.length ? h('section', { class: 'share-sec' }, h('h2', {}, title), ...list) : null;
+  // 項目は見出しを押すとたためる（数があれば見出しの横に）
+  const fold = (title, n, kids, open = true) => h('details', { class: 'share-sec fold', open }, h('summary', {}, h('h2', {}, title), n ? h('span', { class: 'fold-n' }, String(n)) : null), ...kids);
+  const section = (title, list) => list.length ? fold(title, list.length, list) : null;
   // ストーリーチャート：左に全体（引っぱって動かす・拡大縮小）、右にえらんだ点を全部読める欄。
   // 点を押すと右の欄が変わる（ページは動かない）。「このあと」で PL の行動をたどって次の点へ。登場人物などの名前は、右の欄の中で開く。
   // スマホは、点を押すと下から読む欄が出る。印刷では、すべての点を順に並べる
@@ -90,7 +92,7 @@ function render(pkg) {
       draw(); renderPanel(); openSheet();
       if (follow) reveal(id);
     }
-    selectPoint = id => { stage.scrollIntoView({ behavior: 'smooth', block: 'center' }); choose(id, { follow: true }); };
+    selectPoint = id => { chartBox.open = true; stage.scrollIntoView({ behavior: 'smooth', block: 'center' }); choose(id, { follow: true }); };
     const nameBtns = ids => (ids || []).filter(id => w.notes[id]).map(id => h('button', { type: 'button', class: 'rd-name', onclick: () => { card = id; renderPanel(); } }, w.notes[id].title || '（名前なし）'));
     const row = (label, ...vals) => vals.length ? [h('dt', {}, label), h('dd', {}, ...vals)] : [];
     function renderPanel() {
@@ -123,16 +125,17 @@ function render(pkg) {
       ].filter(Boolean));
       panel.scrollTop = 0;
     }
-    chartBox = h('section', { class: 'share-sec rd' },
-      h('div', { class: 'rd-head' }, h('h2', {}, 'ストーリーチャート'),
+    // たたんでいる間は大きさが測れないので、開いたときに描き直す
+    chartBox = h('details', { class: 'share-sec fold rd', open: true, ontoggle: () => { if (chartBox.open) fit(); else panel.classList.remove('open'); } },
+      h('summary', { class: 'rd-head' }, h('h2', {}, 'ストーリーチャート'),
         h('span', { class: 'note-text' }, `点を押すと${phone() ? '下' : '右'}に全部出ます。引っぱって動かせます`),
-        h('button', { type: 'button', class: 'btn small', onclick: fit }, '全体を見る')),
+        h('button', { type: 'button', class: 'btn small', onclick: e => { e.preventDefault(); fit(); } }, '全体を見る')),
       h('div', { class: 'rd-wrap' }, stage, panel));
     requestAnimationFrame(() => { fit(); renderPanel(); });
     addEventListener('resize', () => { if (!phone()) panel.classList.remove('open'); });
+    new IntersectionObserver(([e]) => { if (e.intersectionRatio < 0.2) panel.classList.remove('open'); }, { threshold: 0.2 }).observe(stage); // スマホ：チャートがほとんど見えなくなったら下の欄をしまう
     // すべての点を順に（読み物として・印刷用）。ふだんはたたんでおく
-    allBox = h('details', { class: 'share-sec rd-all' }, h('summary', {}, `すべての点を順に読む（${order.length}）`),
-      ...order.map(n => {
+    allBox = fold('すべての点を順に読む', order.length, order.map(n => {
         const t = NODE_TYPES[n.type] || NODE_TYPES.memo, names = ids => (ids || []).map(id => w.notes[id]?.title).filter(Boolean).join('・');
         const meta = (label, v) => v ? h('p', { class: 'cpoint-m' }, h('span', { class: 'lbl' }, label), v) : null;
         return h('article', { class: `share-card cpoint t-${n.type}` },
@@ -141,8 +144,7 @@ function render(pkg) {
           meta('いつ', n.time), meta('場所', n.place && w.notes[n.place] ? path(n.place) : ''), meta('登場', names(n.cast)), meta('アイテム', names(n.items)),
           n.body ? md(n.body) : null,
           meta('このあと', outs(n.id).map(e => `${e.label ? `${e.label} ` : ''}→ 「${C.nodes[e.to].title || '題名なし'}」`).join('／')));
-      }));
-    addEventListener('beforeprint', () => { allBox.open = true; });
+      }), false);
   }
   // 場所ごとのシーン（チャートの点に場所があるときだけ）
   const byPlace = Object.values(sc.chart?.nodes || {}).some(x => x.place && w.notes[x.place]) ? scenesByPlace(sc.chart, w) : [];
@@ -159,8 +161,8 @@ function render(pkg) {
       h('div', { class: 'row share-tools' },
         h('button', { type: 'button', class: 'btn', onclick: () => print() }, '印刷'),
         h('a', { class: 'btn', href: `./#import&f=${encodeURIComponent(f)}&k=${encodeURIComponent(k)}`, title: 'TRPG 世界設定のアプリで、いま開いている世界にこのシナリオを取り込みます' }, '自分のアプリに取り込む'))),
-    fields(sc) ? h('section', { class: 'share-sec' }, fields(sc)) : null,
-    sc.body ? h('section', { class: 'share-sec' }, h('h2', {}, 'メモ'), md(sc.body)) : null,
+    fields(sc) ? fold('シナリオの基本', 0, [fields(sc)]) : null,
+    sc.body ? fold('メモ', 0, [md(sc.body)]) : null,
     chartBox,
     allBox,
     section('場所ごとのシーン', byPlace.map(sceneCard)),
@@ -169,6 +171,15 @@ function render(pkg) {
     section('付箋', others.map(card)),
     sc.sessions?.length ? section('遊んだ記録', sc.sessions.map(s => h('article', { class: 'share-card' }, h('h3', {}, s.date || ''), s.who ? h('p', { class: 'note-text' }, `参加者：${s.who}`) : null, s.memo ? md(s.memo) : null))) : null,
     h('footer', { class: 'note-text share-foot' }, 'TRPG 世界設定で作ったシナリオです。このページは読むだけで、書き換えはできません。')].filter(Boolean));
-  root.addEventListener('click', e => { const a = e.target.closest('a.nlink'); if (!a) return; e.preventDefault(); if (a.dataset.note) document.getElementById('card-' + a.dataset.note)?.scrollIntoView({ behavior: 'smooth' }); });
+  root.addEventListener('click', e => {
+    const a = e.target.closest('a.nlink'); if (!a) return;
+    e.preventDefault();
+    const el = a.dataset.note && document.getElementById('card-' + a.dataset.note);
+    if (el) { el.closest('details').open = true; el.scrollIntoView({ behavior: 'smooth' }); }
+  });
+  // 印刷では全部開いて、終わったら元のたたみ方に戻す
+  let shut = [];
+  addEventListener('beforeprint', () => { shut = [...root.querySelectorAll('details:not([open])')]; shut.forEach(d => { d.open = true; }); });
+  addEventListener('afterprint', () => { shut.forEach(d => { d.open = false; }); });
 }
 start();
