@@ -7,7 +7,7 @@ import { kindOf, templatesFor, placePath, KINDS } from './model.js';
 import { drawChart } from './ui/chartView.js';
 import { bornOf, periodOf, ageIn } from './ui/elements.js';
 import { PKG } from './share.js';
-import { scenesByPlace, layoutChart, NODE_TYPES, CHART_W } from './chart.js';
+import { layoutChart, NODE_TYPES, CHART_W } from './chart.js';
 import { panZoom } from './ui/panzoom.js';
 
 const root = document.getElementById('share');
@@ -174,12 +174,6 @@ function render(pkg) {
           meta('このあと', outs(n.id).map(e => `${e.label ? `${e.label} ` : ''}→ 「${C.nodes[e.to].title || '題名なし'}」`).join('／')));
       }), false);
   }
-  // 場所ごとのシーン（チャートの点に場所があるときだけ）
-  const byPlace = Object.values(sc.chart?.nodes || {}).some(x => x.place && w.notes[x.place]) ? scenesByPlace(sc.chart, w) : [];
-  const tt = n => w.notes[n]?.title || '';
-  const sceneCard = g => h('article', { class: 'share-card' }, h('h3', {}, g.place ? `📍 ${g.label}` : g.label),
-    h('ul', {}, ...g.nodes.map(x => h('li', {}, h('button', { type: 'button', class: 'rd-name', title: 'チャートで見る', onclick: () => selectPoint?.(x.id) }, x.title || '（題名なし）'), x.time ? `（${x.time}）` : '',
-      x.cast?.length ? ` 👤 ${x.cast.map(tt).filter(Boolean).join('・')}` : '', x.items?.length ? ` 🎁 ${x.items.map(tt).filter(Boolean).join('・')}` : ''))));
   const period = periodOf(w, sc);
   root.replaceChildren(...[
     h('header', { class: 'share-head' },
@@ -193,7 +187,6 @@ function render(pkg) {
     sc.body ? fold('メモ', 0, [md(sc.body)]) : null,
     chartBox,
     allBox,
-    section('場所ごとのシーン', byPlace.map(sceneCard)),
     section('出来事', events.map(n => h('article', { class: 'share-card', id: 'card-' + n.id }, h('p', { class: 'data' }, when(n.when)), h('h3', {}, n.title || '（名前なし）'), n.body ? md(n.body) : null))),
     ...['person', 'item', 'group', 'place'].map(kd => section(kd === 'person' ? '登場人物' : KINDS[kd].label, group(kd).map(card))),
     section('付箋', others.map(card)),

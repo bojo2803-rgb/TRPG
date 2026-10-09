@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { newWorld, newNote, newLink } from '../app/js/model.js';
 import { parseRoute, formatRoute, pushRecent } from '../app/js/route.js';
 import { searchAll, linkQuery } from '../app/js/search.js';
-import { COLUMNS, sortRows, groupCards, inScenario, scenarioGroups, picOf } from '../app/js/listing.js';
+import { COLUMNS, sortRows, groupCards, inScenario, scenarioGroups, picOf, scenarioBoardSpots } from '../app/js/listing.js';
 import { addToScenario, removeFromScenario, setPlace, addMember, addTag, deleteMany } from '../app/js/bulk.js';
 
 // 小さな世界：日本 › 東京都 › 新宿 › 喫茶。シナリオ1つ、人物3人、集団2つ、アイテム1つ
@@ -153,4 +153,39 @@ test('names sort by their reading (よみ) when one is written', async () => {
   const w = { notes: Object.fromEntries(people.map(p => [p.id, p])), links: {} };
   assert.deepEqual(sortRows(w, people, 'person', '名前', 1).map(n => n.id), ['c', 'a', 'b']);
   assert.deepEqual([...people].sort(byTitle).map(n => n.id), ['c', 'a', 'b']);
+});
+
+test('people list shows birth dates instead of a fixed age, sorted by date', async () => {
+  const w = world();
+  w.notes.kuj.born = { tr: 'main', t: { d: 2447893, s: 0 }, prec: 'year', approx: true, tz: 'Asia/Tokyo' }; // 1990年ごろ
+  w.notes.kat.born = { tr: 'main', t: { d: 2440588, s: 0 }, prec: 'day', tz: 'Asia/Tokyo' }; // 1970年1月1日
+  assert.ok(!COLUMNS.person.some(c => c.key === '年齢'), 'no fixed age column');
+  const col = COLUMNS.person.find(c => c.key === '生年月日');
+  assert.match(col.value(w, w.notes.kuj), /1990年/);
+  const people = ['kuj', 'kat', 'mur'].map(id => w.notes[id]);
+  assert.deepEqual(sortRows(w, people, 'person', '生年月日', 1).map(n => n.id), ['kat', 'kuj', 'mur'], 'older first, unknown last');
+  assert.deepEqual(sortRows(w, people, 'person', '生年月日', -1).map(n => n.id), ['kuj', 'kat', 'mur'], 'reversed, unknown still last');
+});
+
+test('person templates no longer ask for a fixed age (old worlds too, values kept)', async () => {
+  const { builtinTemplates, migrateWorld, FORMAT } = await import('../app/js/model.js');
+  for (const t of builtinTemplates()) assert.ok(!t.fields.some(f => f.key === '年齢'), t.name);
+  const old = newWorld('old'); old.version = 3;
+  old.templates['tpl-person'].fields.splice(2, 0, { key: '年齢', label: '年齢', type: 'text' });
+  old.notes.a = newNote({ id: 'a', kind: 'person', title: 'A', fields: { 年齢: '30' } });
+  const w = migrateWorld(JSON.parse(JSON.stringify({ ...old, format: FORMAT })));
+  assert.ok(!w.templates['tpl-person'].fields.some(f => f.key === '年齢'));
+  assert.equal(w.notes.a.fields.年齢, '30', 'what was written stays');
+});
+
+test('placing everything in a scenario on its board: one row per kind, below what is there, nothing twice', () => {
+  const w = world();
+  const spots = scenarioBoardSpots(w, 'sc', { sc: { x: 40, y: 40 }, kat: { x: 300, y: 40 } });
+  assert.deepEqual(Object.keys(spots).sort(), ['cafe', 'key', 'kuj', 'mur'], 'cast, chart people and items, and the stage; not the ones already there');
+  assert.ok(Object.values(spots).every(p => p.y > 40 + 100), 'all below the cards already on the board');
+  assert.equal(spots.kuj.y, spots.mur.y, 'people share a row');
+  assert.ok(spots.key.y > spots.kuj.y && spots.cafe.y > spots.key.y, 'people, then items, then places');
+  const pts = Object.values(spots);
+  assert.ok(pts.every((a, i) => pts.every((b, j) => i === j || Math.abs(a.x - b.x) >= 200 || Math.abs(a.y - b.y) >= 100)), 'no two overlap');
+  assert.deepEqual(scenarioBoardSpots(w, 'sc', { ...spots, sc: { x: 40, y: 40 }, kat: { x: 300, y: 40 } }), {}, 'nothing left to place');
 });

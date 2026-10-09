@@ -4,7 +4,7 @@ import { uid, clone } from './util.js';
 import { T, isT, fromDays, wallToUtc } from './cal/time.js';
 import { scrubChart } from './chart.js';
 
-export const FORMAT = 'trpg-world', VERSION = 3;
+export const FORMAT = 'trpg-world', VERSION = 4;
 
 export const DEFAULT_SETTINGS = () => ({
   tz: 'Asia/Tokyo',
@@ -60,7 +60,7 @@ export function builtinTemplates() {
   const sel = (label, options) => f(label, 'select', { options });
   const kind = (k, name, fields) => ({ id: 'tpl-' + k, name, tags: [], kinds: [k], fields });
   return [
-    kind('person', '人物の基本', [f('よみ'), f('性別'), f('年齢'), f('職業'), f('外見', 'long'), f('性格', 'long'), f('口調'), f('経歴', 'long')]),
+    kind('person', '人物の基本', [f('よみ'), f('性別'), f('職業'), f('外見', 'long'), f('性格', 'long'), f('口調'), f('経歴', 'long')]),
     kind('scenario', 'シナリオの基本', [sel('状態', ['準備中', '完成', '遊んだ']), f('人数'), f('遊ぶ時間'), f('概要', 'long'), f('導入', 'long'), f('ハンドアウト', 'long'), f('真相', 'long'), f('結末', 'long')]),
     kind('item', 'アイテムの基本', [sel('区分', ['キーアイテム', 'アーティファクト', 'そのほか']), f('見た目', 'long'), f('効果', 'long'), f('由来', 'long'), f('代償', 'long')]),
     kind('group', '集団の基本', [f('種類'), f('目的', 'long'), f('規模'), f('資金'), f('雰囲気', 'long')]),
@@ -68,7 +68,7 @@ export function builtinTemplates() {
     {
     id: 'tpl-coc6', name: 'クトゥルフ神話TRPG 6版 キャラクター', tags: ['探索者', 'NPC'], kinds: [],
     fields: [
-      sec('基本'), f('職業'), f('年齢', 'number'), f('性別'), f('出身'), f('所属'), f('生年月日', 'date'),
+      sec('基本'), f('職業'), f('性別'), f('出身'), f('所属'), // 年齢はシナリオの時期で変わるので、生年月日の欄から数える
       sec('能力値'), ...nums(['STR', 'CON', 'POW', 'DEX', 'APP', 'SIZ', 'INT', 'EDU']),
       sec('副次的な数値'), ...nums(['SAN', '幸運', 'アイデア', '知識', '耐久力', 'マジック・ポイント']), f('ダメージ・ボーナス'),
       sec('戦闘技能'), ...nums(['回避', 'キック', '組み付き', 'こぶし（パンチ）', '頭突き', '投擲', 'マーシャルアーツ', '拳銃', 'サブマシンガン', 'ショットガン', 'マシンガン', 'ライフル']),
@@ -82,6 +82,12 @@ export function builtinTemplates() {
 }
 
 export const notesWithTag = (w, tag) => Object.values(w.notes).filter(n => n.tags.includes(tag));
+// 生年月日：入れたもの。なければ時系列の「誕生」（主体の最初の区間の始まり）
+export function bornOf(w, n) {
+  if (n?.born) return n.born;
+  const g = n?.legs?.[0], tr = g && w.tracks.find(t => t.id === g.tr);
+  return tr ? { tr: g.tr, t: g.a, prec: 'day', tz: tr.cal === 'fict' ? null : w.settings?.tz, fromMap: true } : null;
+}
 export const templatesFor = (w, note) => Object.values(w.templates).filter(t => t.tags.some(tag => note.tags.includes(tag)) || (t.kinds || []).includes(kindOf(note)));
 export const allTags = w => [...new Set(Object.values(w.notes).flatMap(n => n.tags))].sort((a, b) => a.localeCompare(b, 'ja'));
 export const childrenOf = (w, id) => Object.values(w.notes).filter(n => n.parents.includes(id));
@@ -166,6 +172,8 @@ function fill(d) {
   const v = d.version || 1;
   if (v < 2) for (const n of Object.values(w.notes)) n.kind = guessKind(n);
   if (v < 3) for (const t of builtinTemplates()) if (!w.templates[t.id]) w.templates[t.id] = t;
+  // 3 → 4：年齢の欄をやめる（年齢はシナリオの時期と生年月日から数える）。入れてあった値は消さない
+  if (v < 4) for (const id of ['tpl-person', 'tpl-coc6']) if (w.templates[id]) w.templates[id].fields = w.templates[id].fields.filter(f => f.key !== '年齢' && !(id === 'tpl-coc6' && f.key === '生年月日'));
   w.version = VERSION;
   for (const n of Object.values(w.notes)) n.kind = kindOf(n);
   for (const t of Object.values(w.templates)) t.kinds ||= [];

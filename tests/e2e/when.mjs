@@ -17,13 +17,13 @@ const w = await p.evaluate(() => Object.values(__app.world.notes)[0].when);
 ok(w.cals?.includes('wareki'), 'input calendar added: ' + JSON.stringify(w));
 const shown = await p.locator('.when-shown').innerText();
 ok(shown.includes('1582年6月21日（ユリウス暦）') && shown.includes('天正10年6月2日'), 'shown: ' + shown);
-// あいまいな日付：年まで・〜頃
-await p.selectOption('.dinput select[aria-label="精度"]', 'year');
+// あいまいな日付：月と日を空にすると「年まで」・〜頃
+await p.fill('.dinput input[aria-label="日"] >> nth=0', '');
+await p.fill('.dinput input[aria-label="月"] >> nth=0', '');
 await p.check('.dinput label:has-text("〜頃") input');
 await p.waitForTimeout(900);
 ok((await p.locator('.when-shown').innerText()).includes('天正10年頃'), 'approx year: ' + await p.locator('.when-shown').innerText());
 // 存在しない日付は理由を出して保存しない
-await p.selectOption('.dinput select[aria-label="精度"]', 'day');
 await p.selectOption('.dinput select[aria-label="暦"]', 'west');
 await p.fill('.dinput input[aria-label="年"] >> nth=0', '1582');
 await p.fill('.dinput input[aria-label="月"] >> nth=0', '10');

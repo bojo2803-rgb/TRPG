@@ -1,4 +1,5 @@
-// 日時の入力欄：どの暦でも入れられる。精度（年まで・月まで・日まで・時刻まで）、「〜頃」、「AとBの間のどこか」、タイムゾーン。
+// 日時の入力欄：どの暦でも入れられる。わからないところは空のまま（月を空 → 年まで、日を空 → 月まで。「時刻も」で時刻まで）、
+// 「〜頃」、「AとBの間のどこか」、タイムゾーン。はじめは空で、数字の欄は押すと全部選ばれる（打てばそのまま入れ替わる）。
 // 入力に使った暦は、その付箋の追加の暦になる（設計メモ §5.1）
 import { h } from '../util.js';
 import { T, utcToWall, wallToUtc, fmtHM } from '../cal/time.js';
@@ -9,7 +10,6 @@ import * as H from '../cal/hijri.js';
 import * as F from '../cal/fict.js';
 import { formatTime, allTimeZones, COMMON_TZ, tzLabel } from '../cal/index.js';
 
-const PRECS = [['year', '年まで'], ['month', '月まで'], ['day', '日まで'], ['minute', '時刻まで']];
 const CALS = [['west', '西暦'], ['wareki', '和暦'], ['kyureki', '旧暦（明治6年以降）'], ['hijri', 'ヒジュラ暦'], ['ago', '〜年前']];
 let seq = 0;
 
@@ -17,11 +17,11 @@ let seq = 0;
 export function dateInput(world, { track = null, value = null, fuzzy = true, onChange = null } = {}) {
   const id = 'di' + (++seq), settings = world.settings || {};
   const fict = track?.cal === 'fict' ? world.calendars?.[track.calId] : null;
-  const v0 = value || { t: T(W.jdnG(2000, 1, 1)), prec: 'day', tz: settings.tz };
+  const v0 = value || { t: null, prec: 'day', tz: settings.tz };
   let tz = v0.tz || settings.tz || 'Asia/Tokyo';
-  let cal = fict ? 'fict' : v0.cal && v0.cal !== 'west' ? v0.cal : (W.isDeepPast(utcToWall(tz, v0.t).d) ? 'ago' : 'west');
+  let cal = fict ? 'fict' : v0.cal && v0.cal !== 'west' ? v0.cal : (v0.t && W.isDeepPast(utcToWall(tz, v0.t).d) ? 'ago' : 'west');
   const el = h('div', { class: 'dinput' });
-  const prec = h('select', { 'aria-label': '精度' }, ...PRECS.map(([k, v]) => h('option', { value: k, selected: k === (v0.prec || 'day') }, v)));
+  const withTime = h('input', { type: 'checkbox', checked: v0.prec === 'minute' });
   const approx = h('input', { type: 'checkbox', checked: !!v0.approx });
   const between = h('input', { type: 'checkbox', checked: !!v0.until });
   const calSel = fict ? null : h('select', { 'aria-label': '暦' }, ...CALS.map(([k, v]) => h('option', { value: k, selected: k === cal }, v)));
@@ -30,20 +30,25 @@ export function dateInput(world, { track = null, value = null, fuzzy = true, onC
   const A = block(), B = block();
   const blocks = h('div', { class: 'dblocks' }, A.el, h('span', { class: 'dbetween' }, '〜'), B.el);
   el.append(
-    h('div', { class: 'row' }, calSel, prec,
+    h('div', { class: 'row' }, calSel,
       fuzzy ? h('label', { class: 'cb' }, approx, '〜頃') : null,
+      h('label', { class: 'cb dtime' }, withTime, '時刻も'),
       fuzzy ? h('label', { class: 'cb' }, between, 'AとBの間のどこか') : null),
     blocks,
+    h('p', { class: 'note-text dhint' }, 'わからないところは空のままで（年だけ → 「年まで」、日を空 → 「月まで」）'),
     tzIn ? h('div', { class: 'row dtz' }, h('span', { class: 'note-text' }, 'タイムゾーン'), tzIn, h('datalist', { id: id + '-tz' }, ...[...COMMON_TZ, ...allTimeZones().filter(z => !COMMON_TZ.includes(z))].map(z => h('option', { value: z }, tzLabel(z))))) : null,
     preview);
 
   // 1つの日時の入力欄（暦ごとに中身が変わる）
   function block() {
     const b = { el: h('div', { class: 'row dblock' }), f: {} };
-    b.render = jdnSecs => {
+    // pr：精度。年までなら月・日を、月までなら日を空にして出す
+    b.render = (jdnSecs, pr = 'day') => {
       const [jdn, secs] = jdnSecs || [null, 0];
-      const f = b.f = {}, box = b.box = {};
-      const num = (k, label, w = 5, val = '') => (f[k] = h('input', { type: 'number', value: val, 'aria-label': label, style: { width: w + 'em' }, inputmode: 'numeric' }));
+      const f = b.f = {}, box = b.box = {}, showM = pr !== 'year', showD = showM && pr !== 'month';
+      const num = (k, label, w = 5, val = '', ph = '') => (f[k] = h('input', { type: 'number', value: (k === 'm' && !showM) || (k === 'd' && !showD) ? '' : val, 'aria-label': label, placeholder: ph, style: { width: w + 'em' }, inputmode: 'numeric', onfocus: e => e.target.select() }));
+      const monthSel = names => (f.m = h('select', { 'aria-label': '月' }, h('option', { value: '' }, '（月）'), ...names.map((n, i) => h('option', { value: i + 1, selected: showM && cur.m === i + 1 }, n))));
+      let cur = {};
       // 年・月・日・閏はそれぞれ箱に入れ、精度に合わせて隠す
       const grp = (k, ...kids) => (box[k] = h('span', { class: 'dgrp' }, ...kids));
       const kids = [];
@@ -55,7 +60,7 @@ export function dateInput(world, { track = null, value = null, fuzzy = true, onC
         const p = jdn == null ? null : W.fromJdn(jdn, settings.cal?.western);
         const astro = settings.cal?.western?.era === 'astronomical', bc = p && !astro && p.y <= 0;
         if (!astro) kids.push(h('label', { class: 'cb' }, f.bc = h('input', { type: 'checkbox', checked: bc }), '紀元前'));
-        kids.push(grp('y', num('y', '年', 6, p ? (bc ? 1 - p.y : p.y) : ''), '年'), grp('m', num('m', '月', 3.5, p?.m ?? ''), '月'), grp('d', num('d', '日', 3.5, p?.d ?? ''), '日'));
+        kids.push(grp('y', num('y', '年', 6, p ? (bc ? 1 - p.y : p.y) : '', '例：1990'), '年'), grp('m', num('m', '月', 3.5, p?.m ?? ''), '月'), grp('d', num('d', '日', 3.5, p?.d ?? ''), '日'));
       } else if (cal === 'wareki') {
         const r = jdn == null ? null : J.fromJdn(jdn, settings.cal?.wareki), e = r?.eras?.[0];
         kids.push(f.era = h('input', { list: id + '-era', value: e?.name ?? '', size: 5, 'aria-label': '元号', placeholder: '元号' }), h('datalist', { id: id + '-era' }, ...J.ERA_NAMES.map(n => h('option', { value: n }))),
@@ -67,18 +72,26 @@ export function dateInput(world, { track = null, value = null, fuzzy = true, onC
           grp('m', num('m', '月', 3.5, r?.month ?? ''), '月'), grp('d', num('d', '日', 3.5, r?.day ?? ''), '日'));
       } else if (cal === 'hijri') {
         const r = jdn == null ? null : H.fromJdn(jdn, settings.cal?.hijri);
-        kids.push(grp('y', num('y', '年', 5, r?.y ?? ''), '年'), grp('m', f.m = h('select', { 'aria-label': '月' }, ...H.MONTHS.map((n, i) => h('option', { value: i + 1, selected: r?.m === i + 1 }, `${i + 1}月 ${n}`)))), grp('d', num('d', '日', 3.5, r?.d ?? ''), '日'));
+        cur = r || {};
+        kids.push(grp('y', num('y', '年', 5, r?.y ?? ''), '年'), grp('m', monthSel(H.MONTHS.map((n, i) => `${i + 1}月 ${n}`))), grp('d', num('d', '日', 3.5, r?.d ?? ''), '日'));
       } else if (cal === 'fict') {
         const r = jdn == null ? null : F.fromDay(fict, jdn);
-        kids.push(grp('y', num('y', '年', 6, r?.y ?? ''), '年'), grp('m', f.m = h('select', { 'aria-label': '月' }, ...fict.months.map((m, i) => h('option', { value: i + 1, selected: r?.m === i + 1 }, m.name)))), grp('d', num('d', '日', 3.5, r?.d ?? ''), '日'));
+        cur = r || {};
+        kids.push(grp('y', num('y', '年', 6, r?.y ?? ''), '年'), grp('m', monthSel(fict.months.map(m => m.name))), grp('d', num('d', '日', 3.5, r?.d ?? ''), '日'));
       }
       if (cal !== 'ago') kids.push(f.time = h('input', { type: 'time', value: fmtHM(secs || 0), 'aria-label': '時刻' }));
       b.el.replaceChildren(...kids);
       showPrec();
     };
     // 入力 → [ユリウス通日（架空の暦なら日数）, 秒]。読めなければ理由を投げる
+    // 精度は、空の欄で決まる（月が空 → 年まで、日が空 → 月まで、「時刻も」→ 時刻まで）
+    b.prec = () => {
+      const val = k => String(b.f[k]?.value ?? '').trim();
+      return cal === 'ago' ? 'year' : val('m') === '' ? 'year' : val('d') === '' ? 'month' : withTime.checked ? 'minute' : 'day';
+    };
     b.read = () => {
-      const f = b.f, p = prec.value, val = k => String(f[k]?.value ?? '').trim();
+      const f = b.f, p = b.prec(), val = k => String(f[k]?.value ?? '').trim();
+      if (p === 'year' && cal !== 'ago' && val('d') !== '') throw '日を入れるときは、月も入れてください';
       const int = (k, name, need = true) => { const s = val(k); if (s === '') { if (need) throw `${name}を入れてください`; return null; } const n = Number(s); if (!Number.isInteger(n)) throw `${name}は整数で入れてください`; return n; };
       const y = cal === 'ago' ? null : int('y', '年');
       const m = p === 'year' ? 1 : cal === 'ago' ? null : int('m', '月');
@@ -106,42 +119,39 @@ export function dateInput(world, { track = null, value = null, fuzzy = true, onC
         if (jdn == null) throw `${fict.name}にその日付はありません`;
       }
       const [hh, mi] = p === 'minute' && f.time?.value ? f.time.value.split(':').map(Number) : [0, 0];
-      return [jdn, hh * 3600 + mi * 60];
+      return [jdn, hh * 3600 + mi * 60, p];
     };
     return b;
   }
   const toT = ([jdn, secs]) => fict ? T(jdn, secs) : wallToUtc(tz, { d: jdn, s: secs });
   const fromT = t => { if (fict) return [t.d, t.s]; const w = utcToWall(tz, t); return [w.d, w.s]; };
   function showPrec() {
-    if (cal === 'ago' && prec.value !== 'year') prec.value = 'year';
-    const p = prec.value;
-    for (const b of [A, B]) {
-      if (b.f.time) b.f.time.hidden = p !== 'minute';
-      if (b.box?.m) b.box.m.hidden = p === 'year';
-      if (b.box?.leap) b.box.leap.hidden = p === 'year';
-      if (b.box?.d) b.box.d.hidden = p === 'year' || p === 'month';
-    }
+    for (const b of [A, B]) if (b.f.time) b.f.time.hidden = !withTime.checked;
+    withTime.parentElement.hidden = cal === 'ago';
+    el.querySelector('.dhint').hidden = cal === 'ago';
     B.el.hidden = !between.checked; blocks.querySelector('.dbetween').hidden = !between.checked;
   }
-  // 最初の値
-  A.render(fromT(v0.t));
-  B.render(v0.until ? fromT(v0.until) : fromT(v0.t));
+  // 最初の値（なければ空）
+  A.render(v0.t ? fromT(v0.t) : null, v0.prec);
+  B.render(v0.until ? fromT(v0.until) : v0.t ? fromT(v0.t) : null, v0.prec);
   const orig = JSON.stringify(snapshot());
-  function snapshot() { return [cal, prec.value, approx.checked, between.checked, tzIn?.value, ...[A, B].map(b => Object.values(b.f).map(x => x.type === 'checkbox' ? x.checked : x.value))]; }
+  function snapshot() { return [cal, withTime.checked, approx.checked, between.checked, tzIn?.value, ...[A, B].map(b => Object.values(b.f).map(x => x.type === 'checkbox' ? x.checked : x.value))]; }
+  const blank = () => Object.entries(A.f).every(([k, x]) => x.type === 'checkbox' || x.type === 'time' || k === 'u' || String(x.value).trim() === '');
 
   // 読み取り：変えていなければ元の値をそのまま返す（丸めで日時がずれないように）
   function read() {
     if (JSON.stringify(snapshot()) === orig && value) return { ...value, tz: fict ? null : tz };
     if (tzIn) { const z = tzIn.value.trim() || 'UTC'; if (!allTimeZones().includes(z) && z !== 'UTC') throw `タイムゾーン「${z}」がわかりません（例：Asia/Tokyo、Europe/London）`; tz = z; }
-    const t = toT(A.read());
-    const out = { t, prec: prec.value, tz: fict ? null : tz };
+    const [ja, sa, p] = A.read(), t = toT([ja, sa]);
+    const out = { t, prec: p, tz: fict ? null : tz };
     if (approx.checked) out.approx = true;
-    if (between.checked) { const u = toT(B.read()); if (!(u.d > t.d || (u.d === t.d && u.s > t.s))) throw '「AとBの間」は、Bを後にしてください'; out.until = u; }
+    if (between.checked) { const u = toT(B.read().slice(0, 2)); if (!(u.d > t.d || (u.d === t.d && u.s > t.s))) throw '「AとBの間」は、Bを後にしてください'; out.until = u; }
     if (cal !== 'west' && cal !== 'ago' && cal !== 'fict') out.cal = cal;
     return out;
   }
   function update() {
     showPrec();
+    if (blank()) { preview.textContent = '年だけでも入れられます（例：1990 と入れて「〜頃」→ 1990年頃）'; preview.classList.remove('err'); onChange?.(); return; }
     try {
       const r = read();
       preview.textContent = '→ ' + [formatTime(r.t, { ...r, track, cal: 'west' }, world), r.cal ? formatTime(r.t, { ...r, track }, world) : null].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join('　／　');
@@ -155,8 +165,7 @@ export function dateInput(world, { track = null, value = null, fuzzy = true, onC
     try { cur = A.read(); } catch { /* 空のまま */ }
     try { curB = B.read(); } catch { /* 空のまま */ }
     cal = calSel.value;
-    if (cal === 'ago') prec.value = 'year';
-    A.render(cur); B.render(curB || cur);
+    A.render(cur, cur?.[2]); B.render(curB || cur, (curB || cur)?.[2]);
     update();
   });
   el.addEventListener('input', update);

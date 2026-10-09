@@ -21,5 +21,24 @@ await p.fill('#dlgBody input[type="search"]', 'アーミテッジ'); await p.loc
 ok((await p.locator('.ne [data-sec="contents"]').textContent()).includes('38歳'), 'scenario cast shows the age then');
 await p.evaluate(id => __app.openNote(id), ids.pc); await p.waitForTimeout(300);
 ok((await p.locator('.ne [data-sec="scen"]').textContent()).includes('38歳'), 'person shows their age in the scenario');
+// 生年月日はあいまいでもよい：はじめは空。年だけ＋「〜頃」→「1990年頃」。年と月 →「月まで」
+const p2 = await p.evaluate(() => __app.newNote({ kind: 'person', title: '巫女' }, { open: false }));
+await p.evaluate(id => __app.openNote(id), p2); await p.waitForTimeout(300);
+await p.click('.ne [data-sec="born"] button'); await p.waitForTimeout(300);
+ok(await p.locator('#dlgBody .dinput input[aria-label="年"]').first().inputValue() === '', 'birth year starts empty (nothing to delete)');
+ok(!(await p.locator('#dlgBody .dpreview').getAttribute('class')).includes('err'), 'no error before typing');
+await p.locator('#dlgBody .dinput input[aria-label="年"]').first().type('1990');
+await p.check('#dlgBody .dinput label:has-text("頃") input');
+await p.click('#dlgOk'); await p.waitForTimeout(300);
+let born = await p.evaluate(id => __app.world.notes[id].born, p2);
+ok(born.prec === 'year' && born.approx && (await p.locator('.ne [data-sec="born"]').textContent()).includes('1990年頃'), 'year only + 頃 = 1990年頃: ' + JSON.stringify(born));
+await p.click('.ne [data-sec="born"] button'); await p.waitForTimeout(300);
+ok(await p.locator('#dlgBody .dinput input[aria-label="月"]').first().inputValue() === '', 'month stays empty when only the year was given');
+await p.locator('#dlgBody .dinput input[aria-label="年"]').first().click();
+await p.keyboard.type('2000'); // 押すと全部選ばれているので、そのまま打ち直せる
+await p.locator('#dlgBody .dinput input[aria-label="月"]').first().fill('8');
+await p.click('#dlgOk'); await p.waitForTimeout(300);
+born = await p.evaluate(id => __app.world.notes[id].born, p2);
+ok(born.prec === 'month' && (await p.locator('.ne [data-sec="born"]').textContent()).includes('2000年8月頃'), 'retyped year, month only = 2000年8月頃: ' + await p.locator('.ne [data-sec="born"]').textContent());
 ok(!errors.length, 'errors: ' + errors.join('\n'));
 await b.close(); done();

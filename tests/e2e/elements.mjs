@@ -82,5 +82,26 @@ await tab('notes');
 await p.click('.ncard:has-text("禁書庫の鍵")'); await p.waitForTimeout(300);
 await p.evaluate(() => __app.setKind(Object.values(__app.world.notes).find(n => n.title.startsWith('禁書庫')).id, 'item'));
 ok((await byTitle('禁書庫の鍵を持っている')).kind === 'item' && await p.locator('.ne [data-sec="holders"]').count() === 1, 'note turned into an item');
+// シナリオのボード：登場するものを全部貼る（種類ごとの行。元に戻すで1回）
+const scId = await p.evaluate(() => {
+  const N = (k, t, x = {}) => __app.newNote({ kind: k, title: t, ...x }, { open: false });
+  const sc = N('scenario', 'ダンウィッチの怪');
+  for (const t of ['ウィルバー', 'ラヴィニア']) N('person', t, { parents: [sc] });
+  N('item', 'ネクロノミコンの写し', { parents: [sc] });
+  return sc;
+});
+await p.evaluate(id => __app.openElement(id, { mode: 'board' }), scId); await p.waitForTimeout(600);
+const placeBtn = p.locator('.bar button:has-text("登場するものを全部貼る")');
+ok((await placeBtn.textContent()).includes('（3）'), 'button says how many will be placed');
+await placeBtn.click(); await p.waitForTimeout(400);
+let items = Object.keys(Object.values((await W()).boards).find(x => x.owner === scId).items);
+ok(items.length === 4 && await p.locator('.bcard[data-id]').count() === 4, 'all three placed next to the scenario card');
+ok(await p.locator('.bar button:has-text("全部貼ってあります")').isDisabled(), 'nothing left to place');
+await p.keyboard.press('Control+z'); await p.waitForTimeout(300);
+items = Object.keys(Object.values((await W()).boards).find(x => x.owner === scId).items);
+ok(items.length === 1, 'one undo takes them all off');
+// 人物の表：年齢ではなく生年月日
+await tab('people');
+ok(await p.locator('.th-sort:has-text("生年月日")').count() === 1 && await p.locator('.th-sort:has-text("年齢")').count() === 0, 'people table has birth dates, not a fixed age');
 ok(!errors.length, 'errors: ' + errors.join('\n'));
 await b.close(); done();

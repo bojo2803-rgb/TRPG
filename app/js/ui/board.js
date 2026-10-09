@@ -9,6 +9,7 @@ import { editLink, freeSpot } from './noteEditor.js';
 import { boardLabel } from './elements.js';
 import { renderMarkdown } from './markdown.js';
 import { quickInput } from './quickNote.js';
+import { scenarioBoardSpots } from '../listing.js';
 
 const views = new Map(); // ボードごとの表示位置 { x, y, z }
 const CARD_W = 190;
@@ -62,7 +63,20 @@ export function mount(el, ctx, arg) {
         } }), { danger: true }],
       ]) }, '…')].filter(Boolean));
   }
+  // シナリオのボード：シナリオに出るもの（中身・チャートの人物やアイテムや場所・舞台）をまとめて、種類ごとの行で貼る
+  const placeAll = () => {
+    const spots = scenarioBoardSpots(ctx.world, board().owner, board().items), n = Object.keys(spots).length;
+    ctx.commit(w => { Object.assign(w.boards[boardId].items, spots); }, '登場するものを全部貼る');
+    fit(true); applyView();
+    ctx.toast(`${n}枚を貼りました（元に戻すで、まとめて外せます）`);
+  };
   const tools = () => [
+    ...(() => {
+      const b = board(), w = ctx.world;
+      if (!b?.owner || kindOf(w.notes[b.owner]) !== 'scenario') return [];
+      const n = Object.keys(scenarioBoardSpots(w, b.owner, b.items)).length;
+      return [h('button', { type: 'button', class: 'btn', disabled: !n, title: n ? 'このシナリオの登場人物・集団・アイテム・場所・出来事を、種類ごとに並べて貼る' : '登場するものは全部貼ってあります', onclick: placeAll }, n ? `＋ 登場するものを全部貼る（${n}）` : '登場するものは全部貼ってあります')];
+    })(),
     h('button', { type: 'button', class: 'btn', onclick: () => pickNote(ctx, { title: 'ボードに貼るカード', exclude: Object.keys(board().items), onPick: id => { const p = center(); ctx.commit(w => { w.boards[boardId].items[id] = { x: p.x - CARD_W / 2, y: p.y - 30 }; }, 'ボードに貼る'); } }) }, '＋ 貼る'),
     h('button', { type: 'button', class: 'btn icon', title: '全体を見る', 'aria-label': '全体を見る', onclick: () => { fit(true); applyView(); } }, '⤢'),
   ];

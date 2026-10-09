@@ -31,7 +31,7 @@ const sid = await p.evaluate(async () => {
     w.notes[id].sessions = [{ id: 's1', date: '2026-10-01', who: 'A・B', memo: '秘密の記録' }];
     w.notes[id].chart = { nodes: { a: { id: 'a', title: '導入', type: 'event', refs: [], body: '村の老人から手紙が届く。\n\n'.repeat(8) }, b: { id: 'b', title: '図書館', type: 'place', refs: [], place, time: '2日目・昼', body: '' } }, edges: { e: { id: 'e', from: 'a', to: 'b', label: '調べに行く' } } };
   });
-  const pc = __app.newNote({ kind: 'person', title: 'アーミテッジ', parents: [id], born: { tr: 'main', t: { d: 2411094, s: 0 }, prec: 'day', tz: 'Asia/Tokyo' } }, { open: false });
+  const pc = __app.newNote({ kind: 'person', title: 'アーミテッジ', parents: [id], body: 'ミスカトニック大学の老司書。\n\n'.repeat(40), born: { tr: 'main', t: { d: 2411094, s: 0 }, prec: 'day', tz: 'Asia/Tokyo' } }, { open: false });
   return id;
 });
 await p.evaluate(id => __app.openNote(id), sid); await wait(400);
@@ -87,7 +87,7 @@ ok(await p.locator('.share .rd-panel .rd-title').textContent() === '導入', 'an
 await p.keyboard.press('1'); await wait(300);
 ok(await p.locator('.share .rd-panel .rd-title').textContent() === '図書館', 'number keys pick a choice');
 ok((await p.locator('.share .cnode').nth(1).textContent()).includes('📍 ダンウィッチ村') && (await p.locator('.share').textContent()).includes('🕒 2日目・昼'), 'chart points show place and time');
-ok((await p.locator('.share-sec:has(h2:text-is("場所ごとのシーン"))').textContent()).includes('📍 ダンウィッチ村図書館（2日目・昼）'), 'scenes by place listed');
+ok(await p.locator('.share-sec:has(h2:text-is("場所ごとのシーン"))').count() === 0, 'no scenes-by-place section');
 ok((await p.locator('.share').textContent()).includes('アーミテッジ（39歳）'), 'person with age at the scenario time (born 1889-04-01, scenario 1928-06-05)');
 ok((await p.locator('.share').textContent()).includes('ヨグ＝ソトースの子'), 'GM fields included');
 ok(!(await p.locator('.share').textContent()).includes('秘密の記録'), 'play records left out');

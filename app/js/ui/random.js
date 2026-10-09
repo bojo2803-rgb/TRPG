@@ -38,7 +38,7 @@ export function randomCharacter(world) {
     : `${markov(SURNAMES, 1)(4) || pick(SURNAMES)} ${markov(GIVEN, 1)(4) || pick(GIVEN)}`;
   const st = { STR: roll(3, 6), CON: roll(3, 6), POW: roll(3, 6), DEX: roll(3, 6), APP: roll(3, 6), SIZ: roll(2, 6, 6), INT: roll(2, 6, 6), EDU: roll(3, 6, 3) };
   const db = st.STR + st.SIZ <= 12 ? '-1D6' : st.STR + st.SIZ <= 16 ? '-1D4' : st.STR + st.SIZ <= 24 ? '0' : st.STR + st.SIZ <= 32 ? '+1D4' : '+1D6';
-  const fields = { ...st, 職業: pick(OCCUPATIONS), 年齢: 15 + Math.floor(Math.random() * 70), SAN: st.POW * 5, 幸運: st.POW * 5, アイデア: st.INT * 5, 知識: Math.min(99, st.EDU * 5), 耐久力: Math.ceil((st.CON + st.SIZ) / 2), 'マジック・ポイント': st.POW, 'ダメージ・ボーナス': db };
+  const fields = { ...st, 職業: pick(OCCUPATIONS), SAN: st.POW * 5, 幸運: st.POW * 5, アイデア: st.INT * 5, 知識: Math.min(99, st.EDU * 5), 耐久力: Math.ceil((st.CON + st.SIZ) / 2), 'マジック・ポイント': st.POW, 'ダメージ・ボーナス': db };
   // メモ：この世界の付箋の本文と、手元の短い文章から作る
   const texts = [...SEED_TEXT, ...Object.values(world.notes).map(n => n.body.replace(/[#*>\-[\]!()]/g, '')).filter(t => t.length > 10)]
     .flatMap(t => t.split(/(?<=[。！？])/)).map(s => s.trim()).filter(s => s.length >= 6);

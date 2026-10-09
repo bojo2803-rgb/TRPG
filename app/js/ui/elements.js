@@ -1,6 +1,6 @@
 // 要素（人物・シナリオ・アイテム・集団）の編集画面の欄と、期間つきのつながり（所属・持ち主）の窓
 import { h, esc, uid, debounce, byTitle } from '../util.js';
-import { KINDS, kindOf, newBoard, newLink, newNote, childrenOf, findByTitle, placePath, placeKids, isWithin } from '../model.js';
+import { KINDS, kindOf, newBoard, newLink, newNote, childrenOf, findByTitle, placePath, placeKids, isWithin, bornOf } from '../model.js';
 import { formatTime } from '../cal/index.js';
 import { ageAt, ageText } from '../cal/age.js';
 import { pickNote } from './picker.js';
@@ -201,12 +201,7 @@ export function orgSec(ctx, w, n) {
       add('＋', pick('下部組織', id => ctx.commit(w => { if (!w.notes[id].parents.includes(n.id)) w.notes[id].parents.push(n.id); }, '下部組織を足す'), downs.map(k => k.id)))));
 }
 // ===== 生年月日・シナリオの時期・年齢 =====
-// 生年月日：入れたもの。なければ時系列の「誕生」（主体の最初の区間の始まり）
-export function bornOf(w, n) {
-  if (n?.born) return n.born;
-  const g = n?.legs?.[0], tr = g && w.tracks.find(t => t.id === g.tr);
-  return tr ? { tr: g.tr, t: g.a, prec: 'day', tz: tr.cal === 'fict' ? null : w.settings?.tz, fromMap: true } : null;
-}
+export { bornOf };
 // シナリオの時期：入れたもの。なければ、シナリオに入れた出来事のいちばん早い日時
 export function periodOf(w, sc) {
   if (sc?.period) return sc.period;
