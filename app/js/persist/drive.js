@@ -1,9 +1,11 @@
 // Googleドライブに保存する。Googleでログインし、このアプリが作ったファイルだけを読み書きする（drive.file の権限）。
 //   ドライブの「TRPG 世界設定」フォルダの中に、世界ごとのフォルダ。その中に world.json（世界のデータ）と画像。
 //   保存するとき、もう一方の端末が先に保存していたら、その内容を取り込んでから保存する（merge.js）。同じ付箋を両方で直していたら2枚になる
+//   世界のフォルダには「AI用まとめ（世界名）.md」も置く（世界全体を AI が読みやすい文章にしたもの。保存のあと少し待ってまとめて書く）
 // 使う前に、Google Cloud で「OAuth クライアント ID」を作り、設定に貼る（手順書：docs/google-drive-setup.md）
 import { h } from '../util.js';
 import { mergeWorlds } from '../merge.js';
+import { worldDigest } from '../aiDigest.js';
 import { registerBackend } from './index.js';
 
 const API = 'https://www.googleapis.com/drive/v3', UP = 'https://www.googleapis.com/upload/drive/v3';
@@ -17,8 +19,10 @@ const conf = {
 };
 
 // ドライブとのやり取り。fetch と、アクセス用の鍵（トークン）を渡すと、自動確認でも使える
-export function createDriveBackend({ fetch: f = (...a) => fetch(...a), token }) {
-  const metas = new Map(); // 世界の id → { folderId, fileId, version, base（前に保存・読み込みした姿） }
+// digestDelay：保存してから AI用まとめ を書くまで待つ時間（続けて保存しても、まとめて1回）
+export function createDriveBackend({ fetch: f = (...a) => fetch(...a), token, digestDelay = 30000 }) {
+  const metas = new Map(); // 世界の id → { folderId, fileId, version, base（前に保存・読み込みした姿）, digestId }
+  const digestTimers = new Map(), digestLatest = new Map();
   let rootId = null;
   async function api(method, url, { body, headers = {}, raw = false } = {}) {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -48,7 +52,27 @@ export function createDriveBackend({ fetch: f = (...a) => fetch(...a), token }) 
     return { body: new Blob([`--${B}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${B}\r\nContent-Type: ${mime}\r\n\r\n`, data, `\r\n--${B}--`]), headers: { 'Content-Type': `multipart/related; boundary=${B}` } };
   }
   const download = async id => (await api('GET', `${API}/files/${id}?alt=media`, { raw: true }));
+  // AI用まとめ：あれば中身（と名前）を入れ替え、なければ作る。書けなくても保存は止めない
+  async function writeDigest(w) {
+    const folderId = await folderOf(w.id);
+    if (!folderId) return;
+    const m = metas.get(w.id) || {}, name = `AI用まとめ（${w.name}）.md`, text = worldDigest(w);
+    let id = m.digestId || (await list(`'${folderId}' in parents and trashed=false and appProperties has { key='trpgDigest' and value='1' }`, 'files(id,name)'))[0]?.id;
+    if (id) {
+      await api('PATCH', `${UP}/files/${id}?uploadType=media&fields=id`, { body: text, headers: { 'Content-Type': 'text/markdown; charset=UTF-8' } });
+      if (m.digestName !== name) await api('PATCH', `${API}/files/${id}?fields=id`, { body: JSON.stringify({ name }), headers: { 'Content-Type': 'application/json' } });
+    } else id = (await api('POST', `${UP}/files?uploadType=multipart&fields=id`, multipart({ name, parents: [folderId], mimeType: 'text/markdown', appProperties: { trpgDigest: '1' } }, text, 'text/markdown; charset=UTF-8'))).id;
+    if (metas.get(w.id)) Object.assign(metas.get(w.id), { digestId: id, digestName: name });
+  }
+  const scheduleDigest = w => {
+    digestLatest.set(w.id, w);
+    if (digestTimers.has(w.id)) return;
+    const t = setTimeout(() => { digestTimers.delete(w.id); writeDigest(digestLatest.get(w.id)).catch(e => console.warn('AI用まとめを書けませんでした', e)); }, digestDelay);
+    t.unref?.(); // 自動確認（node）で、待ち時間のために終われなくならないように
+    digestTimers.set(w.id, t);
+  };
   return {
+    writeDigest,
     name: 'drive', label: 'Googleドライブ',
     async listWorlds() {
       const r = await root();
@@ -72,6 +96,7 @@ export function createDriveBackend({ fetch: f = (...a) => fetch(...a), token }) 
         const text = JSON.stringify(w), mp = multipart({ name: 'world.json', parents: [folderId], mimeType: 'application/json', appProperties: { trpgData: '1' } }, text, 'application/json');
         const r = await api('POST', `${UP}/files?uploadType=multipart&fields=id,version`, mp);
         metas.set(w.id, { folderId, fileId: r.id, version: r.version, base: text, name: w.name });
+        scheduleDigest(w);
         return null;
       }
       const now = await api('GET', `${API}/files/${m.fileId}?fields=version`);
@@ -85,6 +110,7 @@ export function createDriveBackend({ fetch: f = (...a) => fetch(...a), token }) 
       const r = await api('PATCH', `${UP}/files/${m.fileId}?uploadType=media&fields=version`, { body: text, headers: { 'Content-Type': 'application/json' } });
       m.version = r.version; m.base = text;
       if (m.name !== out.name) { await api('PATCH', `${API}/files/${m.folderId}?fields=id`, { body: JSON.stringify({ name: out.name }), headers: { 'Content-Type': 'application/json' } }); m.name = out.name; }
+      scheduleDigest(out);
       return out === w ? null : { world: out, conflicts };
     },
     // 削除：ドライブのゴミ箱へ（30日以内ならドライブから戻せる）

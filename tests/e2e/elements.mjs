@@ -103,5 +103,11 @@ ok(items.length === 1, 'one undo takes them all off');
 // 人物の表：年齢ではなく生年月日
 await tab('people');
 ok(await p.locator('.th-sort:has-text("生年月日")').count() === 1 && await p.locator('.th-sort:has-text("年齢")').count() === 0, 'people table has birth dates, not a fixed age');
+// AIに読ませる（このブラウザの世界）：文章とコピー。ドライブのファイルはない
+await p.click('#worldBtn'); await p.waitForTimeout(200);
+await p.click('#menu button:has-text("AIに読ませる")'); await p.waitForTimeout(600);
+ok((await p.locator('#ai_text').inputValue()).includes('### ダンウィッチの怪') && (await p.locator('#dlgBody').textContent()).includes('「このブラウザ」に保存しています'), 'AI text for a browser world');
+await p.screenshot({ path: SHOT + 'ai-dialog.png' });
+await p.click('#dlgCancel');
 ok(!errors.length, 'errors: ' + errors.join('\n'));
 await b.close(); done();

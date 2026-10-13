@@ -32,8 +32,8 @@ export function emitter() {
   return { on: fn => (subs.add(fn), () => subs.delete(fn)), emit: (...a) => subs.forEach(fn => fn(...a)) };
 }
 
-// 日本語の並び順（あいうえお順）
-export const collator = new Intl.Collator('ja');
+// 日本語の並び順（あいうえお順）。数字は数として（村人2 → 村人10）
+export const collator = new Intl.Collator('ja', { numeric: true });
 // 名前の並びは、よみがあればよみで（漢字の名前が、あいうえお順に並ぶ）
 export const nameKey = n => n?.fields?.['よみ'] || n?.title || '';
 export const byTitle = (a, b) => collator.compare(nameKey(a), nameKey(b));

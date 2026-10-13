@@ -189,3 +189,8 @@ test('placing everything in a scenario on its board: one row per kind, below wha
   assert.ok(pts.every((a, i) => pts.every((b, j) => i === j || Math.abs(a.x - b.x) >= 200 || Math.abs(a.y - b.y) >= 100)), 'no two overlap');
   assert.deepEqual(scenarioBoardSpots(w, 'sc', { ...spots, sc: { x: 40, y: 40 }, kat: { x: 300, y: 40 } }), {}, 'nothing left to place');
 });
+
+test('numbers in names sort as numbers', async () => {
+  const { byTitle } = await import('../app/js/util.js');
+  assert.deepEqual(['村人10', '村人2', '村人1'].map(title => ({ title })).sort(byTitle).map(n => n.title), ['村人1', '村人2', '村人10']);
+});

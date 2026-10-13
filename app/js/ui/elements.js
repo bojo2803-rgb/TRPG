@@ -1,6 +1,6 @@
 // 要素（人物・シナリオ・アイテム・集団）の編集画面の欄と、期間つきのつながり（所属・持ち主）の窓
 import { h, esc, uid, debounce, byTitle } from '../util.js';
-import { KINDS, kindOf, newBoard, newLink, newNote, childrenOf, findByTitle, placePath, placeKids, isWithin, bornOf } from '../model.js';
+import { KINDS, kindOf, newBoard, newLink, newNote, childrenOf, findByTitle, placePath, placeKids, isWithin, bornOf, periodOf } from '../model.js';
 import { formatTime } from '../cal/index.js';
 import { ageAt, ageText } from '../cal/age.js';
 import { pickNote } from './picker.js';
@@ -202,11 +202,7 @@ export function orgSec(ctx, w, n) {
 }
 // ===== 生年月日・シナリオの時期・年齢 =====
 export { bornOf };
-// シナリオの時期：入れたもの。なければ、シナリオに入れた出来事のいちばん早い日時
-export function periodOf(w, sc) {
-  if (sc?.period) return sc.period;
-  return childrenOf(w, sc.id).filter(k => k.when).sort((a, b) => tKey(a) - tKey(b))[0]?.when || null;
-}
+export { periodOf };
 export const ageIn = (w, person, sc) => ageText(ageAt(w, bornOf(w, person), periodOf(w, sc)));
 // 日時を選ぶ窓（世界線も選べる。架空の暦の世界線なら、その暦で入れる）
 async function dateDialog(ctx, { title, value, onSave, onClear }) {

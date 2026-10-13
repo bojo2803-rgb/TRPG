@@ -235,6 +235,7 @@ async function worldMenu() {
     ['＋ 新しい世界', () => newWorldDialog()],
     ['見本の世界を開く', () => exampleMenu()],
     ['名前を変える', () => renameDialog()],
+    ['AIに読ませる（世界全体を1つの文章に）', () => aiDialog()],
     ['書き出す（ファイルにして持ち出す）', () => exportDialog()],
     ['読み込む（書き出したファイルを開く）', () => importDialog()],
     '-',
@@ -272,25 +273,50 @@ function deleteWorldDialog() {
     },
   });
 }
-// 書き出す：ページからのダウンロードが使えない環境（Artifact など）もあるので、文字にしてコピーもできるようにする
+// 「ファイルに保存」「コピー」のボタン。ページからのダウンロードが使えない環境（Artifact など）もあるので、文字にしてコピーもできるようにする
+function saveCopyButtons(text, filename, mime, ta) {
+  return h('div', { class: 'row' },
+    h('button', { type: 'button', class: 'btn', onclick: () => {
+      try {
+        const a = h('a', { href: URL.createObjectURL(new Blob([text()], { type: mime })), download: filename });
+        a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      } catch { toast('この環境ではファイルに保存できません。コピーしてください'); }
+    } }, 'ファイルに保存'),
+    h('button', { type: 'button', class: 'btn', onclick: e => {
+      navigator.clipboard?.writeText(text()).then(() => { e.target.textContent = 'コピーしました'; }, () => { ta.focus(); ta.select(); e.target.textContent = '選んだ文字をコピーしてください'; });
+    } }, 'コピー'));
+}
 function exportDialog() {
-  const json = JSON.stringify(store.get(), null, 1);
+  const json = JSON.stringify(store.get(), null, 1), ta = h('textarea', { id: 'ex_text', readOnly: true, rows: 8, class: 'data', 'aria-label': 'いまの世界' }, json);
   openDialog({
     title: '書き出す',
     body: h('div', { class: 'fields' },
       h('p', { class: 'note-text' }, 'いまの世界を1つのファイル（.json）にします。画像はファイルに入りません（保存先に残ります）。「ファイルに保存」が使えないときは、コピーしてメモ帳などに貼り付け、名前の最後を「.json」にして保存してください。'),
-      h('div', { class: 'row' },
-        h('button', { type: 'button', class: 'btn', onclick: () => {
-          try {
-            const a = h('a', { href: URL.createObjectURL(new Blob([json], { type: 'application/json' })), download: `${store.get().name}.json` });
-            a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-          } catch { toast('この環境ではファイルに保存できません。コピーしてください'); }
-        } }, 'ファイルに保存'),
-        h('button', { type: 'button', class: 'btn', onclick: e => {
-          const t = $('ex_text');
-          navigator.clipboard?.writeText(json).then(() => { e.target.textContent = 'コピーしました'; }, () => { t.focus(); t.select(); e.target.textContent = '選んだ文字をコピーしてください'; });
-        } }, 'コピー')),
-      h('textarea', { id: 'ex_text', readOnly: true, rows: 8, class: 'data', 'aria-label': 'いまの世界' }, json)),
+      saveCopyButtons(() => json, `${store.get().name}.json`, 'application/json', ta), ta),
+  });
+}
+// AIに読ませる：世界全体を、AIが読みやすい1つの文章（Markdown）に。先頭に頼み文。
+// ドライブの世界なら、ドライブの「AI用まとめ（世界名）.md」もいま新しくする（ふだんは保存のあと少しして新しくなる）
+async function aiDialog() {
+  const { worldDigest } = await import('./aiDigest.js');
+  const w = store.get(), drive = persist.current()?.backend === 'drive' ? backendOf('drive') : null;
+  let withRequest = true;
+  const text = () => worldDigest(store.get(), { request: withRequest });
+  const ta = h('textarea', { id: 'ai_text', readOnly: true, rows: 12, class: 'data', 'aria-label': 'AIに読ませる文章' }, text());
+  const status = h('p', { class: 'note-text' }, 'ドライブのファイルを新しくしています…');
+  if (drive) drive.writeDigest(store.get()).then(() => { status.textContent = 'ドライブのファイルを、いまの内容に新しくしました。'; }, e => { status.textContent = `ドライブのファイルを新しくできませんでした（${e.message}）。下の「コピー」で渡してください。`; });
+  openDialog({
+    title: 'AIに読ませる', wide: true,
+    body: h('div', { class: 'fields' },
+      h('p', {}, '世界全体（シナリオ・人物・ロケーション・集団・アイテム・出来事・ストーリーチャート）を、AIが読みやすい1つの文章にしました。先頭に「矛盾・時系列や年齢のずれ・シナリオの抜けなどを、世界全体を見通して調べて」という頼み文が入っています。'),
+      drive ? h('div', { class: 'ai-drive' },
+        h('b', {}, 'ドライブにつながったAI（Claude など）には'),
+        h('p', {}, `「Googleドライブの『AI用まとめ（${w.name}）』を読んで、頼み文どおりに精査して」と頼むだけで読めます。このファイルは、保存のたびに（30秒ほどあとに）新しくなります。`), status)
+        : h('p', { class: 'note-text' }, 'この世界は「このブラウザ」に保存しています。Googleドライブに保存する世界なら、ドライブにもいつも最新の文章を置くので、ドライブにつながったAIにそのまま読ませられます。'),
+      h('b', {}, 'どのAIにも渡せるやり方'),
+      h('ol', { class: 'ai-steps' }, h('li', {}, '「コピー」か「ファイルに保存」'), h('li', {}, 'AI（Claude・ChatGPT など）のチャットに貼る。ファイルなら添付する'), h('li', {}, '「頼み文どおりに精査して」と送る（とくに見てほしいことを足してもよい）')),
+      h('label', { class: 'cb' }, h('input', { type: 'checkbox', checked: true, onchange: e => { withRequest = e.target.checked; ta.value = text(); } }), '頼み文を入れる'),
+      saveCopyButtons(text, `AI用まとめ（${w.name}）.md`, 'text/markdown', ta), ta),
   });
 }
 function importDialog() {

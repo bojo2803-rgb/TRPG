@@ -88,6 +88,11 @@ export function bornOf(w, n) {
   const g = n?.legs?.[0], tr = g && w.tracks.find(t => t.id === g.tr);
   return tr ? { tr: g.tr, t: g.a, prec: 'day', tz: tr.cal === 'fict' ? null : w.settings?.tz, fromMap: true } : null;
 }
+// シナリオの時期：入れたもの。なければ、シナリオに入れた出来事のいちばん早い日時
+export function periodOf(w, sc) {
+  if (sc?.period) return sc.period;
+  return childrenOf(w, sc.id).filter(k => k.when).sort((a, b) => a.when.t.d - b.when.t.d || a.when.t.s - b.when.t.s)[0]?.when || null;
+}
 export const templatesFor = (w, note) => Object.values(w.templates).filter(t => t.tags.some(tag => note.tags.includes(tag)) || (t.kinds || []).includes(kindOf(note)));
 export const allTags = w => [...new Set(Object.values(w.notes).flatMap(n => n.tags))].sort((a, b) => a.localeCompare(b, 'ja'));
 export const childrenOf = (w, id) => Object.values(w.notes).filter(n => n.parents.includes(id));

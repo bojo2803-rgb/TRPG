@@ -116,3 +116,28 @@ test('sharing puts a public file that anyone with the key can read; update keeps
   await A.unshare(id);
   assert.equal(await read(), 404);
 });
+
+test('an AI-readable summary of the whole world is kept next to the data, updated after saves', async () => {
+  const srv = fakeDrive(), A = createDriveBackend({ fetch: srv.fetch, token: async () => 't', digestDelay: 0 });
+  const tick = () => new Promise(r => setTimeout(r, 20));
+  const w = newWorld('黄昏の世界');
+  w.notes.a = newNote({ id: 'a', kind: 'person', title: '店主 葛城' });
+  await A.saveWorld(w); await tick();
+  const digests = () => [...srv.files.values()].filter(f => f.appProperties?.trpgDigest);
+  assert.equal(digests().length, 1);
+  assert.equal(digests()[0].name, 'AI用まとめ（黄昏の世界）.md');
+  assert.equal(digests()[0].mimeType, 'text/markdown');
+  assert.match(digests()[0].content, /^# 世界「黄昏の世界」[\s\S]*## AIへのお願い[\s\S]*店主 葛城/);
+  const folder = [...srv.files.values()].find(f => f.appProperties?.trpgWorld).id;
+  assert.ok(digests()[0].parents.includes(folder), 'in the world folder');
+  // 直して保存 → 同じファイルが新しくなる。名前を変えれば、ファイルの名前も
+  w.notes.b = newNote({ id: 'b', kind: 'person', title: '記者 三浦' }); w.name = '黄昏の世界（改）';
+  await A.saveWorld(w); await tick();
+  assert.equal(digests().length, 1, 'still one file');
+  assert.match(digests()[0].content, /記者 三浦/);
+  assert.equal(digests()[0].name, 'AI用まとめ（黄昏の世界（改））.md');
+  // すぐ書く（AIに読ませる画面を開いたとき）
+  w.notes.c = newNote({ id: 'c', kind: 'place', title: 'K村' });
+  await A.writeDigest(w);
+  assert.match(digests()[0].content, /K村/);
+});

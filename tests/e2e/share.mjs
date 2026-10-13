@@ -40,6 +40,17 @@ const share = await p.evaluate(id => __app.world.notes[id].share, sid);
 ok(!!share?.fileId, 'share link created');
 const url = await p.evaluate(async id => (await import('./js/persist/drive.js')).shareUrl(__app.world.notes[id].share.fileId), sid);
 ok(/share\.html#f=.+&k=AIzaTEST/.test(url), 'link points at the reading page with the key: ' + url);
+// AIに読ませる：世界全体を1つの文章に。ドライブの世界なら、ドライブの「AI用まとめ」もいま新しくする
+await p.click('#worldBtn'); await wait(200);
+await p.click('#menu button:has-text("AIに読ませる")'); await wait(1200);
+const aiText = await p.locator('#ai_text').inputValue();
+ok(aiText.startsWith('# 世界「共有テスト」') && aiText.includes('## AIへのお願い') && aiText.includes('### ダンウィッチの怪') && aiText.includes('アーミテッジ'), 'the whole world as one text with the request');
+ok((await p.locator('#dlgBody .ai-drive').textContent()).includes('新しくしました'), 'Drive copy refreshed when the dialog opens');
+const dg = [...srv.files.values()].find(f => f.appProperties?.trpgDigest);
+ok(dg?.name === 'AI用まとめ（共有テスト）.md' && dg.content.includes('ダンウィッチの怪'), 'AI summary file is in the world folder on Drive');
+await p.click('#dlgBody label:has-text("頼み文を入れる") input'); await wait(200);
+ok(!(await p.locator('#ai_text').inputValue()).includes('## AIへのお願い'), 'request can be left out');
+await p.click('#dlgCancel'); await wait(100);
 // 読むページ（同じタブ：取り込むときにログインが残っているように）
 await p.goto(url); await p.waitForSelector('.share h1'); await wait(500);
 ok(await p.locator('.share h1').textContent() === 'ダンウィッチの怪', 'reading page shows the scenario');

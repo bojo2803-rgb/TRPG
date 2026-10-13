@@ -488,6 +488,10 @@ a.btn { text-decoration: none; color: inherit; display: inline-flex; align-items
 .sf { display: grid; grid-template-columns: 9em 1fr; gap: 8px; align-items: start; }
 .sf .lbl { color: var(--muted); font-size: 13px; }
 .share-foot { margin-top: 32px; }
+/* AIに読ませる */
+.ai-drive { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--raised); }
+.ai-drive p { margin: 4px 0 0; }
+.ai-steps { margin: 0; padding-left: 1.4em; display: grid; gap: 2px; }
 /* たためる項目：見出しの左に ▸、開いていれば下向き */
 .fold > summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; cursor: pointer; list-style: none; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 2px solid var(--line); }
 .fold > summary::-webkit-details-marker { display: none; }
