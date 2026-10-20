@@ -42,7 +42,7 @@ export function newWorld(name = '新しい世界') {
   const w = {
     format: FORMAT, version: VERSION, id: uid('w'), name,
     settings: DEFAULT_SETTINGS(),
-    notes: {}, links: {}, boards: {}, templates: {}, maps: {}, calendars: {}, images: {},
+    notes: {}, links: {}, boards: {}, templates: {}, maps: {}, calendars: {}, images: {}, tagInfo: {},
     tracks: [{ id: 'main', name: '本線', lane: 0, color: 0, cal: 'west', from: T(-5040344048455), to: T(2488070) }],
   };
   const b = newBoard({ name: 'コルクボード' });
@@ -168,7 +168,7 @@ export function migrateWorld(d) {
 function fill(d) {
   const w = { ...newWorld(d.name), ...d };
   w.settings = { ...DEFAULT_SETTINGS(), ...d.settings, cal: { ...DEFAULT_SETTINGS().cal, ...d.settings?.cal } };
-  for (const k of ['notes', 'links', 'boards', 'templates', 'maps', 'calendars', 'images']) w[k] ||= {};
+  for (const k of ['notes', 'links', 'boards', 'templates', 'maps', 'calendars', 'images', 'tagInfo']) w[k] ||= {};
   for (const n of Object.values(w.notes)) { n.tags ||= []; n.parents ||= []; n.fields ||= {}; n.body ??= ''; n.title ??= ''; }
   for (const b of Object.values(w.boards)) { b.items ||= {}; b.collapsed ||= []; }
   for (const m of Object.values(w.maps)) { m.pins ||= []; for (const p of m.pins) p.id ||= uid('p'); m.lines ||= []; }

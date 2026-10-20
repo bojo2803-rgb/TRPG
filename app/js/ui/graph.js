@@ -1,7 +1,7 @@
 // グラフ：すべてのカードとつながりを網の目で見渡す（つながり・家族・まとめの親子・本文のリンク）。
 // arg.only（例：'group'）なら、その種類だけの相関図（つながりのラベルつき。集団タブの「相関図」）
 import { h, esc } from '../util.js';
-import { findByTitle, kindOf } from '../model.js';
+import { findByTitle, kindOf, allTags } from '../model.js';
 import { linkTitles } from './markdown.js';
 import { forceLayout } from './graphLayout.js';
 import { panZoom } from './panzoom.js';
@@ -9,9 +9,12 @@ import { scopeIds, scopeGroupIds, scopeSelect, scopeChip } from './scope.js';
 
 const show = { links: true, family: true, parents: true, body: true, lonely: false };
 let focusId = null;
+// タグ：そのタグのカードを目立たせる（ほかは薄く）か、これだけ出す（つながりのないものも）
+const tagView = { tag: '', only: false };
 
 export function mount(el, ctx, arg) {
   if (arg?.focus) focusId = arg.focus;
+  if (arg?.tag) Object.assign(tagView, { tag: arg.tag, only: false });
   const only = arg?.only || null;
   const bar = h('div', { class: 'bar' }), stage = h('div', { class: 'graph-stage', 'aria-label': 'グラフ' }), layer = h('div', { class: 'graph-layer' });
   stage.append(layer);
@@ -41,7 +44,9 @@ export function mount(el, ctx, arg) {
     const edges = edgesOf(w);
     const deg = {};
     for (const e of edges) { deg[e.a] = (deg[e.a] || 0) + 1; deg[e.b] = (deg[e.b] || 0) + 1; }
-    let ids = Object.keys(w.notes).filter(id => only ? kindOf(w.notes[id]) === only : show.lonely || deg[id]);
+    if (tagView.tag && !allTags(w).includes(tagView.tag)) tagView.tag = ''; // 外された・名前が変わったタグ
+    const tagOnly = !only && tagView.tag && tagView.only;
+    let ids = Object.keys(w.notes).filter(id => only ? kindOf(w.notes[id]) === only : tagOnly ? w.notes[id].tags.includes(tagView.tag) : show.lonely || deg[id] || (tagView.tag && w.notes[id].tags.includes(tagView.tag)));
     total = ids.length;
     if (inSc) ids = ids.filter(id => inSc.has(id));
     ids.sort();
@@ -53,7 +58,8 @@ export function mount(el, ctx, arg) {
   function draw() {
     const w = ctx.world, { ids, es, deg } = data;
     const near = new Set(focusId ? [focusId, ...es.filter(e => e.a === focusId || e.b === focusId).flatMap(e => [e.a, e.b])] : []);
-    const dim = id => focusId && !near.has(id);
+    const tagged = id => !only && tagView.tag && w.notes[id]?.tags.includes(tagView.tag);
+    const dim = id => (focusId && !near.has(id)) || (!only && tagView.tag && !tagView.only && !tagged(id));
     if (!ids.length) { layer.replaceChildren(h('div', { class: 'fam-empty' }, only ? 'まだ集団がありません' : 'つながりのあるカードがまだありません（「つながりのないものも出す」で全部出せます）')); pz.fit(-24, -24, 424, 124); return; }
     const xs = ids.map(id => pos[id].x), ys = ids.map(id => pos[id].y), x0 = Math.min(...xs) - 60, y0 = Math.min(...ys) - 40;
     const X = id => pos[id].x - x0, Y = id => pos[id].y - y0;
@@ -63,7 +69,7 @@ export function mount(el, ctx, arg) {
     if (only) for (const e of es) if (e.label) svg += `<text class="g-elabel" x="${(X(e.a) + X(e.b)) / 2}" y="${(Y(e.a) + Y(e.b)) / 2 - 4}" text-anchor="middle">${esc(e.label)}</text>`;
     for (const id of ids) {
       const n = w.notes[id], r = 5 + Math.min(14, Math.sqrt(deg[id] || 0) * 3);
-      svg += `<g class="g-node${dim(id) ? ' dim' : ''}${id === focusId ? ' focus' : ''}" data-click="${id}"><circle cx="${X(id)}" cy="${Y(id)}" r="${r}" class="g-c c${n.color ?? 0}"/><text x="${X(id)}" y="${Y(id) + r + 13}" text-anchor="middle">${esc(n.title || '名前なし')}</text></g>`;
+      svg += `<g class="g-node${dim(id) ? ' dim' : ''}${id === focusId ? ' focus' : ''}${tagged(id) && !tagView.only ? ' tagged' : ''}" data-click="${id}"><circle cx="${X(id)}" cy="${Y(id)}" r="${r}" class="g-c c${n.color ?? 0}"/><text x="${X(id)}" y="${Y(id) + r + 13}" text-anchor="middle">${esc(n.title || '名前なし')}</text></g>`;
     }
     const W = Math.max(...xs) - x0 + 60, H = Math.max(...ys) - y0 + 60;
     layer.innerHTML = `<svg width="${W}" height="${H}">${svg}</svg>`;
@@ -73,7 +79,11 @@ export function mount(el, ctx, arg) {
     const unit = only ? 'つ' : '件', sc = [scopeSelect(ctx, render), scopeChip(ctx, render, data?.ids.length ?? 0, total, unit)];
     if (only) { bar.replaceChildren(...[h('h2', {}, '相関図'), h('span', { class: 'note-text' }, '集団どうしのつながり（同盟・敵対などは、つながりのラベル）'), ...sc, h('span', { class: 'sp' }), h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; draw(); } }, '⤢')].filter(Boolean)); return; }
     const opt = (k, label) => h('label', { class: 'cb' }, h('input', { type: 'checkbox', checked: show[k], onchange: e => { show[k] = e.target.checked; render(); } }), label);
-    bar.replaceChildren(...[h('h2', {}, 'グラフ'), opt('links', 'つながり'), opt('family', '家族'), opt('parents', 'まとめ'), opt('body', '本文のリンク'), opt('lonely', 'つながりのないものも出す'), ...sc,
+    const tags = allTags(ctx.world);
+    if (tagView.tag && !tags.includes(tagView.tag)) tagView.tag = '';
+    const tagSel = tags.length ? h('select', { 'aria-label': 'タグ', onchange: e => { tagView.tag = e.target.value; first = true; render(); } }, h('option', { value: '' }, 'タグ：なし'), ...tags.map(t => h('option', { value: t, selected: t === tagView.tag }, `#${t}`))) : null;
+    const tagMode = tagView.tag ? h('div', { class: 'seg', role: 'group', 'aria-label': 'タグの見せ方' }, ...[[false, '目立たせる'], [true, 'これだけ']].map(([v, l]) => h('button', { type: 'button', 'aria-pressed': String(tagView.only === v), onclick: () => { tagView.only = v; first = true; render(); } }, l))) : null;
+    bar.replaceChildren(...[h('h2', {}, 'グラフ'), opt('links', 'つながり'), opt('family', '家族'), opt('parents', 'まとめ'), opt('body', '本文のリンク'), opt('lonely', 'つながりのないものも出す'), ...sc, tagSel, tagMode,
       h('span', { class: 'sp' }), focusId ? h('button', { type: 'button', class: 'btn small', onclick: () => { focusId = null; draw(); renderBar(); } }, '強調を消す') : null,
       h('button', { type: 'button', class: 'btn icon', 'aria-label': '全体を見る', title: '全体を見る', onclick: () => { first = true; draw(); } }, '⤢')].filter(Boolean));
   }

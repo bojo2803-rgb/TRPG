@@ -5,6 +5,7 @@ import { formatTime } from './cal/index.js';
 import { ageAt, ageText } from './cal/age.js';
 import { NODE_TYPES, layoutChart } from './chart.js';
 import { byTitle } from './util.js';
+import { tagList } from './tags.js';
 
 export const REQUEST = `あなたはTRPG（テーブルトークRPG）のシナリオと世界設定の編集者です。この文章は、作者がアプリ「TRPG 世界設定」で作った世界を、全部書き出したものです。全部読んで、作者のために精査してください。
 シナリオを1本ずつ見るのではなく、同じ世界にあるすべてのシナリオ・人物・場所・アイテム・出来事を見通して、次のことを探してください。
@@ -21,7 +22,7 @@ export const REQUEST = `あなたはTRPG（テーブルトークRPG）のシナ�
 - 書いていないことを事実として扱わないでください。わからないことは、最後に「作者への質問」としてまとめてください。
 - 設定を書き直した全文は要りません。`;
 
-const READING = `- 下は、世界の中身を種類ごとに並べたものです（世界線と暦 → ロケーション → 集団 → 人物 → アイテム → シナリオ → 時系列 → 付箋 → つながり）。
+const READING = `- 下は、世界の中身を種類ごとに並べたものです（世界線と暦 → ロケーション → 集団 → 人物 → アイテム → シナリオ → 時系列 → 付箋 → タグ → つながり）。タグの説明は、作者がそのタグに込めた意味です。
 - カードは名前で呼びます。同じ名前が2つ以上あるときは「名前〔種類・番号〕」で区別しています。
 - メモの中の [[名前]] は、ほかのカードへのリンクです。
 - 人物に固定の年齢はありません。生年月日と、シナリオの時期から数えた「その時の年齢」を、登場するシナリオの横に書いています（「約」は、生年月日などが「〜頃」「年まで」で、前後1年ずれうるもの）。
@@ -170,6 +171,10 @@ export function worldDigest(w, { request = true, now = new Date() } = {}) {
   // 付箋（時系列にないもの）
   const rest = of('note').filter(n => !n.when);
   if (rest.length) out.push('## 付箋', '', ...rest.map(n => card(nm(n.id), [n.parents.filter(p => w.notes[p]).length ? `- まとめ（中に入っている先）：${names(n.parents)}` : '', tags(n), memo(n)])));
+
+  // タグ：説明と、付いているカード
+  const tl = tagList(w);
+  if (tl.length) out.push('## タグ', '', ...tl.map(t => `- #${t.tag}（${t.count}枚）${t.memo ? `：${t.memo.replace(/\n+/g, ' ')}` : ''}\n  - 付いているカード：${names(notes.filter(n => n.tags?.includes(t.tag)).sort(byTitle).map(n => n.id))}`), '');
 
   // つながり（家族・所属・持ち物のほかの線）
   const free = links.filter(l => (l.kind === 'link' || l.kind === 'order') && w.notes[l.a] && w.notes[l.b]);

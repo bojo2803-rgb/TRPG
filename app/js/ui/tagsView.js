@@ -4,7 +4,7 @@
 import { h } from '../util.js';
 import { KINDS, kindOf, newBoard } from '../model.js';
 import { hintOf } from '../listing.js';
-import { tagList, renameTag, removeTag, tagBoardOf, tagBoardSpots } from '../tags.js';
+import { tagList, renameTag, removeTag, tagBoardOf, tagBoardSpots, setTagMemo } from '../tags.js';
 import { picEl, fillPics } from './kindView.js';
 
 const ORDER = ['person', 'scenario', 'place', 'group', 'item', 'note'];
@@ -34,7 +34,7 @@ export function mount(el, ctx, arg) {
   }
   function renderLeft() {
     const all = tagList(ctx.world), s = q.trim().toLowerCase(), list = all.filter(t => !s || t.tag.toLowerCase().includes(s));
-    left.replaceChildren(all.length ? h('div', { class: 'tree tag-list' }, ...list.map(t => h('button', { type: 'button', class: 'tree-row tag-row', 'aria-current': String(t.tag === sel), onclick: () => pick(t.tag), title: ORDER.filter(k => t.kinds[k]).map(k => `${KINDS[k].label} ${t.kinds[k]}`).join('・') },
+    left.replaceChildren(all.length ? h('div', { class: 'tree tag-list' }, ...list.map(t => h('button', { type: 'button', class: 'tree-row tag-row', 'aria-current': String(t.tag === sel), onclick: () => pick(t.tag), title: [ORDER.filter(k => t.kinds[k]).map(k => `${KINDS[k].label} ${t.kinds[k]}`).join('・'), t.memo].filter(Boolean).join('\n') },
       h('span', { class: 'tree-name' }, `# ${t.tag}`), h('span', { class: 'sp' }), h('span', { class: 'note-text tree-n' }, String(t.count)))),
       list.length ? null : h('p', { class: 'note-text' }, '当てはまるタグがありません'))
       : h('p', { class: 'note-text pad' }, 'まだタグがありません。カードの「そのほか」の「＋ タグ」で付けられます（一覧で複数えらんで「タグを付ける」でも）。'));
@@ -55,7 +55,15 @@ export function mount(el, ctx, arg) {
       h('span', { class: 'sp' }),
       h('button', { type: 'button', class: 'btn small', onclick: renameDialog }, '名前を変える・まとめる'),
       h('button', { type: 'button', class: 'btn small danger', onclick: removeDialog }, '全部から外す'));
-    const note = tpls.length ? h('p', { class: 'note-text' }, `このタグのカードには、テンプレート「${tpls.map(t => t.name).join('」「')}」の欄が出ます。`) : null;
+    // 説明（このタグの意味・決まり）と、ほかの見方へ（このタグを目立たせて開く）
+    const memo = h('textarea', { class: 'tag-memo', rows: info.memo ? Math.min(6, info.memo.split('\n').length + 1) : 1, placeholder: 'このタグの説明（例：持つと正気度が減る品。AI用まとめにも入ります）', 'aria-label': 'タグの説明',
+      onchange: e => ctx.commit(w => setTagMemo(w, sel, e.target.value), 'タグの説明を直す') }, info.memo);
+    const timed = Object.values(w.notes).some(n => n.when && n.tags.includes(sel));
+    const views = h('div', { class: 'row tag-views' }, h('span', { class: 'note-text' }, 'ほかの見方で目立たせる：'),
+      h('button', { type: 'button', class: 'btn small', onclick: () => ctx.go('graph', { tag: sel }) }, 'グラフ'),
+      timed ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.go('timemap', { tag: sel }) }, '時系列') : null);
+    const note = h('div', { class: 'fields tag-info' }, memo, views,
+      tpls.length ? h('p', { class: 'note-text' }, `このタグのカードには、テンプレート「${tpls.map(t => t.name).join('」「')}」の欄が出ます。`) : null);
     if (mode === 'board') {
       const body = h('div', { class: 'el-board tag-board' });
       right.replaceChildren(...[head, note, body].filter(Boolean));

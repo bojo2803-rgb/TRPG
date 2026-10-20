@@ -52,3 +52,42 @@ test('tag board: cards with the tag that are not on it yet, in rows by kind unde
   assert.ok(spots.c.y < spots.b.y, 'people row before items row');
   assert.ok(Object.values(spots).every(p => p.y > 40 + 100));
 });
+
+test('tag descriptions: set and clear; they follow a rename, merge into one text, and go with the tag', async () => {
+  const { setTagMemo, tagMemo } = await import('../app/js/tags.js');
+  const w = world();
+  setTagMemo(w, '呪物', '持つと正気度が減る品');
+  setTagMemo(w, 'じゅぶつ', '表記ゆれ');
+  assert.equal(tagMemo(w, '呪物'), '持つと正気度が減る品');
+  renameTag(w, '呪物', '呪いの品');
+  assert.equal(tagMemo(w, '呪いの品'), '持つと正気度が減る品'); assert.equal(tagMemo(w, '呪物'), '');
+  renameTag(w, 'じゅぶつ', '呪いの品');
+  assert.equal(tagMemo(w, '呪いの品'), '持つと正気度が減る品\n\n表記ゆれ', 'both descriptions kept when merging');
+  setTagMemo(w, '噂', '  '); assert.ok(!('噂' in w.tagInfo), 'empty description is not stored');
+  removeTag(w, '呪いの品'); assert.equal(tagMemo(w, '呪いの品'), '');
+  assert.deepEqual(tagList(w).find(t => t.tag === '鍵').memo, '');
+});
+
+test('remove one tag from many cards at once', async () => {
+  const { untag } = await import('../app/js/bulk.js');
+  const w = world();
+  assert.equal(untag(w, ['a', 'b', 'd'], '呪物'), 2);
+  assert.deepEqual(w.notes.a.tags, ['鍵']); assert.deepEqual(w.notes.d.tags, ['噂']);
+});
+
+test('search finds tags: "#呪" or "呪" lists matching tags, name starts first', async () => {
+  const { searchTags } = await import('../app/js/tags.js');
+  const w = world(); w.notes.x = newNote({ id: 'x', title: 'x', tags: ['古い呪い'] });
+  assert.deepEqual(searchTags(w, '#呪').map(t => [t.tag, t.count]), [['呪物', 3], ['古い呪い', 1]]);
+  assert.deepEqual(searchTags(w, '呪物').map(t => t.tag), ['呪物']);
+  assert.deepEqual(searchTags(w, '#').map(t => t.tag), tagList(w).map(t => t.tag), 'just # lists every tag');
+  assert.deepEqual(searchTags(w, ''), [], 'nothing typed, no tags');
+});
+
+test('two devices editing tag descriptions are merged like other collections', async () => {
+  const { mergeWorlds } = await import('../app/js/merge.js');
+  const base = world(), a = JSON.parse(JSON.stringify(base)), b = JSON.parse(JSON.stringify(base));
+  a.tagInfo = { 呪物: { memo: 'PCで書いた' } }; b.tagInfo = { 噂: { memo: 'スマホで書いた' } };
+  const { world: m } = mergeWorlds(base, a, b);
+  assert.deepEqual(m.tagInfo, { 噂: { memo: 'スマホで書いた' }, 呪物: { memo: 'PCで書いた' } });
+});

@@ -38,6 +38,11 @@ export function addTag(w, ids, tag) {
   for (const id of ids) { const n = w.notes[id]; if (n && !n.tags.includes(tag)) { n.tags.push(tag); c++; } }
   return c;
 }
+export function untag(w, ids, tag) {
+  let c = 0;
+  for (const id of ids) { const n = w.notes[id]; if (n?.tags.includes(tag)) { n.tags = n.tags.filter(t => t !== tag); c++; } }
+  return c;
+}
 export function deleteMany(w, ids) {
   let c = 0;
   for (const id of ids) if (w.notes[id]) { deleteNote(w, id); c++; }

@@ -9,7 +9,7 @@ import { dropLines } from './model.js';
 import { scrubChart } from './chart.js';
 
 const J = v => JSON.stringify(v);
-const COLLECTIONS = ['notes', 'links', 'boards', 'templates', 'maps', 'calendars', 'images'];
+const COLLECTIONS = ['notes', 'links', 'boards', 'templates', 'maps', 'calendars', 'images', 'tagInfo']; // tagInfo：タグの説明（タグの名前ごと）
 
 export function mergeWorlds(base, local, remote) {
   const out = JSON.parse(J(remote)), conflicts = [];

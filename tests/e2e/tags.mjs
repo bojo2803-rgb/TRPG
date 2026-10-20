@@ -54,6 +54,41 @@ ok(Object.values((await W()).notes).filter(n => n.tags.includes('じゅぶつ'))
 await p.evaluate(() => __app.go('people')); await wait(300);
 await p.click('nav button[data-id="tags"]'); await wait(400);
 ok(await p.evaluate(() => location.hash) === '#/tags' && await p.locator('.tag-row').count() === 3, 'タグ is in the other views on the left (呪物 was merged away)');
+// タグの説明：書いて欄を離れると残る。AI用まとめにも入る
+await p.evaluate(() => __app.openTag('じゅぶつ')); await wait(500);
+await p.fill('.tag-memo', '持つと正気度が減る品'); await p.locator('.tag-memo').press('Tab'); await wait(300);
+ok((await W()).tagInfo?.['じゅぶつ']?.memo === '持つと正気度が減る品', 'tag description saved');
+ok((await p.evaluate(async () => (await import('./js/aiDigest.js')).worldDigest(__app.world))).includes('#じゅぶつ（5枚）：持つと正気度が減る品'), 'description is in the AI summary');
+// 検索：「#じゅ」でタグが出て、Enter でタグの画面
+await p.evaluate(() => __app.go('people')); await wait(300);
+await p.click('#search'); await p.keyboard.type('#じゅ'); await wait(200);
+ok((await p.locator('#searchList button').first().textContent()).includes('#じゅぶつ'), 'search lists the tag first');
+await p.keyboard.press('Enter'); await wait(500);
+ok((await p.locator('.tag-main h3').textContent()) === '# じゅぶつ', 'Enter opens the tag');
+// まとめて外す：アイテムの一覧で2つ選んで「タグを外す」
+await p.evaluate(() => __app.go('items')); await wait(400);
+await p.click('.el-tools .seg button:has-text("表")'); await wait(200);
+await p.locator('.tbl tbody tr:has-text("古い鍵") .csel').click(); await p.locator('.tbl tbody tr:has-text("銀の短剣") .csel').click(); await wait(200);
+await p.click('.bulk button:has-text("タグを外す")'); await wait(200);
+await p.selectOption('#dlgBody select', 'じゅぶつ'); await p.click('#dlgOk'); await wait(300);
+let ww = await W();
+ok(!ww.notes[ids.key].tags.includes('じゅぶつ') && !ww.notes[ids.knife].tags.includes('じゅぶつ') && ww.notes[ids.key].tags.includes('鍵'), 'removed one tag from the two chosen cards only');
+await p.keyboard.press('Control+z'); await wait(300);
+// グラフで目立たせる・これだけ
+await p.evaluate(() => __app.openTag('じゅぶつ')); await wait(400);
+await p.click('.tag-views button:has-text("グラフ")'); await wait(900);
+ok(decodeURIComponent(await p.evaluate(() => location.hash)) === '#/graph?tag=じゅぶつ' && await p.locator('.g-node.tagged').count() === 5, 'graph highlights the five tagged cards (even without links)');
+await p.click('.bar .seg button:has-text("これだけ")'); await wait(600);
+ok(await p.locator('.g-node').count() === 5, 'graph shows only them');
+await p.screenshot({ path: SHOT + 'tags-graph.png' });
+// 時系列で目立たせる（時系列にある出来事にタグ）
+await p.evaluate(id => { __app.commit(w => { const n = w.notes[id]; n.when = { tr: 'main', t: { d: 2460000, s: 0 }, prec: 'day', tz: 'Asia/Tokyo' }; }); }, ids.knife);
+const ev2 = await p.evaluate(() => __app.newNote({ title: '別の出来事', when: { tr: 'main', t: { d: 2460100, s: 0 }, prec: 'day', tz: 'Asia/Tokyo' } }, { open: false }));
+await p.evaluate(() => __app.openTag('じゅぶつ')); await wait(400);
+await p.click('.tag-views button:has-text("時系列")'); await wait(1500);
+ok((await p.locator('#tm-tags').textContent()).includes('じゅぶつ（目立たせる）'), 'time map tag chip set to highlight');
+ok(await p.evaluate(() => [...document.querySelectorAll('#tm-map .card')].some(c => c.classList.contains('hl')) && [...document.querySelectorAll('#tm-map .card')].some(c => c.classList.contains('dim'))), 'tagged event stands out, others dim');
+await p.screenshot({ path: SHOT + 'tags-timemap.png' });
 ok(!errors.length, 'errors: ' + errors.join('\n'));
 // スマホ：一覧 → えらぶとタグのページだけ → 「← タグの一覧」
 const ph = await openApp(b, { width: 390, height: 800 });

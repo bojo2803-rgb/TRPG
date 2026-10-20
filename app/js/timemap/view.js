@@ -179,6 +179,7 @@ export function mount(el, ctx, arg) {
   const tm = createTimeMap(root, host);
   root.querySelector('#tm-addScen').onclick = () => scenarioDialog(ctx);
   tm.refresh(true);
+  if (arg?.tag) tm.setTag(arg.tag); // タグの画面の「時系列」から
   window.__tm = tm; // 自動確認用
   if (arg?.focus) setTimeout(() => tm.focusNote(arg.focus), 50);
   if (arg?.subjectForm) setTimeout(() => tm.subjectForm(arg.subjectForm, world().notes[arg.subjectForm]?.title), 50);

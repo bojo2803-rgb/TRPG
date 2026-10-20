@@ -40,7 +40,7 @@ const bootHash = location.hash; // 共有の取り込み（#import&…）は、�
 // 最近開いたもの（この端末だけ、世界ごと）
 const RECENT = 'trpg-recent';
 const recentAll = () => { try { return JSON.parse(localStorage.getItem(RECENT)) || {}; } catch { return {}; } };
-const ROUTE_KEYS = ['open', 'mode', 'sub', 'board', 'map', 'focus'];
+const ROUTE_KEYS = ['open', 'mode', 'sub', 'board', 'map', 'focus', 'tag'];
 const routeArg = r => { const a = {}; for (const k of ROUTE_KEYS) if (r?.[k]) a[k] = r[k]; return Object.keys(a).length ? a : null; };
 
 export const ctx = {

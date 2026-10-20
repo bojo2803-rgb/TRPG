@@ -70,3 +70,12 @@ test('memberships, holdings and free links are written both ways readable', () =
   assert.match(md, /持ち物：社務所の鍵/);
   assert.match(md, /店主 葛城 — 三浦〔人物・1〕「昔なじみ」/);
 });
+
+test('tags with their descriptions and cards', async () => {
+  const { setTagMemo } = await import('../app/js/tags.js');
+  const w = world();
+  w.notes.key.tags.push('呪物'); w.notes.kat.tags.push('呪物');
+  setTagMemo(w, '呪物', '持つと正気度が減る品');
+  const md = worldDigest(w);
+  assert.match(md, /## タグ\n[\s\S]*- #呪物（2枚）：持つと正気度が減る品\n  - 付いているカード：社務所の鍵、店主 葛城/);
+});

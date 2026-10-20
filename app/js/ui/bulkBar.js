@@ -1,8 +1,8 @@
-// まとめての操作の帯：選んだカードを、シナリオに入れる・外す、場所を移す、所属に入れる、タグを付ける、消す。
+// まとめての操作の帯：選んだカードを、シナリオに入れる・外す、場所を移す、所属に入れる、タグを付ける・外す、消す。
 // どれも1回の変更（元に戻すと1回で全部戻る）
 import { h, byTitle } from '../util.js';
 import { KINDS, kindOf, allTags, placeParent, newNote } from '../model.js';
-import { addToScenario, removeFromScenario, setPlace, addMember, addTag, deleteMany } from '../bulk.js';
+import { addToScenario, removeFromScenario, setPlace, addMember, addTag, untag, deleteMany } from '../bulk.js';
 import { pickNote } from './picker.js';
 import { closeDialog } from './dialog.js';
 
@@ -54,6 +54,18 @@ export function bulkBar(ctx, ids, done) {
       onSave: () => { const v = t.value.trim().replace(/^#/, ''); if (!v) throw 'タグを入れてください'; act('まとめてタグを付ける', w => addTag(w, ids, v), c => `${c}${unit}にタグ「${v}」を付けました`); },
     });
   };
+  // タグを外す：選んだカードに付いているタグから選ぶ（何枚に付いているか）
+  const untagIt = () => {
+    const counts = new Map();
+    for (const x of ns) for (const t of x.tags) counts.set(t, (counts.get(t) || 0) + 1);
+    if (!counts.size) { ctx.toast('選んだカードには、タグが付いていません'); return; }
+    const sel = h('select', { 'aria-label': '外すタグ' }, ...[...counts].sort((a, b) => b[1] - a[1]).map(([t, c]) => h('option', { value: t }, `#${t}（${c}${unit}）`)));
+    ctx.openDialog({
+      title: `${n}からタグを外す`, ok: '外す',
+      body: h('label', {}, '外すタグ', sel),
+      onSave: () => { const v = sel.value; act('まとめてタグを外す', w => untag(w, ids, v), c => `${c}${unit}からタグ「${v}」を外しました`); },
+    });
+  };
   const del = () => ctx.openDialog({
     title: `${n}を消す`, ok: '消す',
     body: h('div', { class: 'fields' }, h('p', {}, ns.slice(0, 12).map(x => `「${x.title || '名前なし'}」`).join('') + (ns.length > 12 ? ` ほか${ns.length - 12}${unit}` : '')), h('p', { class: 'note-text' }, '元に戻すで、まとめて戻せます。')),
@@ -67,6 +79,7 @@ export function bulkBar(ctx, ids, done) {
     can('place') ? b('場所を移す', toPlace) : null,
     can('member') ? b('所属に入れる', toGroup) : null,
     b('タグを付ける', tag),
+    b('タグを外す', untagIt),
     h('button', { type: 'button', class: 'btn small danger', onclick: del }, '消す'),
     h('span', { class: 'sp' }),
     b('選ぶのをやめる', done));

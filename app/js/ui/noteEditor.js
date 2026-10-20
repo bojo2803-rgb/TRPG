@@ -3,6 +3,7 @@
 // - 小窓（layout: 'peek'）：右に重ねて開く。1段組
 // 何行も書く欄は、書いてあるものだけを出す（空のものは「＋ 外見」のボタンにたたむ）
 import { h, esc, uid, debounce, byTitle } from '../util.js';
+import { tagMemo } from '../tags.js';
 import { templatesFor, allTags, childrenOf, newLink, findByTitle, KINDS, kindOf, isElement } from '../model.js';
 import { membersSec, holdersSec, holdingsSec, scenariosSec, contentsSec, sessionsSec, orgSec, boardLabel, atSec, nestSec, hereSec, AT_LABEL, bornSec, periodSec } from './elements.js';
 import { renderMarkdown } from './markdown.js';
@@ -163,7 +164,7 @@ export function createEditor(ctx, root, { layout = 'peek' } = {}) {
     input.addEventListener('change', add);
     return h('div', { class: 'row ne-tags' },
       // タグを押すと、そのタグの付いたカードの一覧（このカードと同じ種類で絞って）
-      ...n.tags.map(t => h('span', { class: 'chip' }, h('button', { type: 'button', class: 'linkish chip-name', title: `タグ「${t}」の付いたカードを見る`, onclick: () => ctx.openTag(t, kindOf(n)) }, `#${t}`), h('button', { type: 'button', class: 'x', 'aria-label': `タグ「${t}」を外す`, onclick: () => ctx.commit(w => { w.notes[curId].tags = w.notes[curId].tags.filter(x => x !== t); }, 'タグを外す') }, '×'))),
+      ...n.tags.map(t => h('span', { class: 'chip' }, h('button', { type: 'button', class: 'linkish chip-name', title: [tagMemo(w, t), `タグ「${t}」の付いたカードを見る`].filter(Boolean).join('\n'), onclick: () => ctx.openTag(t, kindOf(n)) }, `#${t}`), h('button', { type: 'button', class: 'x', 'aria-label': `タグ「${t}」を外す`, onclick: () => ctx.commit(w => { w.notes[curId].tags = w.notes[curId].tags.filter(x => x !== t); }, 'タグを外す') }, '×'))),
       input, h('datalist', { id: 'ne-tags' }, ...allTags(w).map(t => h('option', { value: t }))));
   }
 

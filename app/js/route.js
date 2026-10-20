@@ -1,6 +1,6 @@
 // 画面のアドレス：#/people（人物の一覧）・#/people/<id>（人物のページ）・#/people/<id>/board（そのボード）・#/people?sub=family（家系図）など。
 // ブラウザの「戻る」「進む」で画面を行き来するために使う。#/ で始まらないもの（#import&… #drive=…）は画面の指定ではない
-const KEYS = ['sub', 'board', 'map', 'focus'];
+const KEYS = ['sub', 'board', 'map', 'focus', 'tag'];
 
 export function formatRoute(view, arg) {
   const a = arg || {};

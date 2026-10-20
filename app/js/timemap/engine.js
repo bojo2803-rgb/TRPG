@@ -222,7 +222,8 @@ function evIn(e, k) {
 
 // ===== 状態 =====
 let activeSub = OBJECTIVE;
-const tagState = {};  // 0: 通常, 1: 除外, 2: これだけ
+const tagState = {};  // 0: 通常, 1: 除外, 2: これだけ, 3: 目立たせる（ほかを薄く）
+const TAG_NEXT = { 0: 3, 3: 2, 2: 1, 1: 0 };
 const hiddenTracks = new Set();
 let query = '', onlySub = false;
 
@@ -804,13 +805,14 @@ function buildScene(lay, cm) {
     spots.push({ id: `cd|${c.k}|${pl.tag}`, c, pi: pl.pi, ref, base: bref(p, pl.ni), x: at[0], row: p.nodes[pl.ni].y, again: pl.again, title: pl.title, w: textW(pl.title) + 18 + (c.e.branch ? 10 : 0),
       dk: idx != null && pl.k ? `c|${idx}|${pl.k}` : c.k });
   }
-  const rows = assignRows(spots);
+  const rows = assignRows(spots), hiTags = Object.values(tagState).includes(3);
   for (const s of spots) {
     const r = rows[s.id];
     if (r == null) continue;
     if (r < 0) { const g = sc.more[sc.more.length - 1]; if (g && g.row === s.row && s.x - g.x < 60) g.titles.push(s.title); else sc.more.push({ x: s.x, row: s.row, ref: s.ref, base: s.base, titles: [s.title] }); continue; }
     const match = q && (s.title.toLowerCase().includes(q) || s.c.e.tags.some(t => t.toLowerCase().includes(q)));
-    const cls = `card${s.c.grp ? ' grp' : ''}${s.again ? ' again' : ''}${s.c.e.branch ? ' bp' : ''}${q ? (match ? ' hl' : ' dim') : ''}${focusTrack && focusTrack !== s.c.e.tr ? ' dim' : ''}`;
+    const tagHit = hiTags && s.c.e.tags.some(t => tagState[t] === 3);
+    const cls = `card${s.c.grp ? ' grp' : ''}${s.again ? ' again' : ''}${s.c.e.branch ? ' bp' : ''}${q ? (match ? ' hl' : ' dim') : hiTags ? (tagHit ? ' hl' : ' dim') : ''}${focusTrack && focusTrack !== s.c.e.tr ? ' dim' : ''}`;
     sc.els[s.id] = { kind: 'card', ref: s.ref, base: s.base, row: r, title: s.title, cls, color: s.c.grp ? null : T[s.c.e.tr].color, w: s.w, dk: s.dk, bp: !!s.c.e.branch };
   }
   sc.more.forEach((g, i) => { sc.els[`mo|${i}`] = { kind: 'more', ref: g.ref, base: g.base, text: `＋${g.titles.length}`, i }; });
@@ -1172,8 +1174,8 @@ function renderChips() {
   viewsEl.replaceChildren(...[OBJECTIVE, ...subjects].map(v => { const b = chip(v.name, () => { setView(v); egg(v); }); b.dataset.id = v.id ?? ''; return b; }));
   tagsEl.replaceChildren(...[...new Set(events.flatMap(e => e.tags))].map(t => {
     tagState[t] ??= 0;
-    const b = chip(t + (tagState[t] === 1 ? '（除外）' : tagState[t] === 2 ? '（これだけ）' : ''), () => { tagState[t] = (tagState[t] + 1) % 3; renderChips(); setView(activeSub, false); }, 'クリックで「除外」→「これだけ表示」→「元に戻す」');
-    b.classList.toggle('ex', tagState[t] === 1); b.classList.toggle('only', tagState[t] === 2);
+    const b = chip(t + (['', '（除外）', '（これだけ）', '（目立たせる）'][tagState[t]]), () => { tagState[t] = TAG_NEXT[tagState[t]]; renderChips(); setView(activeSub, false); }, 'クリックで「目立たせる」→「これだけ表示」→「除外」→「元に戻す」');
+    b.classList.toggle('ex', tagState[t] === 1); b.classList.toggle('only', tagState[t] === 2); b.classList.toggle('hi', tagState[t] === 3);
     return b;
   }));
   tracksEl.replaceChildren(...tracks.map(tr => {
@@ -1676,6 +1678,8 @@ return {
     revealNext = [e.tr, e.t]; setView(activeSub, false);
     return true;
   },
+  // タグの画面から：そのタグを目立たせる（state：1 除外・2 これだけ・3 目立たせる・0 元に戻す）。設定の欄を開いて、どのタグかを見せる
+  setTag(tag, state = 3) { tagState[tag] = state; root.querySelector('.tm-settings').open = true; renderChips(); setView(activeSub, false); },
   viewSubject(id) { const s = subjects.find(s => s.id === id); if (s) { setView(s); egg(s); } },
   subjectForm(id, name) { subjects.some(s => s.id === id) ? subjectForm(id) : subjectForm(null, { asNote: id, name }); },
   branchFrom(id) { const i = events.findIndex(e => e._id === id); if (i < 0) return; const e = events[i]; trackForm(null, { fork: e.k ? [e.tr, e.t, e.k] : [e.tr, e.t], from: i }); },
