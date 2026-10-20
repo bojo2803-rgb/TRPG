@@ -91,21 +91,26 @@ export function inScenario(w, sid) {
   for (const nd of Object.values(w.notes[sid]?.chart?.nodes || {})) for (const id of nodeCards(nd)) if (w.notes[id]) s.add(id);
   return s;
 }
-// シナリオのボードに「出るもの」をまとめて貼る位置：まだ貼っていないものを、種類ごとの行（人物・集団・アイテム・ロケーション・出来事や付箋）で、
-// いま貼ってあるものの下へ並べる（1行6枚まで）。舞台のロケーションも入れる。戻り値：id → { x, y }
+// ボードにまとめて貼る位置：ids のうちまだ貼っていないものを、種類ごとの行（人物・集団・アイテム・ロケーション・出来事や付箋・シナリオ）で、
+// いま貼ってあるものの下へ並べる（1行6枚まで）。戻り値：id → { x, y }
 const BOARD_ROWS = ['person', 'group', 'item', 'place', 'note', 'scenario'];
-export function scenarioBoardSpots(w, sid, items) {
-  const sc = w.notes[sid], all = new Set(inScenario(w, sid));
-  if (sc?.at && w.notes[sc.at]) all.add(sc.at);
-  const ids = [...all].filter(id => id !== sid && !items[id]), ps = Object.values(items), out = {};
+export function boardSpots(w, ids, items) {
+  const todo = [...new Set(ids)].filter(id => w.notes[id] && !items[id]), ps = Object.values(items), out = {};
   const x0 = ps.length ? Math.min(...ps.map(p => p.x)) : 40;
   let y = ps.length ? Math.max(...ps.map(p => p.y)) + 170 : 40;
   for (const k of BOARD_ROWS) {
-    const row = ids.filter(id => kindOf(w.notes[id]) === k).sort((a, b) => byTitle(w.notes[a], w.notes[b]));
+    const row = todo.filter(id => kindOf(w.notes[id]) === k).sort((a, b) => byTitle(w.notes[a], w.notes[b]));
     row.forEach((id, i) => { out[id] = { x: x0 + (i % 6) * 220, y: y + Math.floor(i / 6) * 130 }; });
     if (row.length) y += Math.ceil(row.length / 6) * 130 + 30;
   }
   return out;
+}
+// シナリオのボード：シナリオに出るもの（中身・チャートの場所や登場など）と舞台
+export function scenarioBoardSpots(w, sid, items) {
+  const sc = w.notes[sid], all = new Set(inScenario(w, sid));
+  if (sc?.at && w.notes[sc.at]) all.add(sc.at);
+  all.delete(sid);
+  return boardSpots(w, [...all], items);
 }
 // シナリオに出る集団：出るもののうちの集団と、出る人物がいま入っている集団
 export function scenarioGroups(w, sid) {

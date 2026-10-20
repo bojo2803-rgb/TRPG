@@ -10,6 +10,7 @@ import { boardLabel } from './elements.js';
 import { renderMarkdown } from './markdown.js';
 import { quickInput } from './quickNote.js';
 import { scenarioBoardSpots } from '../listing.js';
+import { tagBoardSpots } from '../tags.js';
 
 const views = new Map(); // ボードごとの表示位置 { x, y, z }
 const CARD_W = 190;
@@ -27,14 +28,16 @@ export function mount(el, ctx, arg) {
   worldEl.append(svg);
   stage.append(worldEl);
   // 書き留める欄：書いて Enter で、見ている所の近くの空いている所に貼る（真ん中から外へ探す）
-  const placeNew = (w, id) => { w.boards[boardId].items[id] = spotNear(Object.values(w.boards[boardId].items), center()); };
+  // タグのボード（board.tag）：ここに書き留めた付箋・貼ったカードには、そのタグを付ける。タグが外れたカードは出さない
+  const tagIt = (w, id) => { const t = w.boards[boardId].tag; if (t && w.notes[id] && !w.notes[id].tags.includes(t)) w.notes[id].tags.push(t); };
+  const placeNew = (w, id) => { w.boards[boardId].items[id] = spotNear(Object.values(w.boards[boardId].items), center()); tagIt(w, id); };
   const quick = quickInput(ctx, { placeholder: 'このボードに書き留める（Enter で貼る）', place: placeNew });
   el.append(bar, h('div', { class: 'quick-row' }, quick), stage);
   let view = null, sizes = new Map(), drag = null, pinch = null;
   const pointers = new Map();
 
   const board = () => ctx.world.boards[boardId];
-  function lastBoard(ctx) { try { const id = localStorage.getItem('trpg-last-board'); if (ctx.world.boards[id]) return id; } catch { /* なし */ } return Object.values(ctx.world.boards).find(b => !b.owner)?.id || Object.keys(ctx.world.boards)[0]; }
+  function lastBoard(ctx) { try { const id = localStorage.getItem('trpg-last-board'); if (ctx.world.boards[id]) return id; } catch { /* なし */ } return Object.values(ctx.world.boards).find(b => !b.owner && !b.tag)?.id || Object.keys(ctx.world.boards)[0]; }
   const applyView = () => { worldEl.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`; stage.style.backgroundPosition = `${view.x}px ${view.y}px`; stage.style.backgroundSize = `${24 * view.z}px ${24 * view.z}px`; };
   const toWorld = (cx, cy) => { const r = stage.getBoundingClientRect(); return { x: (cx - r.left - view.x) / view.z, y: (cy - r.top - view.y) / view.z }; };
 
@@ -49,13 +52,15 @@ export function mount(el, ctx, arg) {
     bar.replaceChildren(...[
       h('h2', {}, 'ボード'),
       h('select', { 'aria-label': 'ボードを選ぶ', onchange: e => { boardId = e.target.value; remember(); render(true); } },
-        ...boards.filter(x => !x.owner).map(x => h('option', { value: x.id, selected: x.id === boardId }, label(x))),
-        boards.some(x => x.owner) ? h('optgroup', { label: '要素のボード' }, ...boards.filter(x => x.owner).map(x => h('option', { value: x.id, selected: x.id === boardId }, label(x)))) : null),
+        ...boards.filter(x => !x.owner && !x.tag).map(x => h('option', { value: x.id, selected: x.id === boardId }, label(x))),
+        boards.some(x => x.owner) ? h('optgroup', { label: '要素のボード' }, ...boards.filter(x => x.owner).map(x => h('option', { value: x.id, selected: x.id === boardId }, label(x)))) : null,
+        boards.some(x => x.tag) ? h('optgroup', { label: 'タグのボード' }, ...boards.filter(x => x.tag).map(x => h('option', { value: x.id, selected: x.id === boardId }, label(x)))) : null),
       b?.owner ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openElement(b.owner) }, `${KINDS[kindOf(w.notes[b.owner])].label}のタブで開く`) : null,
+      b?.tag ? h('button', { type: 'button', class: 'btn small', onclick: () => ctx.openTag(b.tag) }, 'タグの画面で開く') : null,
       h('span', { class: 'sp' }),
       ...tools(),
       h('button', { type: 'button', class: 'btn icon', title: 'ボードのメニュー', 'aria-label': 'ボードのメニュー', onclick: e => ctx.menuAt(e.currentTarget, null, [
-        ['＋ 新しいボード', () => { const nb = newBoard({ name: `ボード${Object.values(ctx.world.boards).filter(x => !x.owner).length + 1}` }); ctx.commit(w => { w.boards[nb.id] = nb; }, 'ボードを追加'); boardId = nb.id; remember(); render(true); }],
+        ['＋ 新しいボード', () => { const nb = newBoard({ name: `ボード${Object.values(ctx.world.boards).filter(x => !x.owner && !x.tag).length + 1}` }); ctx.commit(w => { w.boards[nb.id] = nb; }, 'ボードを追加'); boardId = nb.id; remember(); render(true); }],
         ['名前を変える', () => ctx.openDialog({ title: 'ボードの名前', body: `<label>名前<input id="bd_name" value="${esc(board().name)}" autocomplete="off"></label>`, onSave: () => { const v = document.getElementById('bd_name').value.trim(); if (!v) throw '名前を入れてください'; ctx.commit(w => { w.boards[boardId].name = v; }, 'ボードの名前を変更'); } })],
         ['このボードを削除', () => ctx.openDialog({ title: 'ボードを削除', ok: null, body: `<p>「${esc(label(board()))}」を削除します。貼ってあるカードそのものは消えません。</p>`, onDelete: () => {
           if (Object.keys(ctx.world.boards).length <= 1) throw '最後のボードは削除できません';
@@ -64,20 +69,25 @@ export function mount(el, ctx, arg) {
       ]) }, '…')].filter(Boolean));
   }
   // シナリオのボード：シナリオに出るもの（中身・チャートの人物やアイテムや場所・舞台）をまとめて、種類ごとの行で貼る
+  const spotsFor = (w, b) => b.tag ? tagBoardSpots(w, b.tag, b.items) : scenarioBoardSpots(w, b.owner, b.items);
   const placeAll = () => {
-    const spots = scenarioBoardSpots(ctx.world, board().owner, board().items), n = Object.keys(spots).length;
-    ctx.commit(w => { Object.assign(w.boards[boardId].items, spots); }, '登場するものを全部貼る');
+    const spots = spotsFor(ctx.world, board()), n = Object.keys(spots).length;
+    ctx.commit(w => { Object.assign(w.boards[boardId].items, spots); }, board().tag ? 'タグの付いたものを貼る' : '登場するものを全部貼る');
     fit(true); applyView();
     ctx.toast(`${n}枚を貼りました（元に戻すで、まとめて外せます）`);
   };
   const tools = () => [
     ...(() => {
       const b = board(), w = ctx.world;
+      if (b?.tag) {
+        const n = Object.keys(tagBoardSpots(w, b.tag, b.items)).length;
+        return n ? [h('button', { type: 'button', class: 'btn', title: 'あとからタグが付いたカードを、種類ごとに並べて貼る', onclick: placeAll }, `＋ タグの付いたものを貼る（${n}）`)] : [];
+      }
       if (!b?.owner || kindOf(w.notes[b.owner]) !== 'scenario') return [];
       const n = Object.keys(scenarioBoardSpots(w, b.owner, b.items)).length;
       return [h('button', { type: 'button', class: 'btn', disabled: !n, title: n ? 'このシナリオの登場人物・集団・アイテム・場所・出来事を、種類ごとに並べて貼る' : '登場するものは全部貼ってあります', onclick: placeAll }, n ? `＋ 登場するものを全部貼る（${n}）` : '登場するものは全部貼ってあります')];
     })(),
-    h('button', { type: 'button', class: 'btn', onclick: () => pickNote(ctx, { title: 'ボードに貼るカード', exclude: Object.keys(board().items), onPick: id => { const p = center(); ctx.commit(w => { w.boards[boardId].items[id] = { x: p.x - CARD_W / 2, y: p.y - 30 }; }, 'ボードに貼る'); } }) }, '＋ 貼る'),
+    h('button', { type: 'button', class: 'btn', onclick: () => pickNote(ctx, { title: board().tag ? `タグ「${board().tag}」を付けて貼るカード` : 'ボードに貼るカード', exclude: Object.keys(board().items).filter(id => !board().tag || ctx.world.notes[id]?.tags.includes(board().tag)), onPick: id => ctx.commit(w => { placeNew(w, id); }, 'ボードに貼る') }) }, board()?.tag ? '＋ タグを付けて貼る' : '＋ 貼る'),
     h('button', { type: 'button', class: 'btn icon', title: '全体を見る', 'aria-label': '全体を見る', onclick: () => { fit(true); applyView(); } }, '⤢'),
   ];
   const remember = () => { if (embedded) return; try { localStorage.setItem('trpg-last-board', boardId); } catch { /* なし */ } };
@@ -117,7 +127,7 @@ export function mount(el, ctx, arg) {
     if (refit) views.delete(boardId);
     view = views.get(boardId) || null;
     const hidden = hiddenOnBoard(w, b);
-    const ids = Object.keys(b.items).filter(id => w.notes[id] && !hidden.has(id));
+    const ids = Object.keys(b.items).filter(id => w.notes[id] && !hidden.has(id) && (!b.tag || w.notes[id].tags.includes(b.tag)));
     worldEl.querySelectorAll('.bcard').forEach(x => x.remove());
     for (const id of ids) worldEl.append(card(w.notes[id], b.items[id], hidden, b));
     if (!ids.length) worldEl.append(h('div', { class: 'bcard empty-hint', style: { left: '40px', top: '40px', width: 'min(320px, 70vw)' } }, 'このボードには、まだ何も貼っていません。上の欄に書いて Enter で付箋を貼れます（人物など、今あるカードは「＋ 貼る」）。カードの右の● を引っぱると、ほかのカードとつながります。'));

@@ -168,6 +168,16 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 .explorer-main h3 { margin: 0; font-size: 17px; }
 .explorer-main h4 { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 .explorer-head { gap: 6px; flex-wrap: wrap; }
+/* タグの画面：左にタグ（数は右にそろえる）、右にえらんだタグのカード・ボード */
+.tag-row { box-sizing: border-box; width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer; padding-left: 10px; }
+.tag-row:focus-visible { outline: 2px solid var(--accent); }
+.tag-main { min-height: 0; padding: 12px 16px; }
+.tag-head h3 { overflow-wrap: break-word; min-width: 0; }
+.tag-cards { flex: 1; min-height: 0; display: grid; gap: 8px; align-content: start; }
+.tag-cards h4 { margin: 8px 0 0; }
+.tag-board { flex: 1; min-height: 360px; margin: 0 -16px -12px; border-top: 1px solid var(--line); }
+.pad { padding: 12px 16px; }
+.phone-only { display: none; }
 .crumbs button[aria-current="true"] { color: var(--fg); font-weight: 600; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
 .tile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 10px; border-radius: 6px; background: var(--raised); border: 1px solid var(--line); cursor: grab; min-width: 0; }
@@ -182,6 +192,11 @@ dialog h2 { font-family: var(--font-title); font-size: 18px; margin: 0 0 12px; }
 .move-opt[aria-current="true"]::after { content: '（いまここ）'; font-weight: 400; color: var(--muted); }
 @media (max-width: 760px) {
   .explorer { grid-template-columns: 1fr; grid-template-rows: minmax(0, 38%) 1fr; }
+  /* タグ：えらんだら一覧はしまって、タグのページだけ（「← タグの一覧」で戻る） */
+  .explorer.tags { grid-template-rows: 1fr; }
+  .explorer.tags.has-sel .explorer-tree { display: none; }
+  .explorer.tags:not(.has-sel) .explorer-main { display: none; }
+  .explorer.tags .phone-only { display: inline-flex; }
   .explorer-tree { border-right: 0; border-bottom: 1px solid var(--line); }
 }
 .tree-fold { all: unset; width: 18px; text-align: center; cursor: pointer; color: var(--muted); flex: none; }

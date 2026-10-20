@@ -24,6 +24,7 @@ const VIEWS = [
   { id: 'board', label: 'ボード', other: true, load: () => import('./ui/board.js') },
   { id: 'timemap', label: '時系列', other: true, load: () => import('./timemap/view.js') },
   { id: 'graph', label: 'グラフ', other: true, load: () => import('./ui/graph.js') },
+  { id: 'tags', label: 'タグ', other: true, load: () => import('./ui/tagsView.js') },
   { id: 'templates', label: 'テンプレート', other: true, load: () => import('./ui/templates.js') },
 ];
 const KIND_VIEWS = new Set(Object.values(KINDS).map(k => k.tab));
@@ -76,6 +77,8 @@ export const ctx = {
     peek?.close();
     showView(KINDS[kindOf(n)].tab, { open: id, ...(mode && { mode }), ...(focus && { focus }) });
   },
+  // タグの画面を開く（kind：その種類で絞って見せる。カードのタグを押したとき）
+  openTag(tag, kind) { peek?.close(); showView('tags', { open: tag, ...(kind && { sub: kind }) }); },
   // いま真ん中に開いているページのカード
   currentPage: () => KIND_VIEWS.has(viewId) ? viewArg?.open || null : null,
   // いま開いているシナリオに出るもの（検索・リンクの候補で先に出す）

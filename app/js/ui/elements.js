@@ -13,7 +13,7 @@ export function ensureOwnBoard(ctx, id) {
   ctx.commit(w => { w.boards[nb.id] = nb; }, 'ボードを作成');
   return nb.id;
 }
-export const boardLabel = (w, b) => b.owner ? `${w.notes[b.owner]?.title || '名前なし'}のボード` : b.name;
+export const boardLabel = (w, b) => b.owner ? `${w.notes[b.owner]?.title || '名前なし'}のボード` : b.tag ? `タグ「${b.tag}」のボード` : b.name;
 
 // 期間：「1550年〜1582年」。わからない端は「？」
 const fmtWhen = (w, v) => v ? formatTime(v.t, { track: w.tracks.find(t => t.id === v.tr), tz: v.tz, prec: v.prec, approx: v.approx, until: v.until }, w) : '';

@@ -162,7 +162,8 @@ export function createEditor(ctx, root, { layout = 'peek' } = {}) {
     input.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ',' || e.key === '、') { e.preventDefault(); add(); } });
     input.addEventListener('change', add);
     return h('div', { class: 'row ne-tags' },
-      ...n.tags.map(t => h('span', { class: 'chip' }, t, h('button', { type: 'button', class: 'x', 'aria-label': `タグ「${t}」を外す`, onclick: () => ctx.commit(w => { w.notes[curId].tags = w.notes[curId].tags.filter(x => x !== t); }, 'タグを外す') }, '×'))),
+      // タグを押すと、そのタグの付いたカードの一覧（このカードと同じ種類で絞って）
+      ...n.tags.map(t => h('span', { class: 'chip' }, h('button', { type: 'button', class: 'linkish chip-name', title: `タグ「${t}」の付いたカードを見る`, onclick: () => ctx.openTag(t, kindOf(n)) }, `#${t}`), h('button', { type: 'button', class: 'x', 'aria-label': `タグ「${t}」を外す`, onclick: () => ctx.commit(w => { w.notes[curId].tags = w.notes[curId].tags.filter(x => x !== t); }, 'タグを外す') }, '×'))),
       input, h('datalist', { id: 'ne-tags' }, ...allTags(w).map(t => h('option', { value: t }))));
   }
 
